@@ -1,49 +1,55 @@
-# thanks vsecoder
+FROM python:3.10 as python-base
+FROM python-base as builder-base
 
-# -------------------------------
-# Используем образ python:3.10-slim⁠ как базовый для этапа сборки
-FROM python:3.10-slim AS builder
-# Отключаем кэширование pip, чтобы уменьшить размер образа
-ENV PIP_NO_CACHE_DIR=1
-# Устанавливаем необходимые пакеты для сборки Python пакетов и git
-RUN apt-get update && \
-    apt-get install -y --fix-missing --no-install-recommends git python3-dev gcc
-# Очищаем кэш apt для уменьшения размера образа
-RUN rm -rf /var/lib/apt/lists/ /var/cache/apt/archives/ /tmp/*
-# Клонируем репозиторий Heroku
-RUN git clone https://github.com/coddrago/Heroku /Heroku
-# Создаем виртуальное окружение Python
-RUN python -m venv /venv
-# Устанавливаем зависимости проекта
-RUN /venv/bin/pip install --no-warn-script-location --no-cache-dir -r /Heroku/requirements.txt
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    \
+    PIP_NO_CACHE_DIR=off \
+    PIP_DISABLE_PIP_VERSION_CHECK=on \
+    PIP_DEFAULT_TIMEOUT=100 \
+    AIOHTTP_NO_EXTENSIONS=1 \
+    \
+    PYSETUP_PATH="/opt/pysetup" \
+    VENV_PATH="/opt/pysetup/.venv" \
+    \
+    DOCKER=true \
+    GIT_PYTHON_REFRESH=quiet
 
-# -------------------------------
-# Используем другой базовый образ для финального контейнера
-FROM python:3.10-slim
-# Устанавливаем необходимые пакеты для работы приложения
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends --fix-missing \
-    curl libcairo2 git ffmpeg libmagic1 \
-    libavcodec-dev libavutil-dev libavformat-dev \
-    libswscale-dev libavdevice-dev neofetch wkhtmltopdf gcc python3-dev
-# Устанавливаем Node.js
+RUN apt-get update && apt-get upgrade -y && apt-get install --no-install-recommends -y \
+    build-essential \
+    curl \
+    ffmpeg \
+    gcc \
+    git \
+    libavcodec-dev \
+    libavdevice-dev \
+    libavformat-dev \
+    libavutil-dev \
+    libcairo2 \
+    libmagic1 \
+    libswscale-dev \
+    openssl \
+    openssh-server \
+    python3 \
+    python3-dev \
+    python3-pip \
+    wkhtmltopdf
 RUN curl -sL https://deb.nodesource.com/setup_18.x -o nodesource_setup.sh && \
     bash nodesource_setup.sh && \
     apt-get install -y nodejs && \
     rm nodesource_setup.sh
-# Очищаем кэш apt для уменьшения размера образа
 RUN rm -rf /var/lib/apt/lists/ /var/cache/apt/archives/ /tmp/*
-# Устанавливаем переменные окружения для работы приложения
-ENV DOCKER=true \
-    GIT_PYTHON_REFRESH=quiet \
-    PIP_NO_CACHE_DIR=1
-# Копируем собранное приложение и виртуальное окружение из этапа сборки
-COPY --from=builder /Heroku /Heroku
-COPY --from=builder /venv /Heroku/venv
-# Устанавливаем рабочую директорию
-WORKDIR /Heroku
-# Открываем порт 8080 для доступа к приложению
-EXPOSE 8080
 
-# Определяем команду запуска приложения
-CMD ["python3", "-m", "hikka"]
+WORKDIR /data
+RUN mkdir /data/private
+
+RUN git clone https://github.com/coddrago/Heroku /data/Heroku
+WORKDIR /data/Heroku
+
+RUN pip install --no-warn-script-location --no-cache-dir -U -r requirements.txt
+RUN pip install --no-warn-script-location --no-cache-dir -U -r optional_requirements.txt
+
+RUN git reset --hard
+
+EXPOSE 8080
+CMD python -m heroku --root

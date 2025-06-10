@@ -394,13 +394,13 @@ files = [
 test = ["pytest", "sphinx", "sphinx-autobuild", "twine", "wheel"]
 
 [[package]]
-name = "hikka-tl-new"
-version = "2.0.8"
+name = "heroku-tl-new"
+version = "1.0.2.1"
 description = "Full-featured Telegram client library for Python 3"
 optional = false
 python-versions = ">=3.5"
 files = [
-    {file = "Hikka_TL_New-2.0.8-py3-none-any.whl", hash = "sha256:6d0c6da16198c1ae9d865024f2363ff098bfe8c33c6f87bfedede5d235ef5195"},
+    {file = "Heroku_TL_New-1.0.2.1-py3-none-any.whl", hash = "sha256:6d0c6da16198c1ae9d865024f2363ff098bfe8c33c6f87bfedede5d235ef5195"},
 ]
 
 [package.dependencies]

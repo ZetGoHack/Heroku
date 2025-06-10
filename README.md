@@ -20,7 +20,7 @@
 
 <b>Manual installation (no script):</b><br>
 <code>apt update && apt install git python3 -y && git clone https://github.com/coddrago/Heroku && cd Heroku && pip install -r requirements.txt && python3 -m hikka</code><br.>
-<i>If you are on VPS\VDS, type <code>--proxy-pass</code> in the end of command to open SSH tunnel to your Hikka web interface, or use <code>--no-web</code> to complete setup in console</i><br>
+<i>If you are on VPS\VDS, type <code>--proxy-pass</code> in the end of command to open SSH tunnel to your Heroku web interface, or use <code>--no-web</code> to complete setup in console</i><br>
 <br>
 <b>Some further details:</b>
 
@@ -44,18 +44,18 @@
  <li>📼 Improved and new <b>core modules</b></li>
  <li>⏱ Quick <b>bug fixes</b> (compared to official FTG and GeekTG)</li>
  <li>▶️ <b>Inline forms, galleries and lists</b></li>
- <li>🔁 Full <b>backward compatibility</b> with FTG, Hikka and GeekTG modules</li>
+ <li>🔁 Full <b>backward compatibility</b> with FTG and GeekTG modules</li>
 </ul>
 <hr>
 <h2 border="none"><img src="https://github.com/hikariatama/assets/raw/master/1312-micro-sd-card-flat.webp" height="54" align="middle"> Requirements</h2>
 <ul>
- <li>Python 3.9-3.12</li>
+ <li>Python 3.8-3.11</li>
  <li>API_ID and HASH from <a href="https://my.telegram.org/apps" color="#2594cb">Telegram</a></li>
 </ul>
 <hr>
 <h2 border="none"><img src="https://github.com/hikariatama/assets/raw/master/680-it-developer-flat.webp" height="54" align="middle"> Documentation</h2>
 
-Check out <a href="https://web.archive.org/dev.hikka.pw">dev.hikka.pw</a> for developers' documentation and <a href="https://web.archive.org/hikka.pw">hikka.pw</a> for users' documentation<br>
+Check out <a href="https://heroku.codrago.top/">heroku.codrago.top</a> for users' documentation<br>
 
 <hr>
 <h2 border="none"><img src="https://github.com/hikariatama/assets/raw/master/981-consultation-flat.webp" height="54" align="middle"> <a href="https://t.me/heroku_talks">Support</a></h2>
@@ -130,10 +130,3 @@ Check out <a href="https://web.archive.org/dev.hikka.pw">dev.hikka.pw</a> for de
     <li><a href="https://t.me/thisLyomi">Lyomi</a> for German translation pack</li>
     <li><a href="https://t.me/lonami">Lonami</a> for Telethon, which is the base of Heroku-TL</li>
 </ul>
-
-<hr>
-<h2>Sponsors: </h2>
-<p align="center">
-    <img src="assets/aeza.svg" width="300" height="60">
-</p>
-<p align="center">Developed with support of <a href="https://aeza.net/?ref=herokugh">aeza.net</a></p>

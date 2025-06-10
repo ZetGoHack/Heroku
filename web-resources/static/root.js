@@ -28,7 +28,7 @@ function auth(c) {
                             "Code waiting timeout exceeded. Reload page and try again.",
                         ),
                         void $(".auth").fadeOut(250)) :
-                    a.startsWith("hikka_") ?
+                    a.startsWith("heroku_") ?
                     ($.cookie("session", a),
                         (auth_required = !1),
                         $(".authorized").hide().fadeIn(100),
