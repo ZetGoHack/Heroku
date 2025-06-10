@@ -487,27 +487,8 @@ class Utils(InlineUnit):
                         else unit.get("buttons", [])
                     ),
                 )
-            except TelegramAPIError as e:
-                if True: # TODO "" in e.message
-                    if query:
-                        with contextlib.suppress(Exception):
-                            await query.answer()
-                elif True: # TODO "" in e.message
-                    with contextlib.suppress(Exception):
-                        await query.answer(
-                            "I should have edited some message, but it is deleted :("
-                        )
-
-                return False
-            except TelegramRetryAfter as e:
-                logger.info("Sleeping %ss on aiogram FloodWait...", e.retry_after)
-                await asyncio.sleep(e.retry_after)
-                return await self._edit_unit(**utils.get_kwargs())
-                
-
-                return False
             except TelegramBadRequest as e:
-                if "There is no text in the message to edit" not in str(e):
+                if "there is no text in the message to edit" not in str(e):
                     raise
 
                 try:
@@ -528,6 +509,25 @@ class Utils(InlineUnit):
                     return False
                 else:
                     return True
+            except TelegramAPIError as e:
+                if True: # TODO "" in e.message
+                    if query:
+                        with contextlib.suppress(Exception):
+                            await query.answer()
+                elif True: # TODO "" in e.message
+                    with contextlib.suppress(Exception):
+                        await query.answer(
+                            "I should have edited some message, but it is deleted :("
+                        )
+
+                return False
+            except TelegramRetryAfter as e:
+                logger.info("Sleeping %ss on aiogram FloodWait...", e.retry_after)
+                await asyncio.sleep(e.retry_after)
+                return await self._edit_unit(**utils.get_kwargs())
+                
+
+                return False
             else:
                 return True
 
