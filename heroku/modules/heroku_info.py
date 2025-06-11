@@ -276,7 +276,7 @@ class HerokuInfoMod(loader.Module):
             if self._get_info_photo(start) is None:
                 await utils.answer(
                     message, 
-                    self.strings["incorrate_img_format"]
+                    self.strings["incorrect_img_format"]
                 )
                 return
            
