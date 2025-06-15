@@ -515,24 +515,24 @@ class HerokuSettingsMod(loader.Module):
 
     @loader.command()
     async def remove_core_protection(self, message: Message):
-        if self._db.get(main.__name__, "remove_core_protection", False):
+        if self._db.get(main.__name__, "remove_core_protection") == True:
             await utils.answer(message, self.strings("core_protection_already_removed"))
             return
-
-        await self.inline.form(
-            message=message,
-            text=self.strings("core_protection_confirm"),
-            reply_markup=[
-                {
-                    "text": self.strings("core_protection_btn"),
-                    "callback": self._remove_core_protection,
-                },
-                {
-                    "text": self.strings("btn_no"),
-                    "action": "close",
-                },
-            ],
-        )
+        else:
+            await self.inline.form(
+                message=message,
+                text=self.strings("core_protection_confirm"),
+                reply_markup=[
+                    {
+                        "text": self.strings("core_protection_btn"),
+                        "callback": self._remove_core_protection,
+                    },
+                    {
+                        "text": self.strings("btn_no"),
+                        "action": "close",
+                    },
+                ],
+            )
 
     async def _enable_core_protection(self, call: InlineCall):
         self._db.set(main.__name__, "remove_core_protection", False)
@@ -540,24 +540,24 @@ class HerokuSettingsMod(loader.Module):
 
     @loader.command()
     async def enable_core_protection(self, message: Message):
-        if self._db.get(main.__name__, "remove_core_protection", True):
+        if self._db.get(main.__name__, "remove_core_protection") == False:
             await utils.answer(message, self.strings("core_protection_already_enabled"))
             return
-
-        await self.inline.form(
-            message=message,
-            text=self.strings("core_protection_confirm_e"),
-            reply_markup=[
-                {
-                    "text": self.strings("core_protection_e_btn"),
-                    "callback": self._enable_core_protection,
-                },
-                {
-                    "text": self.strings("btn_no"),
-                    "action": "close",
-                },
-            ],
-        )
+        else:
+            await self.inline.form(
+                message=message,
+                text=self.strings("core_protection_confirm_e"),
+                reply_markup=[
+                    {
+                        "text": self.strings("core_protection_e_btn"),
+                        "callback": self._enable_core_protection,
+                    },
+                    {
+                        "text": self.strings("btn_no"),
+                        "action": "close",
+                    },
+                ],
+            )
 
     async def inline__restart(
         self,

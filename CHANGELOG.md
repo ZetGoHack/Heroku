@@ -1,4 +1,13 @@
 # Heroku Changelog
+## 🪐 Heroku 1.7.1
+- fixed bug with web 
+- fixed bug with executor
+- fixed bug with presets command
+- added structure for windows and MacOS
+- added blockquote for all lists
+- added new banner for update
+- added ubguard.codrago.life
+
 ## 🪐 Heroku 1.7.0
 
 - added banner to ping

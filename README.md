@@ -19,7 +19,7 @@
 
 
 <b>Manual installation (no script):</b><br>
-<code>apt update && apt install git python3 -y && git clone https://github.com/coddrago/Heroku && cd Heroku && pip install -r requirements.txt && python3 -m hikka</code><br.>
+<code>apt update && apt install git python3 -y && git clone https://github.com/coddrago/Heroku && cd Heroku && pip install -r requirements.txt && python3 -m heroku</code><br.>
 <i>If you are on VPS\VDS, type <code>--proxy-pass</code> in the end of command to open SSH tunnel to your Heroku web interface, or use <code>--no-web</code> to complete setup in console</i><br>
 <br>
 <b>Some further details:</b>
@@ -49,7 +49,7 @@
 <hr>
 <h2 border="none"><img src="https://github.com/hikariatama/assets/raw/master/1312-micro-sd-card-flat.webp" height="54" align="middle"> Requirements</h2>
 <ul>
- <li>Python 3.8-3.11</li>
+ <li>Python 3.9-3.12</li>
  <li>API_ID and HASH from <a href="https://my.telegram.org/apps" color="#2594cb">Telegram</a></li>
 </ul>
 <hr>
@@ -125,8 +125,6 @@ Check out <a href="https://heroku.codrago.top/">heroku.codrago.top</a> for users
 <b>Special thanks to:</b>
 
 <ul>
-    <li><a href="https://gitlab.com/hackintosh5">Hackintosh5</a> for FTG, which is the base of project</li>
-    <li><a href="https://t.me/GunyaKshin">Codwiz</a> for Ukrainian translation pack</li>
-    <li><a href="https://t.me/thisLyomi">Lyomi</a> for German translation pack</li>
+    <li><a href="https://github.com/hikariatama">Hikari</a> for Hikka, which is the base of project</li>
     <li><a href="https://t.me/lonami">Lonami</a> for Telethon, which is the base of Heroku-TL</li>
 </ul>

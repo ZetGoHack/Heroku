@@ -921,6 +921,12 @@ def get_named_platform() -> str:
     if main.IS_WSL:
         return "🍀 WSL"
 
+    if main.IS_WINDOWS:
+        return "💻 Windows"
+
+    if main.IS_MACOS:
+        return "🍏 MacOS"
+
     if main.IS_JAMHOST:
         return "🧃 JamHost"
 

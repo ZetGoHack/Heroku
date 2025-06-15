@@ -15,7 +15,7 @@ heroku_security:
   group_admin: "🧑‍⚖️ Админ (любой)"
   group_member: "👥 В группе"
   pm: "🤙 В лс"
-  owner_list: "<emoji document_id=5386399931378440814>😎</emoji> <b>Пользователи группы</b> <code>owner</code><b>:</b>\n\n{}"
+  owner_list: "<emoji document_id=5386399931378440814>😎</emoji> <b>Пользователи группы</b> <code>owner</code><b>:</b>\n\n<blockquote expandable>{}</blockquote>"
   no_owner: "<emoji document_id=5386399931378440814>😎</emoji> <b>Нет пользователей в группе</b> <code>owner</code>"
   no_user: "<emoji document_id=5210952531676504517>🚫</emoji> <b>Укажи, кому выдавать права</b>"
   not_a_user: "<emoji document_id=5447644880824181073>⚠️</emoji> <b>Указанная цель - не пользователь</b>"
@@ -90,7 +90,7 @@ heroku_security:
   _cmd_doc_sgroupdel: "<имя> [пользователь или ответ] - Удалить пользователя из группы безопасности"
 
 heroku_settings:
-  watchers: "<emoji document_id=5424885441100782420>👀</emoji> <b>Смотрители:</b>\n\n<b>{}</b>"
+  watchers: "<emoji document_id=5424885441100782420>👀</emoji> <b>Смотрители:</b>\n\n<blockquote expandable><b>{}</b></blockquote>"
   mod404: "<emoji document_id=5210952531676504517>🚫</emoji> <b>Смотритель {} не найден</b>"
   disabled: "<emoji document_id=5424885441100782420>👀</emoji> <b>Смотритель {} теперь <u>выключен</u></b>"
   enabled: "<emoji document_id=5424885441100782420>👀</emoji> <b>Смотритель {} теперь <u>включен</u></b>"
@@ -127,9 +127,9 @@ heroku_settings:
   deauth_confirm_btn: "😢 Удалить"
   uninstall: "😢 <b>Удаляю Heroku...</b>"
   uninstalled: "😢 <b>Heroku удалена. Веб-интерфейс все еще активен, можно добавить другие аккаунты!</b>"
-  cmd_nn_list: "<emoji document_id=5469791106591890404>🪄</emoji> <b>NoNick включен для этих команд:</b>\n\n{}"
-  user_nn_list: "<emoji document_id=5469791106591890404>🪄</emoji> <b>NoNick включен для этих пользователей:</b>\n\n{}"
-  chat_nn_list: "<emoji document_id=5469791106591890404>🪄</emoji> <b>NoNick включен для этих чатов:</b>\n\n{}"
+  cmd_nn_list: "<emoji document_id=5469791106591890404>🪄</emoji> <b>NoNick включен для этих команд:</b>\n\n<blockquote expandable>{}</blockquote>"
+  user_nn_list: "<emoji document_id=5469791106591890404>🪄</emoji> <b>NoNick включен для этих пользователей:</b>\n\n<blockquote expandable>{}</blockquote>"
+  chat_nn_list: "<emoji document_id=5469791106591890404>🪄</emoji> <b>NoNick включен для этих чатов:</b>\n\n<blockquote expandable>{}</blockquote>"
   btn_yes: "🚸 Все равно открыть"
   btn_no: "🔻 Закрыть"
   nothing: "<emoji document_id=5427052514094619126>🤷‍♀️</emoji> <b>Нечего показывать...</b>"

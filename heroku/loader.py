@@ -620,7 +620,7 @@ class Modules:
 
                 spec = importlib.machinery.ModuleSpec(
                     module_name,
-                    StringLoader(Path(mod).read_text(), user_friendly_origin),
+                    StringLoader(Path(mod).read_text(encoding='utf-8'), user_friendly_origin),
                     origin=user_friendly_origin,
                 )
 

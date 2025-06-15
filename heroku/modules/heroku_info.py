@@ -137,7 +137,9 @@ class HerokuInfoMod(loader.Module):
             ("🌼", "<emoji document_id=5224219153077914783>❤️</emoji>"),
             ("🎡", "<emoji document_id=5226711870492126219>🎡</emoji>"),
             ("🐧", "<emoji document_id=5361541227604878624>🐧</emoji>"),
-            ("🧃", "<emoji document_id=5422884965593397853>🧃</emoji>")
+            ("🧃", "<emoji document_id=5422884965593397853>🧃</emoji>"),
+            ("💻", "<emoji document_id=5469825590884310445>💻</emoji>"),
+            ("🍏", "<emoji document_id=5372908412604525258>🍏</emoji>")
         ]:
             platform = platform.replace(emoji, icon)
         return (
@@ -266,7 +268,7 @@ class HerokuInfoMod(loader.Module):
             return
         await utils.answer(
             message,
-            self.string["font_installed"]
+            self.strings["font_installed"]
         )
 
     @loader.command()

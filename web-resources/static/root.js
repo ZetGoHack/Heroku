@@ -21,23 +21,23 @@ function auth(c) {
                     credentials: "include",
                     timeout: 25e4,
                 })
-                .then((b) => b.text())
-                .then((a) =>
-                    "TIMEOUT" == a ?
-                    (error_message(
-                            "Code waiting timeout exceeded. Reload page and try again.",
-                        ),
-                        void $(".auth").fadeOut(250)) :
-                    a.startsWith("heroku_") ?
-                    ($.cookie("session", a),
-                        (auth_required = !1),
-                        $(".authorized").hide().fadeIn(100),
-                        $(".auth").fadeOut(250, () => {
-                            $(".installation").fadeIn(250);
-                        }),
-                        void c()) :
-                    void 0,
-                );
+                    .then((b) => b.text())
+                    .then((a) =>
+                        "TIMEOUT" == a ?
+                            (error_message(
+                                "Code waiting timeout exceeded. Reload page and try again.",
+                            ),
+                                void $(".auth").fadeOut(250)) :
+                            a.startsWith("heroku_") ?
+                                ($.cookie("session", a),
+                                    (auth_required = !1),
+                                    $(".authorized").hide().fadeIn(100),
+                                    $(".auth").fadeOut(250, () => {
+                                        $(".installation").fadeIn(250);
+                                    }),
+                                    void c()) :
+                                void 0,
+                    );
         }, 250);
 }
 var qr_interval = null,
@@ -47,7 +47,7 @@ var qr_interval = null,
         document.querySelector(".qr_inner").style.height,
     ];
 (document.querySelector(".qr_inner").style.width = "100px"),
-(document.querySelector(".qr_inner").style.height = "100px");
+    (document.querySelector(".qr_inner").style.height = "100px");
 
 function login_qr() {
     $("#continue_btn").fadeOut(100),
@@ -57,83 +57,83 @@ function login_qr() {
             method: "POST",
             credentials: "include"
         })
-        .then((b) => b.text())
-        .then((c) => {
-            const d = new QRCodeStyling({
-                width: window.innerHeight / 3,
-                height: window.innerHeight / 3,
-                type: "svg",
-                data: c,
-                dotsOptions: {
-                    type: "rounded"
-                },
-                cornersSquareOptions: {
-                    type: "extra-rounded"
-                },
-                backgroundOptions: {
-                    color: "transparent"
-                },
-                imageOptions: {
-                    imageSize: 0.4,
-                    margin: 8
-                },
-                qrOptions: {
-                    errorCorrectionLevel: "M"
-                },
-            });
-            (document.querySelector(".qr_inner").innerHTML = ""),
-            (document.querySelector(".qr_inner").style.width = old_qr_sizes[0]),
-            (document.querySelector(".qr_inner").style.height = old_qr_sizes[1]),
-            d.append(document.querySelector(".qr_inner")),
-                (qr_interval = setInterval(() => {
-                    fetch("/get_qr_url", {
+            .then((b) => b.text())
+            .then((c) => {
+                const d = new QRCodeStyling({
+                    width: window.innerHeight / 3,
+                    height: window.innerHeight / 3,
+                    type: "svg",
+                    data: c,
+                    dotsOptions: {
+                        type: "rounded"
+                    },
+                    cornersSquareOptions: {
+                        type: "extra-rounded"
+                    },
+                    backgroundOptions: {
+                        color: "transparent"
+                    },
+                    imageOptions: {
+                        imageSize: 0.4,
+                        margin: 8
+                    },
+                    qrOptions: {
+                        errorCorrectionLevel: "M"
+                    },
+                });
+                (document.querySelector(".qr_inner").innerHTML = ""),
+                    (document.querySelector(".qr_inner").style.width = old_qr_sizes[0]),
+                    (document.querySelector(".qr_inner").style.height = old_qr_sizes[1]),
+                    d.append(document.querySelector(".qr_inner")),
+                    (qr_interval = setInterval(() => {
+                        fetch("/get_qr_url", {
                             method: "POST",
                             credentials: "include"
                         })
-                        .then((b) => b.text())
-                        .then((b) =>
-                            "SUCCESS" == b || "2FA" == b ?
-                            ($("#block_qr_login").fadeOut(250),
-                                $("#denyqr").fadeOut(250),
-                                $("#continue_btn, .title, .description").hide().fadeIn(250),
-                                "SUCCESS" == b && switch_block("custom_bot"),
-                                "2FA" == b && (show_2fa(), (qr_login = !0)),
-                                void clearInterval(qr_interval)) :
-                            void d.update({
-                                data: b
-                            }),
-                        );
-                }, 1250));
-        });
+                            .then((b) => b.text())
+                            .then((b) =>
+                                "SUCCESS" == b || "2FA" == b ?
+                                    ($("#block_qr_login").fadeOut(250),
+                                        $("#denyqr").fadeOut(250),
+                                        $("#continue_btn, .title, .description").hide().fadeIn(250),
+                                        "SUCCESS" == b && switch_block("custom_bot"),
+                                        "2FA" == b && (show_2fa(), (qr_login = !0)),
+                                        void clearInterval(qr_interval)) :
+                                    void d.update({
+                                        data: b
+                                    }),
+                            );
+                    }, 1250));
+            });
 }
 $("#get_started").click(() => {
-        fetch("/can_add", {
-            method: "POST",
-            credentials: "include"
-        }).then((b) =>
-            b.ok ?
+    fetch("/can_add", {
+        method: "POST",
+        credentials: "include"
+    }).then((b) =>
+        b.ok ?
             auth_required ?
-            auth(() => {
-                $("#get_started").click();
-            }) :
-            void($("#continue_btn").hide().fadeIn(250),
-                $("#denyqr").hide(),
-                $("#enter_api").fadeOut(250),
-                $("#get_started").fadeOut(250, () => {
-                    switch_block(_current_block);
-                })) :
+                auth(() => {
+                    $("#get_started").click();
+                }) :
+                void ($("#continue_btn").hide().fadeIn(250),
+                    $("#denyqr").hide(),
+                    $("#enter_api").fadeOut(250),
+                    $("#get_started").fadeOut(250, () => {
+                        switch_block(_current_block);
+                    })) :
             void show_eula(),
-        );
-    }),
+    );
+}),
     $("#enter_api").click(() =>
         auth_required ?
-        auth(() => {
-            $("#enter_api").click();
-        }) :
-        void($("#get_started").fadeOut(250),
-            $("#enter_api").fadeOut(250, () => {
-                $("#continue_btn").hide().fadeIn(250), switch_block("api_id");
-            })),
+            auth(() => {
+                $("#enter_api").click();
+            }) :
+            void ($("#get_started").fadeOut(250),
+                $("#enter_api").fadeOut(250, () => {
+                    $("#continue_btn").hide().fadeIn(250), switch_block("api_id");
+                })),
     );
 
 function isInt(c) {
@@ -146,30 +146,20 @@ function isValidPhone(b) {
 }
 
 function finish_login() {
-    fetch("/finish_login", {
-            method: "POST",
-            credentials: "include"
-        })
-        .then(() => {
-            $(".installation").fadeOut(2e3),
-                setTimeout(() => {
-                    $("#installation_icon").html(""),
-                        bodymovin.loadAnimation({
-                            container: document.getElementById("installation_icon"),
-                            renderer: "canvas",
-                            loop: !0,
-                            autoplay: !0,
-                            path: "https://assets1.lottiefiles.com/packages/lf20_n3jgitst.json",
-                            rendererSettings: {
-                                clearCanvas: !0
-                            },
-                        }),
-                        $(".finish_block").fadeIn(250);
-                }, 2e3);
-        })
-        .catch((b) => {
-            error_state(), error_message("Login confirmation error: " + b.toString());
-        });
+    console.log("Done")
+    $(".finish_block").fadeIn()
+    $("#installation_icon").html("")
+    $(".installation").fadeOut()
+    bodymovin.loadAnimation({
+        container: document.getElementById("installation_icon"),
+        renderer: "canvas",
+        loop: !0,
+        autoplay: !0,
+        path: "https://assets1.lottiefiles.com/packages/lf20_n3jgitst.json",
+        rendererSettings: {
+            clearCanvas: !0
+        },
+    })
 }
 
 function show_2fa() {
@@ -213,23 +203,23 @@ function show_2fa() {
 function show_eula() {
     $(".main").fadeOut(250),
         $(".eula-form")
-        .hide()
-        .fadeIn(250, () => {
-            $("#law").html(""),
-                (anim = bodymovin.loadAnimation({
-                    container: document.getElementById("law"),
-                    renderer: "canvas",
-                    loop: !0,
-                    autoplay: !0,
-                    path: "https://static.dan.tatar/forbidden.json",
-                    rendererSettings: {
-                        clearCanvas: !0
-                    },
-                }));
-        });
+            .hide()
+            .fadeIn(250, () => {
+                $("#law").html(""),
+                    (anim = bodymovin.loadAnimation({
+                        container: document.getElementById("law"),
+                        renderer: "canvas",
+                        loop: !0,
+                        autoplay: !0,
+                        path: "https://static.dan.tatar/forbidden.json",
+                        rendererSettings: {
+                            clearCanvas: !0
+                        },
+                    }));
+            });
 }
 
-function tg_code(b = !1) {
+function tg_code(b = false) {
     return b && qr_login ?
         void fetch("/qr_2fa", {
             method: "POST",
@@ -237,33 +227,37 @@ function tg_code(b = !1) {
             body: _2fa_pass,
         }).then((b) => {
             b.ok ?
-                ($(".auth-code-form").fadeOut(),
+                (console.log("ko"),
+                finish_login(),
                     $("#block_phone").fadeOut(),
-                    switch_block("custom_bot")) :
+                    $(".auth-code-form").fadeOut()) :
                 ($(".code-input").removeAttr("disabled"),
                     b.text().then((b) => {
                         error_state(), Swal.fire("Error", b, "error");
                     }));
-        }) :
+        })
+        :
         void fetch("/tg_code", {
             method: "POST",
             body: `${_tg_pass}\n${_phone}\n${_2fa_pass}`,
         })
-        .then((b) => {
-            b.ok ?
-                ($(".auth-code-form").fadeOut(),
-                    $("#block_phone").fadeOut(),
-                    switch_block("custom_bot")) :
-                401 == b.status ?
-                show_2fa() :
-                ($(".code-input").removeAttr("disabled"),
-                    b.text().then((b) => {
-                        error_state(), Swal.fire("Error", b, "error");
-                    }));
-        })
-        .catch((b) => {
-            Swal.showValidationMessage(`Auth failed: ${b.toString()}`);
-        });
+            .then((b) => {
+                b.ok ?
+                    (console.log("ok"),
+                    finish_login(),
+                        $("#block_phone").fadeOut(),
+                        $(".auth-code-form").fadeOut()) :
+                    401 == b.status ?
+                        show_2fa() :
+                        ($(".code-input").removeAttr("disabled"),
+                            b.text().then((b) => {
+                                error_state(), Swal.fire("Error", b, "error");
+                            }));
+
+            })
+            .catch((b) => {
+                Swal.showValidationMessage(`Auth failed: ${b.toString()}`);
+            });
 }
 
 function switch_block(b) {
@@ -324,73 +318,73 @@ function process_next() {
                     body: _api_hash + _api_id,
                     credentials: "include",
                 })
-                .then((b) => b.text())
-                .then((b) => {
-                    "ok" == b
-                        ?
-                        switch_block(is_phone() ? "phone" : "qr_login") :
-                        (error_state(), error_message(b));
-                })
-                .catch((b) => {
-                    error_state(),
-                        error_message(
-                            "Error occured while saving credentials: " + b.toString(),
-                        );
-                })) :
+                    .then((b) => b.text())
+                    .then((b) => {
+                        "ok" == b
+                            ?
+                            switch_block(is_phone() ? "phone" : "qr_login") :
+                            (error_state(), error_message(b));
+                    })
+                    .catch((b) => {
+                        error_state(),
+                            error_message(
+                                "Error occured while saving credentials: " + b.toString(),
+                            );
+                    })) :
             void error_state();
     }
     if ("phone" == b) {
         let b = document.querySelector("#phone").value;
         if (!isValidPhone(b)) return void error_state();
         (_phone = b),
-        fetch("/send_tg_code", {
+            fetch("/send_tg_code", {
                 method: "POST",
                 body: _phone,
                 credentials: "include",
             })
-            .then((b) => {
-                b.ok ?
-                    ($(".auth-code-form")
-                        .hide()
-                        .fadeIn(250, () => {
-                            $("#monkey").html(""),
-                                (anim2 = bodymovin.loadAnimation({
-                                    container: document.getElementById("monkey"),
-                                    renderer: "canvas",
-                                    loop: !1,
-                                    autoplay: !0,
-                                    path: "https://assets8.lottiefiles.com/private_files/lf30_t52znxni.json",
-                                    rendererSettings: {
-                                        clearCanvas: !0
-                                    },
-                                })),
-                                anim2.addEventListener("complete", () => {
-                                    setTimeout(() => {
-                                        anim2.goToAndPlay(0);
-                                    }, 2e3);
-                                });
-                        }),
-                        $(".code-input").removeAttr("disabled"),
-                        $(".enter").addClass("tgcode"),
-                        $(".code-caption").text(
-                            "Enter the code you recieved in Telegram",
-                        ),
-                        $(".code-input").attr("autocomplete", "off"),
-                        $(".code-input").attr("autocorrect", "off"),
-                        $(".code-input").attr("autocapitalize", "off"),
-                        $(".code-input").attr("spellcheck", "false"),
-                        $(".code-input").attr("type", "number"),
-                        cnt_btn.setAttribute("current-step", "code"),
-                        (_current_block = "code")) :
-                    403 == b.status ?
-                    show_eula() :
-                    b.text().then((b) => {
-                        error_state(), error_message(b);
-                    });
-            })
-            .catch((b) => {
-                error_state(), error_message("Code send failed: " + b.toString());
-            });
+                .then((b) => {
+                    b.ok ?
+                        ($(".auth-code-form")
+                            .hide()
+                            .fadeIn(250, () => {
+                                $("#monkey").html(""),
+                                    (anim2 = bodymovin.loadAnimation({
+                                        container: document.getElementById("monkey"),
+                                        renderer: "canvas",
+                                        loop: !1,
+                                        autoplay: !0,
+                                        path: "https://assets8.lottiefiles.com/private_files/lf30_t52znxni.json",
+                                        rendererSettings: {
+                                            clearCanvas: !0
+                                        },
+                                    })),
+                                    anim2.addEventListener("complete", () => {
+                                        setTimeout(() => {
+                                            anim2.goToAndPlay(0);
+                                        }, 2e3);
+                                    });
+                            }),
+                            $(".code-input").removeAttr("disabled"),
+                            $(".enter").addClass("tgcode"),
+                            $(".code-caption").text(
+                                "Enter the code you recieved in Telegram",
+                            ),
+                            $(".code-input").attr("autocomplete", "off"),
+                            $(".code-input").attr("autocorrect", "off"),
+                            $(".code-input").attr("autocapitalize", "off"),
+                            $(".code-input").attr("spellcheck", "false"),
+                            $(".code-input").attr("type", "number"),
+                            cnt_btn.setAttribute("current-step", "code"),
+                            (_current_block = "code")) :
+                        403 == b.status ?
+                            show_eula() :
+                            b.text().then((b) => {
+                                error_state(), error_message(b);
+                            });
+                })
+                .catch((b) => {
+                    error_state(), error_message("Code send failed: " + b.toString());
+                });
     }
     if ("2fa" == b) {
         let b = document.querySelector("#_2fa").value;
@@ -405,36 +399,36 @@ function process_next() {
                 text: "It must end with `bot` and be at least 5 symbols in length",
             }) :
             "" == b ?
-            void finish_login() :
-            void fetch("/custom_bot", {
-                method: "POST",
-                credentials: "include",
-                body: b,
-            })
-            .then((b) => b.text())
-            .then((b) =>
-                "OCCUPIED" == b ?
-                void Swal.fire({
-                    icon: "error",
-                    title: "This bot username is already occupied!",
-                }) :
-                void finish_login(),
-            )
-            .catch((b) => {
-                error_state(),
-                    error_message("Custom bot setting error: " + b.toString());
-            });
+                void finish_login() :
+                void fetch("/custom_bot", {
+                    method: "POST",
+                    credentials: "include",
+                    body: b,
+                })
+                    .then((b) => b.text())
+                    .then((b) =>
+                        "OCCUPIED" == b ?
+                            void Swal.fire({
+                                icon: "error",
+                                title: "This bot username is already occupied!",
+                            }) :
+                            void finish_login(),
+                    )
+                    .catch((b) => {
+                        error_state(),
+                            error_message("Custom bot setting error: " + b.toString());
+                    });
     }
 }
 (cnt_btn.onclick = () =>
     cnt_btn.disabled ?
-    void 0 :
-    auth_required ?
-    auth(() => {
-        cnt_btn.click();
-    }) :
-    void process_next()),
-$("#denyqr").on("click", () => {
+        void 0 :
+        auth_required ?
+            auth(() => {
+                cnt_btn.click();
+            }) :
+            void process_next()),
+    $("#denyqr").on("click", () => {
         qr_interval && clearInterval(qr_interval),
             $("#denyqr").fadeOut(250),
             $("#continue_btn, .title, .description").hide().fadeIn(250),
@@ -442,39 +436,37 @@ $("#denyqr").on("click", () => {
     }),
     $(".installation input").on("keyup", (b) =>
         cnt_btn.disabled ?
-        void 0 :
-        auth_required ?
-        auth(() => {
-            cnt_btn.click();
-        }) :
-        void(("Enter" === b.key || 13 === b.keyCode) && process_next()),
+            void 0 :
+            auth_required ?
+                auth(() => {
+                    cnt_btn.click();
+                }) :
+                void (("Enter" === b.key || 13 === b.keyCode) && process_next()),
     ),
     $(".code-input").on("keyup", (b) => {
         if ("code" == _current_block && 5 == $(".code-input").val().length)
             (_tg_pass = $(".code-input").val()),
-            $(".code-input").attr("disabled", "true"),
-            $(".code-input").val(""),
-            tg_code();
+                $(".code-input").attr("disabled", "true"),
+                $(".code-input").val(""),
+                tg_code();
         else if (
             "2fa" == _current_block &&
             ("Enter" === b.key || 13 === b.keyCode)
         ) {
             let b = $(".code-input").val();
             (_2fa_pass = b),
-            $(".code-input").attr("disabled", "true"),
+                $(".code-input").attr("disabled", "true"),
                 $(".code-input").val(""),
-                tg_code(!0);
+                tg_code(true);
+            console.log("2fa True")
         }
     }),
     $(".enter").on("click", () => {
         if ("2fa" == _current_block) {
             let b = $(".code-input").val();
             (_2fa_pass = b),
-            $(".code-input").attr("disabled", "true"),
+                $(".code-input").attr("disabled", "true"),
                 $(".code-input").val(""),
-                tg_code(!0);
+                tg_code(true);
         }
-    }),
-    $(document).ready(() => {
-        new Sakura("body");
-    });
+    })

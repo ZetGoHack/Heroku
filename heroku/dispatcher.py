@@ -720,7 +720,7 @@ class CommandDispatcher:
                 self._external_bl = (
                     await utils.run_sync(
                         requests.get,
-                        "https://ubguard.dan.tatar/blacklist.json",
+                        "https://ubguard.codrago.life/blacklist.json",
                     )
                 ).json()["blacklist"]
 

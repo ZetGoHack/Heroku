@@ -117,11 +117,11 @@ class Executor(loader.Module):
 
         if result:
             if not cerr:
-                result = self.strings["result_no_error"].format(result={result})
+                result = self.strings["result_no_error"].format(result=result)
             else:
-                result = self.strings["result_error"].format(result={result})
+                result = self.strings["result_error"].format(result=result)
 
         if res or res == 0 or res == False and res is not None:
-            result += self.strings["res_return"].format(res={res})
+            result += self.strings["res_return"].format(res=res)
 
-        return await utils.answer(message, self.strings["result"].format(code={code}, result={result}, time=round({stop_time} - {start_time}, 5)))
+        return await utils.answer(message, self.strings["result"].format(code=code, result=result, time=round(stop_time - start_time, 5)))

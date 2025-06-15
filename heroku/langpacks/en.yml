@@ -17,7 +17,7 @@ heroku_security:
   group_member: "👥 In group"
   pm: "🤙 In PM"
   everyone: "🌍 Everyone (Inline)"
-  owner_list: "<emoji document_id=5386399931378440814>😎</emoji> <b>Users in group</b> <code>owner</code><b>:</b>\n\n{}"
+  owner_list: "<emoji document_id=5386399931378440814>😎</emoji> <b>Users in group</b> <code>owner</code><b>:</b>\n\n<blockquote expandable>{}</blockquote>"
   no_owner: "<emoji document_id=5386399931378440814>😎</emoji> <b>There is no users in group</b> <code>owner</code>"
   owner_added: '<emoji document_id="5386399931378440814">😎</emoji> <b><a href="tg://user?id={}">{}</a> added to group</b> <code>owner</code>'
   owner_removed: '<emoji document_id="5386399931378440814">😎</emoji> <b><a href="tg://user?id={}">{}</a> removed from group</b> <code>owner</code>'
@@ -96,7 +96,7 @@ heroku_security:
 
 heroku_settings:
   name: "HerokuSettings"
-  watchers: "<emoji document_id=5424885441100782420>👀</emoji> <b>Watchers:</b>\n\n<b>{}</b>"
+  watchers: "<emoji document_id=5424885441100782420>👀</emoji> <b>Watchers:</b>\n\n<blockquote expandable><b>{}</b></blockquote>"
   no_args: "<emoji document_id=5210952531676504517>🚫</emoji> <b>No arguments specified</b>"
   invoke404: "<emoji document_id=5210952531676504517>🚫</emoji> <b>Internal debug method</b> <code>{}</code> <b>not found, ergo can't be invoked</b>"
   module404: "<emoji document_id=5210952531676504517>🚫</emoji> <b>Module</b> <code>{}</code> <b>not found</b>"
@@ -137,9 +137,9 @@ heroku_settings:
   deauth_confirm_btn: "😢 Delete"
   uninstall: "😢 <b>Uninstalling Heroku...</b>"
   uninstalled: "😢 <b>Heroku uninstalled. Web interface is still active, you can add another account</b>"
-  cmd_nn_list: "<emoji document_id=5469791106591890404>🪄</emoji> <b>NoNick is enabled for these commands:</b>\n\n{}"
-  user_nn_list: "<emoji document_id=5469791106591890404>🪄</emoji> <b>NoNick is enabled for these users:</b>\n\n{}"
-  chat_nn_list: "<emoji document_id=5469791106591890404>🪄</emoji> <b>NoNick is enabled for these chats:</b>\n\n{}"
+  cmd_nn_list: "<emoji document_id=5469791106591890404>🪄</emoji> <b>NoNick is enabled for these commands:</b>\n\n<blockquote expandable>{}</blockquote>"
+  user_nn_list: "<emoji document_id=5469791106591890404>🪄</emoji> <b>NoNick is enabled for these users:</b>\n\n<blockquote expandable>{}</blockquote>"
+  chat_nn_list: "<emoji document_id=5469791106591890404>🪄</emoji> <b>NoNick is enabled for these chats:</b>\n\n<blockquote expandable>{}</blockquote>"
   nothing: "<emoji document_id=5427052514094619126>🤷‍♀️</emoji> <b>Nothing to show...</b>"
   btn_yes: "🚸 Open anyway"
   btn_no: "🔻 Cancel"

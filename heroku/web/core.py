@@ -112,6 +112,7 @@ class Web(root.Web):
         await self.get_url(proxy_pass)
 
         self.running.set()
+        print(f"Heroku Userbot Web Interface running on {self.port}")
 
     async def stop(self):
         await self.runner.shutdown()

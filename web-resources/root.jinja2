@@ -11,23 +11,19 @@
 {% block head %}
 <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/bodymovin/5.8.1/lottie.min.js"></script>
-<script src="{{ static("sakura.min.js") }}"></script>
-<script src="//unpkg.com/@dotlottie/player-component@1.0.0/dist/dotlottie-player.js"></script>
+<!-- <script src="//unpkg.com/@dotlottie/player-component@1.0.0/dist/dotlottie-player.js"></script> -->
 <script src="//unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
 
-<link href="{{ static("sakura.min.css") }}" rel="stylesheet">
 <link href="https://css.gg/css?=arrow-right-r|add|brackets|chevron-right-o|smartphone" rel="stylesheet">
 
-<link rel="stylesheet" href="{{ static("base.min.css") }}">
+<link rel="stylesheet" href="{{ static("base.css") }}">
 {% endblock %}
 
 {% block content %}
 {% endblock %}
 
 {% block after %}
-<div class="bg">
-  <div class="bg_inner"></div>
-</div>
+
 <div class="blur auth vert_center">
   <div id="tg_icon"></div>
   <div class="waiting_for_auth">Waiting for authentification...</div>
@@ -185,17 +181,6 @@
 
   </div>
 </div>
-<div class="lights">
-  <div class="light x1"></div>
-  <div class="light x2"></div>
-  <div class="light x3"></div>
-  <div class="light x4"></div>
-  <div class="light x5"></div>
-  <div class="light x6"></div>
-  <div class="light x7"></div>
-  <div class="light x8"></div>
-  <div class="light x9"></div>
-</div>
 <script>
   var skip_creds = "{{ skip_creds }}" == "True";
   var auth_required = true;
@@ -208,5 +193,5 @@
       auth_required = response != "1";
     })
 </script>
-<script src="{{ static("root.min.js") }}"></script>
+<script src="{{ static("root.js") }}"></script>
 {% endblock %}

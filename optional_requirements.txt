@@ -1,5 +1,4 @@
 requests
-emoji
 moviepy
 python-ffmpeg
 ffmpeg
