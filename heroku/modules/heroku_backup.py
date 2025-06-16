@@ -227,11 +227,11 @@ class HerokuBackupMod(loader.Module):
                             with modzip.open(name, "r") as module:
                                 path.write_bytes(module.read())
 
-            await call.answer(self.strings("all_restored"), show_alert=True)
+            self.inline.bot(await call.answer(self.strings("all_restored"), show_alert=True))
             await self.invoke("restart", "-f", peer=call.message.peer_id)
         except Exception:
             logger.exception("Restore from backupall failed")
-            await call.answer(self.strings("reply_to_file"), show_alert=True)
+            self.inline.bot(await call.answer(self.strings("reply_to_file"), show_alert=True))
 
     def _convert(self, backup):
         fixed = re.sub(r'(hikka\.)(\S+\":)', lambda m: 'heroku.' + m.group(2), backup)

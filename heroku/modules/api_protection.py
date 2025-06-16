@@ -214,7 +214,7 @@ class APIRatelimiterMod(loader.Module):
         return logging.getLogger().handlers[0].web_debugger
 
     async def _show_pin(self, call: InlineCall):
-        await call.answer(f"Werkzeug PIN: {self._debugger.pin}", show_alert=True)
+        await self.inline.bot(call.answer(f"Werkzeug PIN: {self._debugger.pin}", show_alert=True))
 
     @loader.command()
     async def debugger(self, message: Message):
