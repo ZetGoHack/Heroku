@@ -132,6 +132,7 @@ class InlineManager(
         self.init_complete = True
 
         if self._db.get(main.__name__, "test_server", False):
+            logger.info("Ставлю тестовый серв")
             sesion = AiohttpSession(
                 api=TEST
             )
