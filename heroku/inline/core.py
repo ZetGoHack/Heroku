@@ -137,6 +137,7 @@ class InlineManager(
                 api=TEST
             )
         else:
+            logger.info("Ставлю продакшн серв")
             sesion = AiohttpSession(
                 api=PRODUCTION
             )
