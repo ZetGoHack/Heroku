@@ -27,7 +27,7 @@ except Exception:
 
 
 async def check_branch(me_id: int, allowed_ids: list):
-    if branch != "master" and me_id not in allowed_ids:
+    if False and branch != "master" and me_id not in allowed_ids:
         repo = git.Repo(path=os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
         repo.git.reset("--hard", "HEAD")
         repo.git.checkout("master", force=True)
