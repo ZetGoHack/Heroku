@@ -628,6 +628,16 @@ class Heroku:
                 lang_code="en",
                 system_lang_code="en-US",
             )
+            test = input(
+                "\033[0;96mDo you want to connect to the test server? [y/N]: \033[0m"
+                if self.arguments.tty
+                else "Do you want to connect to the test server? [y/N]: ").lower() == "y"
+            if test:
+                client.session.set_dc(
+                    dc_id=2,
+                    server_address='149.154.167.40',
+                    port=443,
+                )
             await client.connect()
 
             print(
