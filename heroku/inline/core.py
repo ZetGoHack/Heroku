@@ -22,12 +22,14 @@ from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramConflictError, TelegramUnauthorizedError
 from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.client.telegram import PRODUCTION, TEST
 from herokutl.errors.rpcerrorlist import InputUserDeactivatedError, YouBlockedUserError
 from herokutl.tl.functions.contacts import UnblockRequest
 from herokutl.tl.types import Message
 from herokutl.utils import get_display_name
 
-from .. import utils
+from .. import main, utils
 from ..database import Database
 from ..tl_cache import CustomTelegramClient
 from ..translations import Translator
@@ -129,7 +131,17 @@ class InlineManager(
 
         self.init_complete = True
 
-        self.bot = Bot(token=self._token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+        if self._db.get(main.__name__, "test_server", False):
+            sesion = AiohttpSession(
+                api=TEST
+            )
+        else:
+            sesion = AiohttpSession(
+                api=PRODUCTION
+            )
+
+        self.bot = Bot(token=self._token, session=sesion, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+
         self._bot = self.bot
         self._dp = Dispatcher()
 

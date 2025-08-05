@@ -596,7 +596,7 @@ class Heroku:
 
         return False
 
-    async def _phone_login(self, client: CustomTelegramClient) -> bool:
+    async def _phone_login(self, client: CustomTelegramClient, test_server: bool = False) -> bool:
         phone = input(
             "\033[0;96mEnter phone: \033[0m"
             if self.arguments.tty
@@ -606,6 +606,7 @@ class Heroku:
         await client.start(phone)
 
         await self.save_client_session(client)
+        client.heroku_db.set(__name__, "test_server", test_server)
         self.clients += [client]
         return True
 
@@ -657,7 +658,7 @@ class Heroku:
                 ).lower()
                 != "y"
             ):
-                return await self._phone_login(client)
+                return await self._phone_login(client, test_server=test)
 
             print("\033[0;96mLoading QR code...\033[0m")
             qr_login = await client.qr_login()
