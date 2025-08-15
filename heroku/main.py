@@ -604,6 +604,17 @@ class Heroku:
         )
 
         await client.start(phone)
+
+        if hasattr(client, "tg_id"):
+            telegram_id = client.tg_id
+        else:
+            if not (me := await client.get_me()): return
+
+            telegram_id = me.id
+            client._tg_id = telegram_id
+            client.tg_id = telegram_id
+            client.heroku_me = me
+        
         db = database.Database(client)
         await db.init()
         db.set(__name__, "test_server", test_server)
