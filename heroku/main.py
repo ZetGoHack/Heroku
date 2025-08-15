@@ -604,9 +604,10 @@ class Heroku:
         )
 
         await client.start(phone)
-
+        db = database.Database(client)
+        await db.init()
+        db.set(__name__, "test_server", test_server)
         await self.save_client_session(client)
-        client.heroku_db.set(__name__, "test_server", test_server)
         self.clients += [client]
         return True
 
