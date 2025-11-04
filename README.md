@@ -62,6 +62,7 @@ python3 -m heroku
 > Add `--proxy-pass` to enable SSH tunneling  
 > Add `--no-web` for console-only setup  
 > Add `--root` for root users (to avoid entering force_insecure)
+> Add `--login-test` to log in to your account on the <b>test</b> server
 
 ### Additional Features
 

@@ -672,128 +672,15 @@ class Heroku:
             return False
 
         if not self.web:
-            client = CustomTelegramClient(
-                MemorySession(),
-                self.api_token.ID,
-                self.api_token.HASH,
-                connection=self.conn,
-                proxy=self.proxy,
-                connection_retries=None,
-                device_model=get_app_name(),
-                system_version=generate_random_system_version(),
-                app_version=".".join(map(str, __version__)) + " x64",
-                lang_code="en",
-                system_lang_code="en-US",
-            )
-            test = input(
-                "\033[0;96mDo you want to connect to the test server? [y/N]: \033[0m"
-                if self.arguments.tty
-                else "Do you want to connect to the test server? [y/N]: ").lower() == "y"
-            if test:
-                client.session.set_dc(
-                    dc_id=2,
-                    server_address='149.154.167.40',
-                    port=443,
-                )
-            await client.connect()
-
-            print(
-                (
-                    "\033[0;96m{}\033[0m" if self.arguments.tty else "{}"
-                ).format(
-                    "You can use QR-code to login from another device (your friend's"
-                    " phone, for example)."
-                )
-            )
-
-            if (
+            setattr(
+                self.arguments,
+                "test_server", 
                 input(
-                    "\033[0;96mUse QR code? [y/N]: \033[0m"
+                    "\033[0;96mDo you want to connect to the test server? [y/N]: \033[0m"
                     if self.arguments.tty
-                    else "Use QR code? [y/N]: "
-                ).lower()
-                != "y"
-            ):
-                return await self._phone_login(client, test_server=test)
-
-            print("\033[0;96mLoading QR code...\033[0m")
-            qr_login = await client.qr_login()
-
-            def print_qr():
-                qr = QRCode()
-                qr.add_data(qr_login.url)
-                print("\033[2J\033[3;1f")
-                qr.print_ascii(invert=True)
-                print("\033[0;96mScan the QR code above to log in.\033[0m")
-                print("\033[0;96mPress Ctrl+C to cancel.\033[0m")
-
-            async def qr_login_poll() -> bool:
-                logged_in = False
-                while not logged_in:
-                    try:
-                        logged_in = await qr_login.wait(10)
-                    except asyncio.TimeoutError:
-                        try:
-                            await qr_login.recreate()
-                            print_qr()
-                        except SessionPasswordNeededError:
-                            return True
-                    except SessionPasswordNeededError:
-                        return True
-                    except KeyboardInterrupt:
-                        print("\033[2J\033[3;1f")
-                        return None
-
-                return False
-
-            if (qr_logined := await qr_login_poll()) is None:
-                return await self._phone_login(client)
-
-            if qr_logined:
-                print_banner("2fa.txt")
-                password = await client(GetPasswordRequest())
-                while True:
-                    _2fa = getpass(
-                        f"\033[0;96mEnter 2FA password ({password.hint}): \033[0m"
-                        if self.arguments.tty
-                        else f"Enter 2FA password ({password.hint}): "
-                    )
-                    try:
-                        await client._on_login(
-                            (
-                                await client(
-                                    CheckPasswordRequest(
-                                        compute_check(password, _2fa.strip())
-                                    )
-                                )
-                            ).user
-                        )
-                    except PasswordHashInvalidError:
-                        print("\033[0;91mInvalid 2FA password!\033[0m")
-                    except FloodWaitError as e:
-                        seconds, minutes, hours = (
-                            e.seconds % 3600 % 60,
-                            e.seconds % 3600 // 60,
-                            e.seconds // 3600,
-                        )
-                        seconds, minutes, hours = (
-                            f"{seconds} second(-s)",
-                            f"{minutes} minute(-s) " if minutes else "",
-                            f"{hours} hour(-s) " if hours else "",
-                        )
-                        print(
-                            "\033[0;91mYou got FloodWait error! Please wait"
-                            f" {hours}{minutes}{seconds}\033[0m"
-                        )
-                        return False
-                    else:
-                        break
-
-            print_banner("success.txt")
-            print("\033[0;92mLogged in successfully!\033[0m")
-            await self.save_client_session(client)
-            self.clients += [client]
-            return True
+                    else "Do you want to connect to the test server? [y/N]: ").lower() == "y"
+                )
+            return await self._register_client()
 
         if not self.web.running.is_set():
             await self.web.start(
@@ -804,6 +691,128 @@ class Heroku:
 
         await self.web.wait_for_clients_setup()
 
+        return True
+    
+    async def _register_client(self) -> bool:
+        """Registers new client via command line"""
+        client = CustomTelegramClient(
+            MemorySession(),
+            self.api_token.ID,
+            self.api_token.HASH,
+            connection=self.conn,
+            proxy=self.proxy,
+            connection_retries=None,
+            device_model=get_app_name(),
+            system_version=generate_random_system_version(),
+            app_version=".".join(map(str, __version__)) + " x64",
+            lang_code="en",
+            system_lang_code="en-US",
+        )
+        test = getattr(self.arguments, "test_server", False)
+        if test:
+            client.session.set_dc(
+                dc_id=2,
+                server_address='149.154.167.40',
+                port=443,
+            )
+        await client.connect()
+
+        print(
+            (
+                "\033[0;96m{}\033[0m" if self.arguments.tty else "{}"
+            ).format(
+                "You can use QR-code to login from another device (your friend's"
+                " phone, for example)."
+            )
+        )
+
+        if (
+            input(
+                "\033[0;96mUse QR code? [y/N]: \033[0m"
+                if self.arguments.tty
+                else "Use QR code? [y/N]: "
+            ).lower()
+            != "y"
+        ):
+            return await self._phone_login(client, test_server=test)
+
+        print("\033[0;96mLoading QR code...\033[0m")
+        qr_login = await client.qr_login()
+
+        def print_qr():
+            qr = QRCode()
+            qr.add_data(qr_login.url)
+            print("\033[2J\033[3;1f")
+            qr.print_ascii(invert=True)
+            print("\033[0;96mScan the QR code above to log in.\033[0m")
+            print("\033[0;96mPress Ctrl+C to cancel.\033[0m")
+
+        async def qr_login_poll() -> bool:
+            logged_in = False
+            while not logged_in:
+                try:
+                    logged_in = await qr_login.wait(10)
+                except asyncio.TimeoutError:
+                    try:
+                        await qr_login.recreate()
+                        print_qr()
+                    except SessionPasswordNeededError:
+                        return True
+                except SessionPasswordNeededError:
+                    return True
+                except KeyboardInterrupt:
+                    print("\033[2J\033[3;1f")
+                    return None
+
+            return False
+
+        if (qr_logined := await qr_login_poll()) is None:
+            return await self._phone_login(client)
+
+        if qr_logined:
+            print_banner("2fa.txt")
+            password = await client(GetPasswordRequest())
+            while True:
+                _2fa = getpass(
+                    f"\033[0;96mEnter 2FA password ({password.hint}): \033[0m"
+                    if self.arguments.tty
+                    else f"Enter 2FA password ({password.hint}): "
+                )
+                try:
+                    await client._on_login(
+                        (
+                            await client(
+                                CheckPasswordRequest(
+                                    compute_check(password, _2fa.strip())
+                                )
+                            )
+                        ).user
+                    )
+                except PasswordHashInvalidError:
+                    print("\033[0;91mInvalid 2FA password!\033[0m")
+                except FloodWaitError as e:
+                    seconds, minutes, hours = (
+                        e.seconds % 3600 % 60,
+                        e.seconds % 3600 // 60,
+                        e.seconds // 3600,
+                    )
+                    seconds, minutes, hours = (
+                        f"{seconds} second(-s)",
+                        f"{minutes} minute(-s) " if minutes else "",
+                        f"{hours} hour(-s) " if hours else "",
+                    )
+                    print(
+                        "\033[0;91mYou got FloodWait error! Please wait"
+                        f" {hours}{minutes}{seconds}\033[0m"
+                    )
+                    return False
+                else:
+                    break
+
+        print_banner("success.txt")
+        print("\033[0;92mLogged in successfully!\033[0m")
+        await self.save_client_session(client)
+        self.clients += [client]
         return True
 
     async def _init_clients(self) -> bool:
@@ -1027,6 +1036,8 @@ class Heroku:
         save_config_key("port", self.arguments.port)
         await self._get_token()
 
+        if getattr(self.arguments, "test_server", False):
+            await self._register_client()
         if (
             not self.clients and not self.sessions or not await self._init_clients()
         ) and not (inital_web := await self._initial_setup()):
