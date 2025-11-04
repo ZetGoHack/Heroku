@@ -40,7 +40,6 @@ from aiogram.exceptions import (
     TelegramAPIError,
     TelegramRetryAfter,
 )
-from herokutl.utils import resolve_inline_message_id
 
 from .. import utils
 from ..types import HerokuReplyMarkup

@@ -79,7 +79,7 @@ class TokenObtainment(InlineUnit):
                 await fw_protect()
                 from .. import main
 
-                m = await conv.send_file("https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku.png")
+                m = await conv.send_file(f"{os.getcwd()}/assets/heroku.png")
                 r = await conv.get_response()
 
                 logger.debug(">> <Photo>")
@@ -208,8 +208,6 @@ class TokenObtainment(InlineUnit):
                         "/setinlinefeedback",
                         button.text,
                         "Enabled",
-                        "/setuserpic",
-                        button.text,
                     ]:
                         await fw_protect()
                         m = await conv.send_message(msg)
@@ -223,27 +221,6 @@ class TokenObtainment(InlineUnit):
                         await m.delete()
                         await r.delete()
 
-                    try:
-                        await fw_protect()
-                        from .. import main
-
-                        m = await conv.send_file("https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku.png")
-                        r = await conv.get_response()
-
-                        logger.debug(">> <Photo>")
-                        logger.debug("<< %s", r.raw_text)
-                    except Exception:
-                        await fw_protect()
-                        m = await conv.send_message("/cancel")
-                        r = await conv.get_response()
-
-                        logger.debug(">> %s", m.raw_text)
-                        logger.debug("<< %s", r.raw_text)
-
-                    await fw_protect()
-
-                    await m.delete()
-                    await r.delete()
 
                     return True
 

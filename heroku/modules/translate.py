@@ -12,9 +12,7 @@
 
 import logging
 
-import herokutl
 from herokutl.tl.types import Message
-from herokutl import types, functions, extensions
 
 from .. import loader, utils
 

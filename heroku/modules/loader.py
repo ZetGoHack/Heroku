@@ -36,7 +36,7 @@ import requests
 from herokutl.errors.common import ScamDetectionError
 from herokutl.errors.rpcerrorlist import MediaCaptionTooLongError
 from herokutl.tl.functions.channels import JoinChannelRequest
-from herokutl.tl.types import Channel, Message, PeerUser
+from herokutl.tl.types import Channel, Message
 
 from .. import loader, main, utils
 from .._local_storage import RemoteStorage
@@ -183,8 +183,8 @@ class LoaderMod(loader.Module):
             },
         )
 
-    @loader.command(alias="dlm")
-    async def dlmod(self, message: Message, force_pm: bool = False):
+    @loader.command()
+    async def dlm(self, message: Message, force_pm: bool = False):
         if args := utils.get_args(message):
             args = args[0]
 
@@ -487,6 +487,30 @@ class LoaderMod(loader.Module):
             photo="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/joined_jr.png",
         )
 
+    async def install_requirements(self, requirements: list):
+        is_venv = hasattr(sys, 'real_prefix') or sys.prefix != getattr(sys, 'base_prefix', sys.prefix)
+        need_user_flag = loader.USER_INSTALL and not is_venv
+
+        pip = await asyncio.create_subprocess_exec(
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "--upgrade",
+            "-q",
+            "--disable-pip-version-check",
+            "--no-warn-script-location",
+            *["--user"] if need_user_flag else [],
+            *requirements,
+        )
+
+        rc = await pip.wait()
+
+        if rc != 0:
+            return False
+
+        return True
+
     async def load_module(
         self,
         doc: str,
@@ -496,6 +520,7 @@ class LoaderMod(loader.Module):
         did_requirements: bool = False,
         save_fs: bool = False,
         blob_link: bool = False,
+        did_requires: bool = False,
     ):
         if any(
             line.replace(" ", "") == "#scope:ffmpeg" for line in doc.splitlines()
@@ -542,6 +567,31 @@ class LoaderMod(loader.Module):
         developer = re.search(r"# ?meta developer: ?(.+)", doc)
         developer = developer.group(1) if developer else False
 
+        if not did_requires:
+            requirements = []
+            try:
+                requirements = list(
+                                filter(
+                                    lambda x: not x.startswith(("-", "_", ".")),
+                                    map(
+                                        str.strip,
+                                        loader.VALID_PIP_PACKAGES.search(doc)[1].split(),
+                                    ),
+                                )
+                            )
+            except TypeError:
+                pass
+
+            if requirements:
+                await self.install_requirements(requirements)
+
+                importlib.invalidate_caches()
+
+                kwargs = utils.get_kwargs()
+                kwargs["did_requires"] = True
+
+                return await self.load_module(**kwargs)  # Try again
+
         blob_link = self.strings("blob_link") if blob_link else ""
 
         if name is None:
@@ -576,7 +626,7 @@ class LoaderMod(loader.Module):
         
         async def restart_inline(call: InlineCall):
             await call.edit(self.strings["requirements_restarted"])
-            await self.invoke("restart@me", "-f", message=message)
+            await self.invoke("restart", "-f", message = message)
 
         async def core_overwrite(e: CoreOverwriteError):
             nonlocal message
@@ -616,29 +666,13 @@ class LoaderMod(loader.Module):
                     "Module loading failed, attemping dependency installation (%s)",
                     e.name,
                 )
-                # Let's try to reinstall dependencies
-                try:
-                    requirements = list(
-                        filter(
-                            lambda x: not x.startswith(("-", "_", ".")),
-                            map(
-                                str.strip,
-                                loader.VALID_PIP_PACKAGES.search(doc)[1].split(),
-                            ),
-                        )
-                    )
-                except TypeError:
-                    logger.warning(
-                        "No valid pip packages specified in code, attemping"
-                        " installation from error"
-                    )
-                    requirements = [
-                        {
-                            "sklearn": "scikit-learn",
-                            "pil": "Pillow",
-                            "herokutl": "Heroku-TL-New",
-                        }.get(e.name.lower(), e.name)
-                    ]
+                requirements = [
+                    {
+                        "sklearn": "scikit-learn",
+                        "pil": "Pillow",
+                        "herokutl": "Heroku-TL-New",
+                    }.get(e.name.lower(), e.name)
+                ]
 
                 if not requirements:
                     raise Exception("Nothing to install") from e
@@ -652,7 +686,7 @@ class LoaderMod(loader.Module):
                             text = self.strings("requirements_restart").format(e.name),
                             reply_markup = [
                                 {
-                                    "text": "🚀 restart", "callback": restart_inline
+                                    "text": "🚀 Restart", "callback": restart_inline
                                 }
                             ]
                         )
@@ -671,25 +705,8 @@ class LoaderMod(loader.Module):
                         ),
                     )
 
-                is_venv = hasattr(sys, 'real_prefix') or sys.prefix != getattr(sys, 'base_prefix', sys.prefix)
-                need_user_flag = loader.USER_INSTALL and not is_venv
-
-                pip = await asyncio.create_subprocess_exec(
-                    sys.executable,
-                    "-m",
-                    "pip",
-                    "install",
-                    "--upgrade",
-                    "-q",
-                    "--disable-pip-version-check",
-                    "--no-warn-script-location",
-                    *["--user"] if need_user_flag else [],
-                    *requirements,
-                )
-
-                rc = await pip.wait()
-
-                if rc != 0:
+                result = await self.install_requirements(requirements)
+                if not result:
                     if message is not None:
                         await utils.answer(
                             message,
@@ -877,8 +894,9 @@ class LoaderMod(loader.Module):
             instance.strings.external_strings = transations
 
         for alias, cmd in self.lookup("settings").get("aliases", {}).items():
-            if cmd in instance.commands:
-                self.allmodules.add_alias(alias, cmd)
+            _cmd = cmd.split(maxsplit=1)
+            if _cmd[0] in instance.commands:
+                self.allmodules.add_alias(alias, *_cmd)
 
         try:
             modname = instance.strings("name")
@@ -1072,20 +1090,48 @@ class LoaderMod(loader.Module):
             await utils.answer(message, self.strings("no_class"))
             return
 
-        instance = self.lookup(args)
+        if len(args.split("\n")) == 1:
+            msg = await self.unload_module(args)
+
+        else:
+            modules = [m for m in args.split("\n") if m]
+            success = []
+            errors = []
+            msg = ""
+            for module in modules:
+                status = await self.unload_module(module)
+                if "🚫" in status or "😖" in status:
+                    if "💡" in status:
+                        status = status.split("<code>")[0]
+
+                    errors.append(
+                        f"<code>{module}</code> — {status}"
+                    )
+                else: success.append(f"<code>{module}</code>")
+
+            if success:
+                msg += self.strings["modules_unloaded"].format(
+                    unloaded_num = len(success),
+                    unloaded=", ".join(success)
+                )
+            if errors:
+                msg += ("\n" + self.strings["modules_not_unloaded"].format(
+                    not_unloaded = len(errors),
+                    errors="\n".join(errors),
+                ))
+
+        await utils.answer(message, msg)
+
+    async def unload_module(self, module: str) -> str:
+        instance = self.lookup(module)
 
         if issubclass(instance.__class__, loader.Library):
-            await utils.answer(message, self.strings("cannot_unload_lib"))
-            return
+            return self.strings("cannot_unload_lib")
 
         try:
-            worked = await self.allmodules.unload_module(args)
+            worked = await self.allmodules.unload_module(module)
         except CoreUnloadError as e:
-            await utils.answer(
-                message,
-                self.strings("unload_core").format(e.module),
-            )
-            return
+            return self.strings("unload_core").format(module)
 
         if not self.allmodules.secure_boot:
             self.set(
@@ -1107,8 +1153,8 @@ class LoaderMod(loader.Module):
             if worked
             else self.strings("not_unloaded")
         )
+        return msg
 
-        await utils.answer(message, msg)
 
     @loader.command()
     async def clearmodules(self, message: Message):
@@ -1212,7 +1258,7 @@ class LoaderMod(loader.Module):
             aliases = {
                 alias: cmd
                 for alias, cmd in self.lookup("settings").get("aliases", {}).items()
-                if self.allmodules.add_alias(alias, cmd)
+                if self.allmodules.add_alias(alias, *cmd.split(maxsplit=1))
             }
 
             self.lookup("settings").set("aliases", aliases)

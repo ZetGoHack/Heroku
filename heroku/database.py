@@ -17,6 +17,14 @@ import logging
 import os
 import re
 import time
+
+try:
+    import redis
+except ImportError as e:
+    if "RAILWAY" in os.environ:
+        raise e
+
+
 import typing
 
 from herokutl.errors.rpcerrorlist import ChannelsTooMuchError

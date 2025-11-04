@@ -55,6 +55,7 @@ from herokutl.errors import (
     PasswordHashInvalidError,
     PhoneNumberInvalidError,
     SessionPasswordNeededError,
+    YouBlockedUserError,
 )
 from herokutl.network.connection import (
     ConnectionTcpFull,
@@ -64,6 +65,7 @@ from herokutl.password import compute_check
 from herokutl.sessions import MemorySession, SQLiteSession
 from herokutl.tl.functions.account import GetPasswordRequest
 from herokutl.tl.functions.auth import CheckPasswordRequest
+from herokutl.tl.functions.contacts import UnblockRequest
 
 from . import database, loader, utils, version
 from ._internal import print_banner, restart
@@ -95,8 +97,8 @@ IS_DOCKER = "DOCKER" in os.environ
 IS_LAVHOST = "LAVHOST" in os.environ
 IS_HIKKAHOST = "HIKKAHOST" in os.environ
 IS_MACOS = "com.apple" in os.environ.get("PATH", "")
-IS_AEZA = "aeza" in socket.gethostname()
 IS_USERLAND = "userland" in os.environ.get("USER", "")
+IS_PTERODACTYL = "PTERODACTYL" in os.environ
 IS_JAMHOST = "JAMHOST" in os.environ
 IS_WSL = False
 IS_WINDOWS = False
@@ -203,14 +205,6 @@ def generate_random_system_version():
     return version
 
 
-try:
-    import uvloop
-
-    uvloop.install()
-except Exception:
-    pass
-
-
 def run_config():
     """Load configurator.py"""
     from . import configurator
@@ -292,6 +286,7 @@ def parse_arguments() -> dict:
     )
     parser.add_argument("--phone", "-p", action="append")
     parser.add_argument("--no-web", dest="disable_web", action="store_true")
+    parser.add_argument("--login-test", dest="test_server", action="store_true")
     parser.add_argument(
         "--qr-login",
         dest="qr_login",
@@ -541,6 +536,7 @@ class Heroku:
             telegram_id = me.id
             client._tg_id = telegram_id
             client.tg_id = telegram_id
+            client.hikka_me = me
             client.heroku_me = me
 
         session = SQLiteSession(
@@ -605,22 +601,70 @@ class Heroku:
 
         await client.start(phone)
 
-        if hasattr(client, "tg_id"):
-            telegram_id = client.tg_id
-        else:
-            if not (me := await client.get_me()): return
-
-            telegram_id = me.id
-            client._tg_id = telegram_id
-            client.tg_id = telegram_id
-            client.heroku_me = me
+        me = await client.get_me()
+        telegram_id = me.id
+        client._tg_id = telegram_id
+        client.tg_id = telegram_id
+        client.hikka_me = me
+        client.heroku_me = me
         
         db = database.Database(client)
         await db.init()
+
+        while (bot := input("You can enter a custom bot username or leave it empty and Heroku will generate a random one: ")):
+            try:
+                if await self._check_bot(client, bot):
+                    db.set("heroku.inline", "custom_bot", bot)
+                    print("Bot username saved!")
+                    break
+                else:
+                    print("Bot username is occupied. Try again or leave it empty")
+                    continue
+            except Exception:
+                print("Something went wrong")
+        
         db.set(__name__, "test_server", test_server)
+
         await self.save_client_session(client)
         self.clients += [client]
         return True
+
+    async def _check_bot(
+        self,
+        client: CustomTelegramClient,
+        username: str,
+    ) -> bool:
+        async with client.conversation("@BotFather", exclusive=False) as conv:
+            try:
+                m = await conv.send_message("/token")
+            except YouBlockedUserError:
+                await client(UnblockRequest(id="@BotFather"))
+                m = await conv.send_message("/token")
+
+            r = await conv.get_response()
+
+            await m.delete()
+            await r.delete()
+
+            if not hasattr(r, "reply_markup") or not hasattr(r.reply_markup, "rows"):
+                return False
+
+            for row in r.reply_markup.rows:
+                for button in row.buttons:
+                    if username != button.text.strip("@"):
+                        continue
+
+                    m = await conv.send_message("/cancel")
+                    r = await conv.get_response()
+
+                    await m.delete()
+                    await r.delete()
+
+                    return True
+        try:
+            await client.get_entity(f"{username}")
+        except:
+            return True
 
     async def _initial_setup(self) -> bool:
         """Responsible for first start"""
@@ -825,6 +869,7 @@ class Heroku:
             me = await client.get_me()
             client._tg_id = me.id
             client.tg_id = me.id
+            client.hikka_me = me
             client.heroku_me = me
 
             async with aiohttp.ClientSession() as session:
@@ -978,13 +1023,20 @@ class Heroku:
     async def _main(self):
         """Main entrypoint"""
         self._init_web()
+        inital_web = False
         save_config_key("port", self.arguments.port)
         await self._get_token()
 
         if (
             not self.clients and not self.sessions or not await self._init_clients()
-        ) and not await self._initial_setup():
+        ) and not (inital_web := await self._initial_setup()):
             return
+        if inital_web:
+            async def scheduled_web_stop():
+                await asyncio.sleep(delay=120)
+                await self.web.stop()
+                logging.debug("inital web was stopped for security reasons")
+            asyncio.create_task(scheduled_web_stop())
 
         self.loop.set_exception_handler(
             lambda _, x: logging.error(

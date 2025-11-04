@@ -150,7 +150,7 @@ class HerokuBackupMod(loader.Module):
                 z.writestr("db.json", db.getvalue())
                 z.writestr("mods.zip", mods.getvalue())
 
-            archive.name = f"backup-{datetime.datetime.now():%d-%m-%Y-%H-%M}.zip"
+            archive.name = f"backup-{datetime.datetime.now():%d-%m-%Y-%H-%M}.backup"
             archive.seek(0)
 
             await self.inline.bot.send_document(
@@ -291,7 +291,12 @@ class HerokuBackupMod(loader.Module):
             return
 
         file = await reply.download_media(bytes)
-        decoded_text = json.loads(file.decode())
+        try:
+            decoded_text = json.loads(file.decode())
+        except UnicodeDecodeError as e:
+            await utils.answer(message,
+                               self.strings("probably_zip").format(self.get_prefix()))
+            return
         if re.search(r'"(hikka\.)(\S+\":)', file.decode()):
             await utils.answer(message,
                                self.strings["db_warning"],
@@ -427,7 +432,7 @@ class HerokuBackupMod(loader.Module):
             z.writestr("db.json", db.getvalue())
             z.writestr("mods.zip", mods.getvalue())
 
-        archive.name = f"backup-all-{datetime.datetime.now():%d-%m-%Y-%H-%M}.zip"
+        archive.name = f"backup-all-{datetime.datetime.now():%d-%m-%Y-%H-%M}.backup"
         archive.seek(0)
 
         await self._client.send_file(

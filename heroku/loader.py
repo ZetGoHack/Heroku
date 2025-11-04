@@ -147,7 +147,9 @@ def patched_import(name: str, *args, **kwargs):
         return native_import("herokutl" + name[8:], *args, **kwargs)
     elif name.startswith("hikkatl"):
         return native_import("herokutl" + name[7:], *args, **kwargs)
-    elif name.startswith ("hikka"):
+    elif name.startswith("hikkalls"):
+        return native_import(name, *args, **kwargs)
+    elif name.startswith("hikka"):
         return native_import("heroku" + name[5:], *args, **kwargs)
 
     return native_import(name, *args, **kwargs)
@@ -686,7 +688,7 @@ class Modules:
         """Saves aliases and applies them to <core>/<file> modules"""
         self.aliases.update(aliases)
         for alias, cmd in aliases.items():
-            self.add_alias(alias, cmd)
+            self.add_alias(alias, *cmd.split(maxsplit=1))
 
     def register_raw_handlers(self, instance: Module):
         """Register event handlers for a module"""
@@ -731,8 +733,9 @@ class Modules:
             self.commands.update({_command.lower(): cmd})
 
         for alias, cmd in self.aliases.copy().items():
-            if cmd in instance.heroku_commands:
-                self.add_alias(alias, cmd)
+            _cmd = cmd.split(maxsplit=1)
+            if _cmd[0] in instance.heroku_commands:
+                self.add_alias(alias, *_cmd)
 
         self.register_inline_stuff(instance)
 
@@ -841,14 +844,32 @@ class Modules:
     def get_approved_channel(self):
         return self.__approve.pop(0) if self.__approve else None
 
-    def get_prefix(self) -> str:
+    def get_prefix(self, ent_id: int = None) -> str:
         """Get command prefix"""
         from . import main
 
         key = main.__name__
         default = "."
 
-        return self._db.get(key, "command_prefix", default)
+        if ent_id:
+            prefixes = self._db.get(key, f"command_prefixes", {})
+            result = prefixes.get(str(ent_id), default)
+        else:
+            result = self._db.get(key, "command_prefix", default)
+        return result
+    
+    def get_prefixes(self) -> set[str]:
+        """Get all command prefixes"""
+        from . import main
+
+        key = main.__name__
+        default = "."
+
+        prefixes = ()
+        prefixes += tuple(self._db.get(key, f"command_prefixes", {}).values())
+        prefixes += tuple(self._db.get(key, "command_prefix", default))
+
+        return set(prefixes)
 
     async def complete_registration(self, instance: Module):
         """Complete registration of instance"""
@@ -921,13 +942,13 @@ class Modules:
 
         return next(
             (
-                (cmd, self.commands[cmd.lower()])
+                (cmd, self.commands[cmd.split()[0].lower()])
                 for cmd in [
                     _command,
                     self.aliases.get(_command.lower()),
                     self.find_alias(_command),
                 ]
-                if cmd and cmd.lower() in self.commands
+                if cmd and cmd.split()[0].lower() in self.commands
             ),
             (_command, None),
         )
@@ -1163,12 +1184,12 @@ class Modules:
                     handler.id,
                 )
 
-    def add_alias(self, alias: str, cmd: str) -> bool:
+    def add_alias(self, alias: str, cmd: str, args: str = None) -> bool:
         """Make an alias"""
         if cmd not in self.commands:
             return False
 
-        self.aliases[alias.lower().strip()] = cmd
+        self.aliases[alias.lower().strip()] = f"{cmd} {args}" if args else cmd
         return True
 
     def remove_alias(self, alias: str) -> bool:

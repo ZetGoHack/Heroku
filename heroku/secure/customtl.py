@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import struct
 import time
 
 from herokutl.errors import InvalidBufferError, SecurityError

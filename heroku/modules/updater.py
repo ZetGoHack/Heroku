@@ -11,11 +11,12 @@
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
 
+import aiohttp
+import ast
 import asyncio
 import contextlib
 import logging
 import os
-import requests
 import subprocess
 import sys
 import time
@@ -28,7 +29,7 @@ from herokutl.tl.functions.messages import (
     GetDialogFiltersRequest,
     UpdateDialogFilterRequest,
 )
-from herokutl.tl.types import DialogFilter, Message
+from herokutl.tl.types import DialogFilter, TextWithEntities, Message
 
 from .. import loader, main, utils, version
 from .._internal import restart
@@ -59,21 +60,23 @@ class UpdaterMod(loader.Module):
             ),
             loader.ConfigValue(
                 "autoupdate",
+                False,
                 doc=lambda: self.strings("_cfg_doc_autoupdate"),
                 validator=loader.validators.Boolean(),
             ),
         )
 
     async def _set_autoupdate_state(self, call: BotInlineCall, state: bool):
+        self.set("autoupdate", True)
         if not state:
             self.config["autoupdate"] = False
-            await self.inline.bot(call.answer(self.strings("autoupdate_off").format(prefix=self.get_prefix()), show_alert=True)) # "Автоматическое обновление выключено. Используйте {prefix}(команда), чтобы включить его."
+            await self.inline.bot(call.answer(self.strings("autoupdate_off").format(prefix=self.get_prefix()), show_alert=True))
             await call.delete()
             return
         
         self.config["autoupdate"] = True
 
-        await self.inline.bot(call.answer(self.strings("autoupdate_on").format(prefix=self.get_prefix()), show_alert=True))
+        await self.inline.bot(call.answer(self.strings("autoupdate_on"), show_alert=True))
         await call.delete()
 
     def get_changelog(self) -> str:
@@ -127,20 +130,25 @@ class UpdaterMod(loader.Module):
             if not self.config["autoupdate"]: manual_update = True
             else:
                 try:
-                    ver = f"https://api.github.com/repos/coddrago/Heroku/contents/heroku/version.py?ref={version.branch}"
-                    text = requests.get(ver, headers={"Accept": "application/vnd.github.v3.raw"}).text
+                    async with aiohttp.ClientSession() as session:
+                        r = await session.get(
+                            url=f"https://api.github.com/repos/coddrago/Heroku/contents/heroku/version.py?ref={version.branch}",
+                            headers={"Accept": "application/vnd.github.v3.raw"}
+                        )
+                        text = await r.text()
+                    
                     new_version = ""
                     for line in text.splitlines():
                         if line.strip().startswith("__version__"):
-                            new_version = line.split("=", 1)[1] .strip(" ()") .split(",")[0]
+                            new_version = ast.literal_eval(line.split("=")[1])
 
-                    if (str(version.__version__[0]) == new_version):
+                    if version.__version__[0] == new_version[0]:
                         manual_update = False
                     else:
                         logger.info("Got a major update, updating manually")
                         manual_update = True
                 except:
-                    manual_update = False
+                    manual_update = True
 
             if manual_update:
                 m = await self.inline.bot.send_photo(
@@ -170,13 +178,13 @@ class UpdaterMod(loader.Module):
                     self.tg_id,
                     "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/updated.png",
                     caption=self.strings("autoupdate_notifier").format(
-                        utils.get_git_hash()[:6],
+                        self.get_latest()[:6],
+                        self.get_changelog(),
                         '<a href="https://github.com/coddrago/Heroku/compare/{}...{}">{}</a>'.format(
                             utils.get_git_hash()[:12],
                             self.get_latest()[:12],
-                            self.get_latest()[:6],
+                            "🔎 diff",
                         ),
-                        self.get_changelog(),
                     ),
                 )
                 await self.invoke("update", "-f", peer=self.inline.bot_username)
@@ -291,11 +299,7 @@ class UpdaterMod(loader.Module):
 
         self.set("restart_ts", time.time())
 
-        await self._db.remote_force_save()
-
-        if "LAVHOST" in os.environ:
-            os.system("lavhost restart")
-            return
+        # await self._db.remote_force_save()
 
         with contextlib.suppress(Exception):
             await main.heroku.web.stop()
@@ -308,6 +312,10 @@ class UpdaterMod(loader.Module):
             # Won't work if not all clients are ready
             if client is not message.client:
                 await client.disconnect()
+
+        if "LAVHOST" in os.environ:
+            await self.client.send_message("lavhostbot", "🔄 Restart")
+            return
 
         await message.client.disconnect()
         restart()
@@ -356,8 +364,6 @@ class UpdaterMod(loader.Module):
         except subprocess.CalledProcessError:
             logger.exception("Req install failed")
 
-    async def autoupdate(self): pass
-
     @loader.command()
     async def update(self, message: Message):
         try:
@@ -390,6 +396,15 @@ class UpdaterMod(loader.Module):
                 raise
         except Exception:
             await self.inline_update(message)
+
+    @loader.command()
+    async def autoupdate(self, message: Message):
+        """| switch autoupdate state"""
+        self.config["autoupdate"] = not self.config["autoupdate"]
+        if self.config["autoupdate"]:
+            await utils.answer(message, self.strings["autoupdate_on"])
+        else:
+            await utils.answer(message, self.strings["autoupdate_off"].format(prefix=self.get_prefix()))
             
     async def inline_update(
         self,
@@ -416,7 +431,7 @@ class UpdaterMod(loader.Module):
                     ),
                 )
                 await self.process_restart_message(msg_obj)
-                os.system("lavhost update")
+                await self.client.send_message("lavhostbot", "/update")
                 return
 
             with contextlib.suppress(Exception):
@@ -465,20 +480,20 @@ class UpdaterMod(loader.Module):
                 logger.exception("Failed to complete update!")
 
         if self.get("do_not_create", False):
-            return
+            pass
+        else:
+            try:
+                await self._add_folder()
+            except Exception:
+                logger.exception("Failed to add folder!")
 
-        try:
-            await self._add_folder()
-        except Exception:
-            logger.exception("Failed to add folder!")
+            self.set("do_not_create", True)
 
-        self.set("do_not_create", True)
-
-        if self.config["autoupdate"] == None:
+        if not self.config["autoupdate"] and not self.get("autoupdate", False):
             await self.inline.bot.send_photo(
                 self.tg_id,
                 photo="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/unit_alpha.png",
-                caption=self.strings("autoupdate"), # "⌚️ <b>Юнит «ALPHA»</b> автоматически обновляет юзербота сразу после выхода нового патча. Только мажорные обновления (1.x.x > 2.x.x) будут требовать вашего внимания\n\n<b>🔄 Не хотите ли включить автообновление?</b>"
+                caption=self.strings("autoupdate"),
                 reply_markup=self.inline.generate_markup(
                     [
                         [
@@ -502,7 +517,7 @@ class UpdaterMod(loader.Module):
     async def _add_folder(self):
         folders = await self._client(GetDialogFiltersRequest())
 
-        if any(getattr(folder, "title", None) == "heroku" for folder in folders.filters):
+        if any(getattr(folder, "title", None) == "Heroku" for folder in folders.filters):
             return
 
         try:
@@ -522,7 +537,10 @@ class UpdaterMod(loader.Module):
                     folder_id,
                     DialogFilter(
                         folder_id,
-                        title="heroku",
+                        title=TextWithEntities(
+                            text='Heroku',
+                            entities=[]
+                        ),
                         pinned_peers=(
                             [
                                 await self._client.get_input_entity(
@@ -583,7 +601,7 @@ class UpdaterMod(loader.Module):
                 "Can't create Heroku folder. Possible reasons are:\n"
                 "- User reached the limit of folders in Telegram\n"
                 "- User got floodwait\n"
-                "Ignoring error and adding folder addition to ignore list"
+                "Ignoring error and adding folder addition to ignore list\n"
             )
 
     async def update_complete(self):
@@ -674,3 +692,13 @@ class UpdaterMod(loader.Module):
         await asyncio.create_subprocess_shell(f'git reset --hard HEAD~{number}', stdout=asyncio.subprocess.PIPE)
         await self.restart_common(call)
 
+    @loader.command()
+    async def stop(self, message: Message):
+        """| stops your userbot"""
+
+        if "LAVHOST" in os.environ:
+            await utils.answer(message, self.strings["ub_stop"].format(emoji=utils.get_platform_emoji()))
+            await self.client.send_message("lavhostbot", "⏹ Stop")
+        else:
+            await utils.answer(message, self.strings["ub_stop"].format(emoji=utils.get_platform_emoji()))
+            exit()

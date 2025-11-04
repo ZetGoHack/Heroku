@@ -16,12 +16,12 @@ import inspect
 import logging
 import os
 import random
-import subprocess
 import time
 import typing
 from io import BytesIO
 
 from herokutl.tl.types import Message
+from herokutl.types import InputMediaWebPage
 
 from .. import loader, main, utils
 from ..inline.types import InlineCall
@@ -71,7 +71,7 @@ class TestMod(loader.Module):
                     "Minimal loglevel for records to be sent in Telegram."
                 ),
                 validator=loader.validators.Choice(
-                    ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+                    ["ALL", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "DISABLE"]
                 ),
                 on_change=self._pass_config_to_logger,
             ),
@@ -106,16 +106,30 @@ class TestMod(loader.Module):
                 lambda: self.strings["banner_url"],
                 validator=loader.validators.String(),
             ),
+            loader.ConfigValue(
+                "quote_media",
+                False,
+                "Switch preview media to quote in ping",
+                validator=loader.validators.Boolean(),
+            ),
+            loader.ConfigValue(
+                "invert_media",
+                False,
+                "Switch preview invert media in ping",
+                validator=loader.validators.Boolean(),
+            ),
         )
 
     def _pass_config_to_logger(self):
         logging.getLogger().handlers[0].force_send_all = self.config["force_send_all"]
         logging.getLogger().handlers[0].tg_level = {
-            "DEBUG": 0,
+            "ALL": 0,
+            "DEBUG": 10,
             "INFO": 20,
             "WARNING": 30,
             "ERROR": 40,
             "CRITICAL": 50,
+            "DISABLE": 50000,
         }[self.config["tglog_level"]]
         logging.getLogger().handlers[0].ignore_common = self.config["ignore_common"]
 
@@ -226,40 +240,47 @@ class TestMod(loader.Module):
     ):
         if not isinstance(lvl, int):
             args = utils.get_args_raw(message)
-            try:
+            if args:
                 try:
-                    lvl = int(args.split()[0])
-                except ValueError:
-                    lvl = getattr(logging, args.split()[0].upper(), None)
-            except IndexError:
+                    try:
+                        lvl = int(args.split()[0])
+                    except ValueError:
+                        lvl = getattr(logging, args.split()[0].upper(), None)
+                except IndexError:
+                    lvl = None
+            else:
                 lvl = None
 
         if not isinstance(lvl, int):
             try:
-                if not self.inline.init_complete or not await self.inline.form(
-                    text=self.strings("choose_loglevel"),
-                    reply_markup=utils.chunks(
-                        [
-                            {
-                                "text": name,
+                if self.inline.init_complete:
+                    await utils.answer(
+                        message,
+                        self.strings("choose_loglevel"),
+                        reply_markup=utils.chunks(
+                            [
+                                {
+                                    "text": name,
                                 "callback": self.logs,
-                                "args": (False, level),
-                            }
-                            for name, level in [
-                                ("🚫 Error", 40),
-                                ("⚠️ Warning", 30),
-                                ("ℹ️ Info", 20),
-                                ("🧑‍💻 All", 0),
-                            ]
-                        ],
-                        2,
-                    )
-                    + [[{"text": self.strings("cancel"), "action": "close"}]],
-                    message=message,
-                ):
+                                    "args": (False, level),
+                                }
+                                for name, level in [
+                                    ("🚫 Critical", 60),
+                                    ("🚫 Error", 40),
+                                    ("⚠️ Warning", 30),
+                                    ("ℹ️ Info", 20),
+                                    ("⚠️ Debug", 10),
+                                    ("🧑‍💻 All", 0),
+                                ]
+                            ],
+                            2,
+                        )
+                        + [[{"text": self.strings("cancel"), "action": "close"}]],
+                )
+                else: 
                     raise
-            except Exception:
-                await utils.answer(message, self.strings("set_loglevel"))
+            except Exception as e:
+                await utils.answer(message, self.strings("set_loglevel") + f"\n{e}")
 
             return
 
@@ -317,12 +338,8 @@ class TestMod(loader.Module):
             return
 
         if len(logs) <= 2:
-            if isinstance(message, Message):
-                await utils.answer(message, self.strings("no_logs").format(named_lvl))
-            else:
-                await message.edit(self.strings("no_logs").format(named_lvl))
-                await message.unload()
-
+            back_button = {"text": self.strings["back"], "callback": self.logs}
+            await utils.answer(message, self.strings("no_logs").format(named_lvl), reply_markup=back_button)
             return
 
         logs = self.lookup("evaluator").censor(logs)
@@ -377,38 +394,23 @@ class TestMod(loader.Module):
         start = time.perf_counter_ns()
         message = await utils.answer(message, self.config["ping_emoji"])
         banner = self.config["banner_url"]
+        if self.config["quote_media"] is True:
+            banner = InputMediaWebPage(self.config["banner_url"])
         
-        if self.config["banner_url"]:
-            await utils.answer(
-                message,
-                self.config["Text_Of_Ping"].format(
-                    ping=round((time.perf_counter_ns() - start) / 10**6, 3),
-                    uptime=utils.formatted_uptime(),
-                    ping_hint=(
-                        (self.config["hint"]) if random.choice([0, 0, 1]) == 1 else ""
-                    ),
-                    hostname=lib_platform.node(),
-                    user=getpass.getuser(),
-                    prefix=self.get_prefix(),
-                    
-        ),
-                file = banner,
-                reply_to=getattr(message, "reply_to_msg_id", None),
-            )
-
-        else:
-            await utils.answer(
-                message,
-                self.config["Text_Of_Ping"].format(
-                    ping=round((time.perf_counter_ns() - start) / 10**6, 3),
-                    uptime=utils.formatted_uptime(),
-                    ping_hint=(
-                        (self.config["hint"]) if random.choice([0, 0, 1]) == 1 else ""
-                    ),
-                    hostname=lib_platform.node(),
-                    user=getpass.getuser(),
-        ),
-            )
+        await utils.answer(
+            message,
+            self.config["Text_Of_Ping"].format(
+                ping=round((time.perf_counter_ns() - start) / 10**6, 3),
+                uptime=utils.formatted_uptime(),
+                ping_hint=(
+                    (self.config["hint"]) if random.choice([0, 0, 1]) == 1 else ""
+                ),
+                hostname=lib_platform.node(),
+                user=getpass.getuser(),
+            ),
+            file = banner,
+            invert_media = self.config["invert_media"]
+        )
 
 
     async def client_ready(self):

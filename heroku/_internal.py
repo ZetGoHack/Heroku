@@ -20,7 +20,7 @@ import sys
 
 
 async def fw_protect():
-    await asyncio.sleep(random.randint(1000, 3000) / 1000)
+    await asyncio.sleep(random.randint(1000, 2000) / 1000)
 
 
 def get_startup_callback() -> callable:
@@ -37,10 +37,15 @@ def die():
     """Platform-dependent way to kill the current process group"""
     if "DOCKER" in os.environ:
         sys.exit(0)
+    elif sys.platform == 'win32':
+        # Windows implementation
+        sys.exit(0)
     else:
+        # Unix implementation
         # This one is actually better, because it kills all subprocesses
-        # but it can't be used inside the Docker
+        # but it can't be used inside the Docker and Windows
         os.killpg(os.getpgid(os.getpid()), signal.SIGTERM)
+
 
 
 def restart():
@@ -67,7 +72,7 @@ def restart():
     else:
         os.environ["HEROKU_DO_NOT_RESTART2"] = "1"
 
-    if "DOCKER" in os.environ:
+    if "DOCKER" in os.environ or sys.platform == "win32":
         atexit.register(get_startup_callback())
     else:
         # This one is requried for better way of killing to work properly,

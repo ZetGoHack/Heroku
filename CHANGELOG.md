@@ -1,7 +1,39 @@
 # Heroku Changelog
 ## 🪐 Heroku 1.7.2
 - added autoupdate
-- updated heroku-tl to 1.2.0
+- updated heroku-tl to 1.7.2
+- fix folder bug
+- fix request_join in quickstart
+- improve request_join logic
+- fixed hikkalls
+- added multiunload 
+- fixed command for anonimous user 
+- removed executor
+- added print output in eval
+- aliases with arguments (.addalias alias command args)
+- prefixes for owners
+- fix sudo mode 
+- removed aeza from info
+- fixed bug in help with quote
+- loging improvements
+- add invert_media in heroku-tl
+- fix zero CPU %
+- added config split
+- added command addacc for add account like a weburl without web
+- fixed sorting function in help
+- added initial web stop
+- fixed all bugs with tsec, sgroups and owners
+- fix loader inline_restart
+- added modules selection in presets
+- fix all updater cmds for lavhost
+- refactor close button
+- fix _mod_import_lib
+- added stop command
+- refactor utils.answer logic
+- added back button in many menus
+- update support command
+- added quote for list commands in help
+- fix banner in .presets command
 
 ## 🪐 Heroku 1.7.1
 - fixed bug with web 

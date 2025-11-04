@@ -17,6 +17,7 @@ import typing
 from math import ceil
 
 from herokutl.tl.types import Message
+from herokutl.extensions import html
 
 from .. import loader, translations, utils
 from ..inline.types import InlineCall
@@ -97,8 +98,7 @@ class HerokuConfigMod(loader.Module):
                 reply_markup={
                     "text": self.strings("try_again"),
                     "callback": self.inline__configure_option,
-                    "args": (mod, option),
-                    "kwargs": {"obj_type": obj_type},
+                    "kwargs": {"obj_type": obj_type, "mod": mod, "config_opt": option},
                 },
             )
             return
@@ -172,8 +172,7 @@ class HerokuConfigMod(loader.Module):
                 reply_markup={
                     "text": self.strings("try_again"),
                     "callback": self.inline__configure_option,
-                    "args": (mod, option),
-                    "kwargs": {"obj_type": obj_type},
+                    "kwargs": {"obj_type": obj_type, "mod": mod, "config_opt": option},
                 },
             )
             return
@@ -301,8 +300,7 @@ class HerokuConfigMod(loader.Module):
                 reply_markup={
                     "text": self.strings("try_again"),
                     "callback": self.inline__configure_option,
-                    "args": (mod, option),
-                    "kwargs": {"obj_type": obj_type},
+                    "kwargs": {"obj_type": obj_type, "mod": mod, "config_opt": option},
                 },
             )
             return
@@ -367,8 +365,7 @@ class HerokuConfigMod(loader.Module):
                 reply_markup={
                     "text": self.strings("try_again"),
                     "callback": self.inline__configure_option,
-                    "args": (mod, option),
-                    "kwargs": {"obj_type": obj_type},
+                    "kwargs": {"obj_type": obj_type, "mod": mod, "config_opt": option},
                 },
             )
             return
@@ -476,8 +473,7 @@ class HerokuConfigMod(loader.Module):
                 reply_markup={
                     "text": self.strings("try_again"),
                     "callback": self.inline__configure_option,
-                    "args": (mod, option),
-                    "kwargs": {"obj_type": obj_type},
+                    "kwargs": {"obj_type": obj_type, "mod": mod, "config_opt": option},
                 },
             )
             return
@@ -526,13 +522,12 @@ class HerokuConfigMod(loader.Module):
                 reply_markup={
                     "text": self.strings("try_again"),
                     "callback": self.inline__configure_option,
-                    "args": (mod, option),
-                    "kwargs": {"obj_type": obj_type},
+                    "kwargs": {"obj_type": obj_type, "mod": mod, "config_opt": option},
                 },
             )
             return
 
-        await self.inline__configure_option(call, mod, option, False, obj_type)
+        await self.inline__configure_option(call, mod=mod, config_opt=option, force_hidden=False, obj_type=obj_type)
         await call.answer("✅")
 
     def _generate_choice_markup(
@@ -676,8 +671,9 @@ class HerokuConfigMod(loader.Module):
     async def inline__configure_option(
         self,
         call: InlineCall,
-        mod: str,
-        config_opt: str,
+        page: int = 0,
+        mod: str = "",
+        config_opt: str = "",
         force_hidden: bool = False,
         obj_type: typing.Union[bool, str] = False,
     ):
@@ -706,8 +702,7 @@ class HerokuConfigMod(loader.Module):
                         {
                             "text": self.strings("hide_value"),
                             "callback": self.inline__configure_option,
-                            "args": (mod, config_opt, False),
-                            "kwargs": {"obj_type": obj_type},
+                            "kwargs": {"obj_type": obj_type, "mod": mod, "config_opt": config_opt, "force_hidden": False},
                         }
                     ]
                 ]
@@ -717,8 +712,7 @@ class HerokuConfigMod(loader.Module):
                         {
                             "text": self.strings("show_hidden"),
                             "callback": self.inline__configure_option,
-                            "args": (mod, config_opt, True),
-                            "kwargs": {"obj_type": obj_type},
+                            "kwargs": {"obj_type": obj_type, "mod": mod, "config_opt": config_opt, "force_hidden": True},
                         }
                     ]
                 ]
@@ -800,13 +794,27 @@ class HerokuConfigMod(loader.Module):
                     ),
                 )
                 return
-
-        await call.edit(
-            self.strings(
+            
+        text = self.strings(
                 "configuring_option"
                 if isinstance(obj_type, bool)
                 else "configuring_option_lib"
-            ).format(*args),
+            ).format(*args)
+        
+        if len(text) > 4096:
+            additonal_button_row += self.inline.build_pagination(
+                callback=functools.partial(
+                    self.inline__configure_option, mod=mod, config_opt=config_opt, force_hidden=force_hidden, obj_type=obj_type
+                ),
+                total_pages=ceil(len(text) / 4096),
+                current_page=page + 1,
+            )
+            text = list(utils.smart_split(
+                *html.parse(text)
+            ))[page]
+
+        await call.edit(
+            text,
             reply_markup=additonal_button_row
             + [
                 [
@@ -848,8 +856,7 @@ class HerokuConfigMod(loader.Module):
             {
                 "text": param,
                 "callback": self.inline__configure_option,
-                "args": (mod, param),
-                "kwargs": {"obj_type": obj_type},
+                "kwargs": {"obj_type": obj_type, "mod": mod, "config_opt": param},
             }
             for param in self.lookup(mod).config
         ]
@@ -863,7 +870,19 @@ class HerokuConfigMod(loader.Module):
                     [
                         "▫️ <code>{}</code>: <b>{}</b>".format(
                             utils.escape_html(key),
-                            self._get_value(mod, key),
+                            (
+                                self._get_value(mod, key)
+                                if len(self._get_value(mod, key)) < 200
+                                else (
+                                    list(
+                                        utils.smart_split(
+                                            *html.parse(self._get_value(mod, key)),
+                                            200
+                                            )
+                                        )[0] +
+                                    "..."
+                                    )
+                            ),
                         )
                         for key in self.lookup(mod).config
                     ]
@@ -1004,7 +1023,7 @@ class HerokuConfigMod(loader.Module):
                 type_ = mod.__origin__.startswith("<core")
 
             if args_s[1] in mod.config.keys():
-                await self.inline__configure_option(form, args_s[0], args_s[1], obj_type=type_)
+                await self.inline__configure_option(form, mod=args_s[0], config_opt=args_s[1], obj_type=type_)
             else:
                 await self.inline__configure(form, args, obj_type=type_)
             return

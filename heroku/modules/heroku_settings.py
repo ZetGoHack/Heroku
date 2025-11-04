@@ -11,7 +11,6 @@
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
 import logging
-import os
 import random
 
 import herokutl
@@ -25,7 +24,6 @@ from herokutl.utils import get_display_name
 from .. import loader, log, main, utils
 from .._internal import fw_protect, restart
 from ..inline.types import InlineCall
-from ..web import core
 
 logger = logging.getLogger(__name__)
 

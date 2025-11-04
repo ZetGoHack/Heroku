@@ -192,8 +192,9 @@ class SecurityManager:
 
     def _reload_rights(self):
         """
-        Internal method to ensure that account owner is always in the owner list
-        and to clear out outdated tsec rules
+        Internal method to ensure that account owner is always in the owner list,
+        to clear out outdated tsec rules and to remove prefixes of users, that is
+        not in any security group
         """
 
         if self._client.tg_id not in self._owner:
@@ -206,6 +207,25 @@ class SecurityManager:
         for info in self._tsec_chat.copy():
             if info["expires"] and info["expires"] < time.time():
                 self._tsec_chat.remove(info)
+        
+        sgroup_users = []
+        for g in self._sgroups.values():
+            for u in g.users:
+                sgroup_users.append(u)
+
+        tsec_users = [rule['target'] for rule in self._tsec_user]
+        ub_owners = self.owner.copy()
+
+        all_users = sgroup_users + tsec_users + ub_owners
+
+        prefixes = self._db.get(main.__name__, "command_prefixes", {})
+
+        for id in prefixes.copy():
+            if int(id) not in all_users:
+                del prefixes[id]
+
+        self._db.set(main.__name__, "command_prefixes", prefixes)
+
 
     def add_rule(
         self,

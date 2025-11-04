@@ -53,7 +53,7 @@ class Translations(loader.Module):
 
     @loader.command()
     async def setlang(self, message: Message):
-        if not (args := utils.get_args_raw(message)):
+        if not (args := utils.get_args_raw(message).lower()):
             await self.inline.form(
                 message=message,
                 text=self.strings("choose_language"),

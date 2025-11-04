@@ -25,6 +25,8 @@ from typing import Optional
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
+from herokutl.errors import WebpageMediaEmptyError
+from herokutl.types import InputMediaWebPage
 from herokutl.tl.types import Message
 from herokutl.utils import get_display_name
 from .. import loader, utils, version
@@ -74,6 +76,18 @@ class HerokuInfoMod(loader.Module):
                 validator=loader.validators.Series(
                     fixed_len=7,
                 ),
+            ),
+            loader.ConfigValue(
+                "quote_media",
+                False,
+                "Switch preview media to quote",
+                validator=loader.validators.Boolean(),
+            ),
+            loader.ConfigValue(
+                "invert_media",
+                False,
+                "Switch preview invert media",
+                validator=loader.validators.Boolean(),
             ),
         )
 
@@ -138,6 +152,7 @@ class HerokuInfoMod(loader.Module):
             ("🎡", "<emoji document_id=5226711870492126219>🎡</emoji>"),
             ("🐧", "<emoji document_id=5361541227604878624>🐧</emoji>"),
             ("🧃", "<emoji document_id=5422884965593397853>🧃</emoji>"),
+            ("🦅", "<emoji document_id=5427286516797831670>🦅</emoji>"),
             ("💻", "<emoji document_id=5469825590884310445>💻</emoji>"),
             ("🍏", "<emoji document_id=5372908412604525258>🍏</emoji>")
         ]:
@@ -274,33 +289,47 @@ class HerokuInfoMod(loader.Module):
     @loader.command()
     async def infocmd(self, message: Message):
         start = time.perf_counter_ns()
-        if self.config['switchInfo']:
-            if self._get_info_photo(start) is None:
-                await utils.answer(
-                    message, 
-                    self.strings["incorrect_img_format"]
+        media = self.config["banner_url"]
+        if self.config["quote_media"] is True:
+            media = InputMediaWebPage(self.config["banner_url"]) 
+        try:
+            if self.config['switchInfo']:
+                if self._get_info_photo(start) is None:
+                    await utils.answer(
+                        message, 
+                        self.strings["incorrect_img_format"]
+                    )
+                    return
+
+                await utils.answer_file(
+                    message,
+                    self._get_info_photo(start),
+                    reply_to=getattr(message, "reply_to_msg_id", None),
                 )
-                return
-           
-            await utils.answer_file(
-                message,
-                self._get_info_photo(start),
-                reply_to=getattr(message, "reply_to_msg_id", None),
-            )
-        elif self.config["custom_message"] is None:
+            elif self.config["custom_message"] is None:
+                await utils.answer(
+                    message,
+                    self._render_info(start),
+                    file = media,
+                    reply_to=getattr(message, "reply_to_msg_id", None),
+                    invert_media = self.config["invert_media"],
+                )
+            else:
+                if '{ping}' in self.config["custom_message"]:
+                    message = await utils.answer(message, self.config["ping_emoji"])
+                await utils.answer(
+                    message,
+                    self._render_info(start),
+                    file = media,
+                    reply_to=getattr(message, "reply_to_msg_id", None),
+                    invert_media = self.config["invert_media"],
+                )
+        except WebpageMediaEmptyError:
             await utils.answer(
                 message,
-                self._render_info(start),
-                file = self.config["banner_url"],
-                reply_to=getattr(message, "reply_to_msg_id", None),
-            )
-        else:
-            if '{ping}' in self.config["custom_message"]:
-                message = await utils.answer(message, self.config["ping_emoji"])
-            await utils.answer(
-                message,
-                self._render_info(start),
-                file = self.config["banner_url"],
+                self.strings["no_banner"].format(
+                    self.config["banner_url"], # ❌ <b>Я не могу найти баннер по ссылке {link}</b>
+                ),
                 reply_to=getattr(message, "reply_to_msg_id", None),
             )
 
@@ -316,3 +345,11 @@ class HerokuInfoMod(loader.Module):
         self.config["custom_message"] = args
         await utils.answer(message, self.strings("setinfo_success"))
 
+    @loader.command()
+    async def switchinfo(self, message: Message):
+        """| switch Image info state"""
+        self.config["switchInfo"] = not self.config["switchInfo"]
+        if self.config["switchInfo"]:
+            await utils.answer(message, self.strings["switchinfo_on"])
+        else:
+            await utils.answer(message, self.strings["switchinfo_off"])

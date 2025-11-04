@@ -33,6 +33,7 @@ from herokutl.hints import EntityLike
 from herokutl.tl.functions.account import UpdateNotifySettingsRequest
 from herokutl.tl.types import (
     Channel,
+    ChannelForbidden,
     ChannelFull,
     InputPeerNotifySettings,
     Message,
@@ -125,6 +126,7 @@ class Module:
         self._client = self.allmodules.client
         self.lookup = self.allmodules.lookup
         self.get_prefix = self.allmodules.get_prefix
+        self.get_prefixes = self.allmodules.get_prefixes
         self.inline = self.allmodules.inline
         self.allclients = self.allmodules.allclients
         self.tg_id = self._client.tg_id
@@ -360,15 +362,16 @@ class Module:
         """
         from . import utils
 
-        event = asyncio.Event()
-        await self.client(
-            UpdateNotifySettingsRequest(
-                peer=self.inline.bot_username,
-                settings=InputPeerNotifySettings(show_previews=False, silent=False),
-            )
-        )
 
         channel = await self.client.get_entity(peer)
+        if isinstance(channel, ChannelForbidden):
+            if assure_joined:
+                raise LoadError(
+                    f"You need to join {channel.title} (@{peer}) in order to use this module, "
+                    "but you have been banned there"
+                )
+            return False
+
         if channel.id in self._db.get("heroku.main", "declined_joins", []):
             if assure_joined:
                 raise LoadError(
@@ -385,6 +388,14 @@ class Module:
 
         if not getattr(channel, "left", True):
             return True
+        
+        event = asyncio.Event()
+        await self.client(
+            UpdateNotifySettingsRequest(
+                peer=self.inline.bot_username,
+                settings=InputPeerNotifySettings(show_previews=False, silent=False),
+            )
+        )
 
         await self.inline.bot.send_photo(
             self.tg_id,
@@ -550,7 +561,7 @@ class Module:
             kwargs = utils.get_kwargs()
             kwargs["_did_requirements"] = True
 
-            return await self._mod_import_lib(**kwargs)  # Try again
+            return await self.import_lib(**kwargs)  # Try again
 
         lib_obj = next(
             (
@@ -666,6 +677,7 @@ class Library:
         self._tg_id = self._client.tg_id
         self.lookup = self.allmodules.lookup
         self.get_prefix = self.allmodules.get_prefix
+        self.get_prefixes = self.allmodules.get_prefixes
         self.inline = self.allmodules.inline
         self.allclients = self.allmodules.allclients
 

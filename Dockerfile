@@ -15,6 +15,10 @@ ENV PYTHONUNBUFFERED=1 \
     DOCKER=true \
     GIT_PYTHON_REFRESH=quiet
 
+RUN apt-get update && \
+    apt-get install -y wget gnupg2 && \
+    wget http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.1_1.1.1w-0+deb11u3_amd64.deb && \
+    apt-get install -y ./libssl1.1_1.1.1w-0+deb11u3_amd64.deb
 RUN apt-get update && apt-get upgrade -y && apt-get install --no-install-recommends -y \
     build-essential \
     curl \
@@ -33,7 +37,11 @@ RUN apt-get update && apt-get upgrade -y && apt-get install --no-install-recomme
     python3 \
     python3-dev \
     python3-pip \
-    wkhtmltopdf
+    xfonts-75dpi \
+    xfonts-base \
+ && curl -L -o /tmp/wkhtmltox.deb https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.bullseye_amd64.deb \
+ && apt-get install -y /tmp/wkhtmltox.deb \
+ && rm /tmp/wkhtmltox.deb
 RUN curl -sL https://deb.nodesource.com/setup_18.x -o nodesource_setup.sh && \
     bash nodesource_setup.sh && \
     apt-get install -y nodejs && \

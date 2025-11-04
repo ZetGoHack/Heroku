@@ -152,6 +152,8 @@ class Help(loader.Module):
             _name,
             ""
         )
+        inline_cmd = ""
+        cmds = ""
         if module.__doc__:
             reply += (
                 "\n<i><emoji document_id=5879813604068298387>ℹ️</emoji> "
@@ -167,7 +169,7 @@ class Help(loader.Module):
 
         if hasattr(module, "inline_handlers"):
             for name, fun in module.inline_handlers.items():
-                reply += (
+                inline_cmd += (
                     "\n<emoji document_id=5372981976804366741>🤖</emoji>"
                     " <code>{}</code> {}".format(
                         f"@{self.inline.bot_username} {name}",
@@ -179,9 +181,10 @@ class Help(loader.Module):
                     )
                 )
 
+        lines = []
         for name, fun in commands.items():
-            reply += (
-                f'\n{self.config["command_emoji"]}'
+            lines.append(
+                f'{self.config["command_emoji"]}'
                 " <code>{}{}</code>{} {}".format(
                     utils.escape_html(self.get_prefix()),
                     name,
@@ -205,10 +208,11 @@ class Help(loader.Module):
                     ),
                 )
             )
+        cmds = "\n".join(lines)
 
         await utils.answer(
             message,
-            reply
+            f'{reply}<blockquote expandable>{cmds}{inline_cmd}</blockquote>'
             + (f"\n\n{self.strings('not_exact')}" if not exact else "")
             + (
                 f"\n\n{self.strings('core_notice')}"
@@ -298,7 +302,7 @@ class Help(loader.Module):
                 for name, func in mod.inline_handlers.items()
                 if await self.inline.check_inline_security(
                     func=func,
-                    user=message.sender_id,
+                    user=message.sender_id if not message.out else self._client.tg_id,
                 )
                 or force
             ]
@@ -323,13 +327,9 @@ class Help(loader.Module):
                 )
                 shown_warn = True
 
-        def extract_name(line):
-            match = re.search(r'[\U0001F300-\U0001FAFF\U0001F900-\U0001F9FF]*\s*(name.*)', line)
-            return match.group(1) if match else line
-
-        plain_.sort(key=extract_name)
-        core_.sort(key=extract_name)
-        no_commands_.sort(key=extract_name)
+        plain_.sort(key=str.lower)
+        core_.sort(key=str.lower)
+        no_commands_.sort(key=str.lower)
 
         await utils.answer(
             message,
@@ -351,11 +351,5 @@ class Help(loader.Module):
        
         await utils.answer(
             message,
-            self.strings("support").format(
-                (
-                    utils.get_platform_emoji()
-                    if self._client.heroku_me.premium and CUSTOM_EMOJIS
-                    else "🪐"
-                )
-            ),
+            self.strings("offchats"),
         )

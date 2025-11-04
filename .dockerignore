@@ -132,10 +132,10 @@ dmypy.json
 
 *__pycache__
 *.pyc
-hikka/api_token.py
-hikka/loaded_modules
+heroku/api_token.py
+heroku/loaded_modules
 loaded_modules
-hikka/debug_modules
+heroku/debug_modules
 *.session
 *.session-journal
 database-*.json
@@ -173,7 +173,7 @@ config.json
 vendor/
 Pipfile.lock
 
-hikka.log.*
+heroku.log.*
 unknown_errors.txt
 
 *.sock

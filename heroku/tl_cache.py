@@ -32,7 +32,6 @@ from herokutl.tl.tlobject import TLRequest
 from herokutl.tl.types import (
     ChannelFull,
     Message,
-    Pong,
     Updates,
     UpdatesCombined,
     UpdateShort,

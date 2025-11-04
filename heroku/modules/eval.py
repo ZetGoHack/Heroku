@@ -196,12 +196,14 @@ class Evaluator(loader.Module):
         with contextlib.suppress(MessageIdInvalidError):
             await utils.answer(
                 message,
-                self.strings("eval").format(
+                self.strings("eval_py").format(
                     "4985626654563894116",
                     "python",
                     utils.escape_html(utils.get_args_raw(message)),
+                ) + (self.strings["eval_result"].format(
                     "python",
-                    utils.escape_html(self.censor(str(result))),
+                     utils.escape_html(self.censor(str(result)))
+                    ) if result or not print_output else ""
                 ) + (self.strings["print_outp"].format(
                     "python",
                     print_output,
@@ -521,3 +523,4 @@ class Evaluator(loader.Module):
                 )
             ),
         }
+        

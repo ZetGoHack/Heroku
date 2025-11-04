@@ -25,12 +25,16 @@ import typing
 from logging.handlers import RotatingFileHandler
 
 import herokutl
-from aiogram.exceptions import TelegramNetworkError
+from aiogram.exceptions import TelegramNetworkError, TelegramRetryAfter
 from herokutl.errors import PersistentTimestampOutdatedError
+from herokutl.errors.rpcbaseerrors import (
+    ServerError,
+    RPCError
+)
 
 from . import utils
 from .tl_cache import CustomTelegramClient
-from .types import BotInlineCall, Module
+from .types import BotInlineCall, Module, CoreOverwriteError
 from .web.debugger import WebDebugger
 
 # Monkeypatch linecache to make interactive line debugger available
@@ -72,10 +76,27 @@ linecache.getlines = getlines
 
 def override_text(exception: Exception) -> typing.Optional[str]:
     """Returns error-specific description if available, else `None`"""
+
     if isinstance(exception, (TelegramNetworkError, asyncio.exceptions.TimeoutError)):
         return "✈️ <b>You have problems with internet connection on your server.</b>"
-    elif isinstance(exception, PersistentTimestampOutdatedError):
+
+    if isinstance(exception, PersistentTimestampOutdatedError):
         return "✈️ <b>Telegram has problems with their datacenters.</b>"
+
+    if isinstance(exception, CoreOverwriteError):
+        return f"⚠️ {str(exception)}"
+
+    if isinstance(exception, ServerError):
+        return "📡 <b>Telegram servers are currently experiencing issues. Please try again later.</b>"
+
+    if isinstance(exception, RPCError) and "TRANSLATION_TIMEOUT" in str(exception):
+        return ("🕓 <b>Telegram translation service timed out. Please try again later.</b>")
+
+    if isinstance(exception, ModuleNotFoundError):
+        return f"📦 {traceback.format_exception_only(type(exception), exception)[0].split(':')[1].strip()}"
+    
+    if isinstance(exception, TelegramRetryAfter):
+        return f"✋ <b>Bot is hitting limits on {type(exception.method).__name__!r} method and got {exception.retry_after} seconds floodwait</b>"
 
     return None
 
@@ -395,7 +416,7 @@ class TelegramLogsHandler(logging.Handler):
 
             for exceptions in self._exc_queue.values():
                 for exc in exceptions:
-                    asyncio.create_task(exc)
+                    asyncio.create_task(self.avoid_floodwait(exc))
 
             self.tg_buff = []
 
@@ -430,6 +451,12 @@ class TelegramLogsHandler(logging.Handler):
                                 disable_notification=True,
                             )
                         )
+    async def avoid_floodwait(self, exc):
+        try:
+            await exc
+        except TelegramRetryAfter as e:
+            await asyncio.sleep(e.retry_after)
+            await self.avoid_floodwait(exc)
 
     def emit(self, record: logging.LogRecord):
         try:
@@ -456,10 +483,18 @@ class TelegramLogsHandler(logging.Handler):
 
         if record.levelno >= self.tg_level:
             if record.exc_info:
+                try:
+                    if record.args:
+                        comment = record.msg % record.args
+                    else:
+                        comment = str(record.msg)
+                except Exception:
+                    comment = f"{record.msg} {record.args}"
+
                 exc = HerokuException.from_exc_info(
                     *record.exc_info,
                     stack=record.__dict__.get("stack", None),
-                    comment=record.msg % record.args,
+                    comment=comment,
                 )
 
                 if not self.ignore_common or all(
@@ -530,7 +565,7 @@ def init():
     class NoFetchUpdatesFilter(logging.Filter):
         def filter(self, record: logging.LogRecord) -> bool:
             msg = record.getMessage()
-            return "Failed to fetch updates" not in msg or "Sleep" not in msg
+            return "Failed to fetch updates" not in msg and "Sleep" not in msg
     
     logging.getLogger("aiogram.dispatcher").addFilter(NoFetchUpdatesFilter())
     handler = logging.StreamHandler()

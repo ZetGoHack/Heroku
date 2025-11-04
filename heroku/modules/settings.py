@@ -3,6 +3,7 @@
 # 🌐 https://github.com/hikariatama/Hikka
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
+import contextlib
 
 # ©️ Codrago, 2024-2025
 # This file is a part of Heroku Userbot
@@ -13,11 +14,10 @@
 
 import herokutl
 from herokutl.extensions.html import CUSTOM_EMOJIS
-from herokutl.tl.types import Message
+from herokutl.tl.types import Message, User
 
 from .. import loader, main, utils, version
 from ..inline.types import InlineCall
-import random
 
 
 @loader.tds
@@ -60,7 +60,9 @@ class CoreMod(loader.Module):
                     "callback": self._inline__choose__installation,
                     "args": (platform,),
                 }
-                for platform in ['vds','userland','jamhost']
+                for platform in ['vds', 'wsl',
+                                 'userland', 'jamhost',
+                                 'hikkahost', 'lavhost']
             ],
             2
         )
@@ -195,30 +197,80 @@ class CoreMod(loader.Module):
 
     @loader.command()
     async def setprefix(self, message: Message):
-        if not (args := utils.get_args_raw(message)):
+        if not (args := utils.get_args(message)):
             await utils.answer(message, self.strings("what_prefix"))
             return
 
-        if len(args) != 1 and self.config.get("allow_nonstandart_prefixes") is False:
+        if len(args[0]) != 1 and self.config.get("allow_nonstandart_prefixes") is False:
             await utils.answer(message, self.strings("prefix_incorrect"))
             return
 
-        if args == "s":
+        if args[0] == "s":
             await utils.answer(message, self.strings("prefix_incorrect"))
             return
+
+        if len(args) == 2:
+            if args[1].isdigit():
+                args[1] = int(args[1])
+            try:
+                entity = await self.client.get_entity(args[1])
+            except:
+                return await utils.answer(message, self.strings["invalid_id_or_username"])
+            
+            if not isinstance(entity, User):
+                return await utils.answer(message, f"The entity {args[1]} is not a User")
+            
+            sgroup_users = []
+            for g in self._client.dispatcher.security._sgroups.values():
+                for u in g.users:
+                    sgroup_users.append(u)
+
+            tsec_users = [rule['target'] for rule in self._client.dispatcher.security._tsec_user]
+            ub_owners = self._client.dispatcher.security.owner.copy()
+
+            all_users = sgroup_users + tsec_users + ub_owners
+
+            if entity.id not in all_users:
+                return await utils.answer(message, self.strings["id_not_found_scgroup"])
+            
+            oldprefix = utils.escape_html(self.get_prefix(entity.id))
+            all_prefixes = self._db.get(
+                main.__name__,
+                "command_prefixes",
+                {},
+            )
+
+            all_prefixes[str(entity.id)] = args[0]
+
+            self._db.set(
+                main.__name__,
+                "command_prefixes",
+                all_prefixes,
+            )
+            return await utils.answer(
+                message,
+                self.strings("entity_prefix_set").format(
+                    "<emoji document_id=5197474765387864959>👍</emoji>",
+                    entity_name=utils.escape_html(entity.first_name),
+                    newprefix=utils.escape_html(args[0]),
+                    oldprefix=utils.escape_html(oldprefix),
+                    entity_id=args[1],
+                ),
+            )
+
 
         oldprefix = utils.escape_html(self.get_prefix())
 
         self._db.set(
             main.__name__,
             "command_prefix",
-            args,
+            args[0],
         )
         await utils.answer(
             message,
             self.strings("prefix_set").format(
                 "<emoji document_id=5197474765387864959>👍</emoji>",
-                newprefix=utils.escape_html(args),
+                newprefix=utils.escape_html(args[0]),
                 oldprefix=utils.escape_html(oldprefix),
             ),
         )
@@ -240,17 +292,18 @@ class CoreMod(loader.Module):
 
     @loader.command()
     async def addalias(self, message: Message):
-        if len(args := utils.get_args(message)) != 2:
+        if len(args := utils.get_args_raw(message).split()) < 2:
             await utils.answer(message, self.strings("alias_args"))
             return
 
-        alias, cmd = args
-        if self.allmodules.add_alias(alias, cmd):
+        alias, cmd, *rest = args
+        rest = " ".join(rest) if rest else None
+        if self.allmodules.add_alias(alias, cmd, rest):
             self.set(
                 "aliases",
                 {
                     **self.get("aliases", {}),
-                    alias: cmd,
+                    alias: f"{cmd} {rest}" if rest else cmd,
                 },
             )
             await utils.answer(
@@ -315,7 +368,7 @@ class CoreMod(loader.Module):
 
         args = utils.get_args_raw(message)
 
-        if (not args or args not in {'-v', '-r', '-jh', '-ms', '-u'}) and \
+        if (not args or args not in {'-vds', '-wsl', '-ul', '-jh', '-hh', '-lh'}) and \
             not (await self.inline.form(
                 self.strings("choose_installation"),
                 message,
@@ -328,17 +381,25 @@ class CoreMod(loader.Module):
             await self.client.send_file(
                 message.peer_id,
                 "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_installation.png",
-                caption=self.strings["installation"], reply_to=getattr(message, "reply_to_msg_id", None),)
-        elif "-v" in args:
-            await utils.answer(message, self.strings["vds_install"])
+                caption=self.strings("vds_install"), reply_to=getattr(message, "reply_to_msg_id", None),)
+        elif "-vds" in args:
+            await utils.answer(message, self.strings("vds_install"))
+        elif "-wsl" in args:
+            await utils.answer(message, self.strings("wsl_install"))
+        elif "-ul" in args:
+            await utils.answer(message, self.strings("userland_install"))
         elif "-jh" in args:
-            await utils.answer(message, self.strings["jamhost_install"])
-        elif "-u" in args:
-            await utils.answer(message, self.strings["userland_install"])
+            await utils.answer(message, self.strings("jamhost_install"))
+        elif "-hh" in args:
+            await utils.answer(message, self.strings("hikkahost_install"))
+        elif "-lh" in args:
+            await utils.answer(message, self.strings("lavhost_install"))
 
     async def _inline__choose__installation(self, call: InlineCall, platform: str):
-        await call.edit(
-            text=self.strings(f'{platform}_install'),
-            reply_markup=self._markup,
-        )
+        with contextlib.suppress(Exception):
+            await utils.answer(
+                call,
+                self.strings(f'{platform}_install'),
+                reply_markup=self._markup,
+            )
 

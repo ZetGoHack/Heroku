@@ -1,5 +1,6 @@
 services:
   worker:
+    container_name: heroku_ub
     build:
       context: .
     volumes:

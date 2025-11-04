@@ -631,6 +631,7 @@ class HerokuSecurityMod(loader.Module):
     @loader.command()
     async def ownerlist(self, message: Message):
         _resolved_users = []
+        _and_prefixes = []
         for user in set(self._client.dispatcher.security.owner + [self.tg_id]):
             with contextlib.suppress(Exception):
                 _resolved_users += [await self._client.get_entity(user, exp=0)]
@@ -639,6 +640,10 @@ class HerokuSecurityMod(loader.Module):
             await utils.answer(message, self.strings("no_owner"))
             return
 
+        prefixes = self._db.get(main.__name__, f"command_prefixes", {})
+        for user in _resolved_users:
+            _and_prefixes += [prefixes.get(str(user.id), None)]
+
         await utils.answer(
             message,
             self.strings("owner_list").format(
@@ -646,18 +651,23 @@ class HerokuSecurityMod(loader.Module):
                     [
                         self.strings("li").format(
                             i.id, utils.escape_html(get_display_name(i))
-                        )
-                        for i in _resolved_users
+                        ) + (f" ({p})" if p else "")
+                        for i, p in zip(_resolved_users, _and_prefixes)
                     ]
                 )
             ),
         )
 
     def _lookup(self, needle: str) -> str:
+        # TODO: to not removing ALL prefixes from needle using message author's id
+        command = needle
+        for prefix in self.get_prefixes():
+            command = command.lower().removeprefix(prefix)
+
         return (
             (
                 []
-                if needle.lower().startswith(self.get_prefix())
+                if needle.lower().startswith(tuple(self.get_prefixes()))
                 else (
                     [f"module/{self.lookup(needle).__class__.__name__}"]
                     if self.lookup(needle)
@@ -665,13 +675,13 @@ class HerokuSecurityMod(loader.Module):
                 )
             )
             + (
-                [f"command/{needle.lower().strip(self.get_prefix())}"]
-                if needle.lower().strip(self.get_prefix()) in self.allmodules.commands
+                [f"command/{command}"]
+                if command in self.allmodules.commands
                 else []
             )
             + (
-                [f"inline/{needle.lower().strip('@')}"]
-                if needle.lower().strip("@") in self.allmodules.inline_handlers
+                [f"inline/{needle.lower().removeprefix('@')}"]
+                if needle.lower().removeprefix("@") in self.allmodules.inline_handlers
                 else []
             )
         )
@@ -949,8 +959,11 @@ class HerokuSecurityMod(loader.Module):
         await self._confirm(message, "sgroup", target, possible_rules[0], duration)
 
     async def _tsec_user(self, message: Message, args: list):
-        if len(args) == 1 and not message.is_private and not message.is_reply:
-            await utils.answer(message, self.strings("no_target"))
+        if len(args) == 1:
+            if not message.is_private and not message.is_reply:
+                await utils.answer(message, self.strings("no_target"))
+                return
+            await utils.answer(message, self.strings("no_rule"))
             return
 
         if len(args) >= 2:

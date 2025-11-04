@@ -285,7 +285,15 @@ class CommandDispatcher:
         if not hasattr(event, "message") or not hasattr(event.message, "message"):
             return False
 
-        prefix = self._db.get(main.__name__, "command_prefix", False) or "."
+        initiator = getattr(event, "sender_id", 0)
+
+        main_prefix = self._db.get(main.__name__, "command_prefix", ".")
+        if initiator == self._client.tg_id:
+            prefix = main_prefix
+        else:
+            prefix = self._db.get(main.__name__, "command_prefixes", {})
+            prefix = prefix.get(str(initiator), main_prefix)
+            
         change = str.maketrans(ru_keys + en_keys, en_keys + ru_keys)
         message = utils.censor(event.message)
 
@@ -353,7 +361,6 @@ class CommandDispatcher:
         if not message.message or len(message.message) == len(prefix):
             return False  # Message is just the prefix
 
-        initiator = getattr(event, "sender_id", 0)
 
         command = message.message[len(prefix):].strip().split(maxsplit=1)[0]
         tag = command.split("@", maxsplit=1)
