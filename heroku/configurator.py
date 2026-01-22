@@ -72,7 +72,7 @@ def api_config(tty: typing.Optional[bool] = None):
         tty_print("\033[0;91mCancelled\033[0m", tty)
         sys.exit(0)
 
-    while api_hash := tty_input("\033[0;95mEnter API hash: \033[0m", tty):
+    while api_hash := tty_input("\033[38;2;255;165;0mEnter API hash: \033[0m", tty):
         if len(api_hash) == 32 and all(
             symbol in string.hexdigits for symbol in api_hash
         ):
@@ -86,4 +86,4 @@ def api_config(tty: typing.Optional[bool] = None):
 
     main.save_config_key("api_id", int(api_id))
     main.save_config_key("api_hash", api_hash)
-    tty_print("\033[0;92mAPI config saved\033[0m", tty)
+    tty_print("\033[1;92mAPI config saved\033[0m", tty)

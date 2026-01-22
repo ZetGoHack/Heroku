@@ -342,7 +342,7 @@ if typing.TYPE_CHECKING:
 async def asset_forum_topic(
     client: CustomClient,
     db: 'Database',
-    peer: hints.Entity,
+    peer: 'hints.Entity',
     title: str,
     description: typing.Optional[str] = None,
     icon_emoji_id: typing.Optional[int] = None,

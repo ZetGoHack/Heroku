@@ -119,10 +119,7 @@ class Database(dict):
         self.read()
 
         try:
-            self._content_channel_id = self.get("heroku.forums", "channel_id", None)
-
-            if not self._content_channel_id:
-                raise KeyError("Heroku content channel not found in database")
+            self._content_channel_id = await utils.wait_for_content_channel(self)
 
             self._assets_topic = await utils.asset_forum_topic(
                 client=self._client,
@@ -133,9 +130,9 @@ class Database(dict):
                 icon_emoji_id=5877307202888273539,
             )
 
-        except Exception:
+        except Exception as e:
             self._assets_topic = None
-            logger.error(
+            logger.exception(
                 "Can't find and/or create assets topic\n"
                 "This may cause several consequences, such as:\n"
                 "- Non working assets feature (e.g. notes)\n"

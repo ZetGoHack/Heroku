@@ -1008,6 +1008,8 @@ class SQLiteStringStorage(SQLiteStorage):
         super().__init__(name, workdir)
 
     async def import_session_string(self, session_string: str):
+        if self.conn is None:
+            await self.open()
         # Old format
         if len(session_string) in [
             self.SESSION_STRING_SIZE,

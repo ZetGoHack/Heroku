@@ -540,6 +540,7 @@ class Heroku:
                 os.listdir(BASE_DIR),
             )
         ]
+        print(self.sessions)
 
     def _get_api_token(self):
         """Get API Token from disk or environment"""
@@ -628,30 +629,31 @@ class Heroku:
 
         session = f"heroku-{telegram_id}"
         init_kwargs = client._export_init_kwargs()
-        session_str = await client.storage.auth_key()
+        session_str = await client.export_session_string()
 
         cli = CustomClient(
             session,
-            self.api_token.ID,
-            self.api_token.HASH,
             **init_kwargs
         )
+
+        await client.stop()
 
         storage = SQLiteStringStorage(cli)
         await storage.import_session_string(session_str)
         cli.storage = storage
 
+        await cli.connect()
+
         if not delay_restart:
-            client.disconnect()
             restart()
 
         # Set db attribute to this client in order to save
         # custom bot nickname from web
-        client.heroku_db = database.Database(client)
-        await client.heroku_db.init()
+        cli.heroku_db = database.Database(cli)
+        await cli.heroku_db.init()
 
         try:
-            db = client.heroku_db
+            db = cli.heroku_db
             existing = db.get("heroku.inline", "custom_bot", False)
         except Exception:
             existing = False
@@ -667,7 +669,7 @@ class Heroku:
                     print("Invalid username: must end with 'bot'.")
                     continue
                 try:
-                    if await self._check_bot(client, bot):
+                    if await self._check_bot(cli, bot):
                         db.set("heroku.inline", "custom_bot", bot)
                         print("Bot username saved!")
                         break
@@ -678,7 +680,7 @@ class Heroku:
                     print("Something went wrong")
 
         if delay_restart:
-            client.disconnect()
+            await cli.disconnect()
             await asyncio.sleep(3600)  # Will be restarted from web anyway
 
     async def _web_banner(self):
@@ -792,7 +794,6 @@ class Heroku:
                 lang_code = "en",
                 system_lang_code = "en-US",
             )
-            await client.connect()
 
             print(
                 (
@@ -811,7 +812,7 @@ class Heroku:
 
             match user_choice:
                 case "y":
-                    pass
+                    await client.connect()
                 case _:
                     return await self._phone_login(client)
 
@@ -849,37 +850,40 @@ class Heroku:
                 case None:
                     return await self._phone_login(client)
 
-            if qr_logined:
-                print_banner("2fa.txt")
-                password = await client.invoke(GetPassword())
-                while True:
-                    _2fa = getpass(
-                        f"\033[0;96mEnter 2FA password ({password.hint}): \033[0m"
-                        if self.arguments.tty
-                        else f"Enter 2FA password ({password.hint}): "
-                    )
-                    try:
-                        await client.check_password(_2fa)
-                    except BadRequest:
-                        print("\033[0;91mInvalid 2FA password!\033[0m")
-                    except FloodWait as e:
-                        seconds, minutes, hours = (
-                            e.value % 3600 % 60,
-                            e.value % 3600 // 60,
-                            e.value // 3600,
+                case True:
+                    print_banner("2fa.txt")
+                    password = await client.invoke(GetPassword())
+                    while True:
+                        _2fa = getpass(
+                            f"\033[0;96mEnter 2FA password ({password.hint}): \033[0m"
+                            if self.arguments.tty
+                            else f"Enter 2FA password ({password.hint}): "
                         )
-                        seconds, minutes, hours = (
-                            f"{seconds} second(-s)",
-                            f"{minutes} minute(-s) " if minutes else "",
-                            f"{hours} hour(-s) " if hours else "",
-                        )
-                        print(
-                            "\033[0;91mYou got FloodWait error! Please wait"
-                            f" {hours}{minutes}{seconds}\033[0m"
-                        )
-                        return False
-                    else:
-                        break
+                        try:
+                            await client.check_password(_2fa)
+                        except BadRequest:
+                            print("\033[0;91mInvalid 2FA password!\033[0m")
+                        except FloodWait as e:
+                            seconds, minutes, hours = (
+                                e.value % 3600 % 60,
+                                e.value % 3600 // 60,
+                                e.value // 3600,
+                            )
+                            seconds, minutes, hours = (
+                                f"{seconds} second(-s)",
+                                f"{minutes} minute(-s) " if minutes else "",
+                                f"{hours} hour(-s) " if hours else "",
+                            )
+                            print(
+                                "\033[0;91mYou got FloodWait error! Please wait"
+                                f" {hours}{minutes}{seconds}\033[0m"
+                            )
+                            return False
+                        else:
+                            break
+
+                case False:
+                    pass
 
             print_banner("success.txt")
             print("\033[0;92mLogged in successfully!\033[0m")
