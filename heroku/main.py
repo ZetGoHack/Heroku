@@ -54,7 +54,7 @@ from .dispatcher import CommandDispatcher
 from .inline.token_obtainment import TokenObtainment
 from .inline.utils import Utils as inutils
 from .qr import QRCode
-from .types import SQLiteStringStorage
+from .types import SQLiteStringStorage, PatchedParser
 from .tl_cache import CustomClient
 from .translations import Translator
 from .version import __version__
@@ -932,6 +932,8 @@ class Heroku:
                     lang_code="en",
                     system_lang_code="en-US",
                 )
+
+                client.parser = PatchedParser(client)
 
                 rslt = await client.connect()
                 if not rslt:

@@ -257,7 +257,7 @@ class UpdaterMod(loader.Module):
         with open('CHANGELOG.md', mode='r', encoding='utf-8') as f:
             changelog = f.read().split('##')[1].strip()
         if (await self._client.get_me()).is_premium:
-            changelog.replace('🌑 Heroku', '<tg-emoji emoji-id=5192765204898783881>🌘</tg-emoji><tg-emoji emoji-id=5195311729663286630>🌘</tg-emoji><tg-emoji emoji-id=5195045669324201904>🌘</tg-emoji>')
+            changelog.replace('🌑 Heroku', '<emoji id=5192765204898783881>🌘</emoji><emoji id=5195311729663286630>🌘</emoji><emoji id=5195045669324201904>🌘</emoji>')
 
         await utils.answer(message, self.strings('changelog').format(changelog))
 
@@ -346,13 +346,13 @@ class UpdaterMod(loader.Module):
             # Terminate main loop of all running clients
             # Won't work if not all clients are ready
             if client is not message._client:
-                await client.disconnect()
+                await client.stop()
 
         if "LAVHOST" in os.environ:
             await self.client.send_message("lavhostbot", "🔄 Restart")
             return
 
-        await message._client.disconnect()
+        await message._client.stop()
         restart()
 
     async def download_common(self):
@@ -666,7 +666,7 @@ class UpdaterMod(loader.Module):
         if ":" in str(ms):
             chat_id, message_id = ms.split(":")
             chat_id, message_id = int(chat_id), int(message_id)
-            await self._client.edit_message(chat_id, message_id, msg)
+            await self._client.edit_message_text(chat_id, message_id, msg)
             return
 
         await self.inline.bot.edit_message_text(

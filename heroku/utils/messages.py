@@ -354,7 +354,7 @@ async def answer(
 
     if isinstance(response, str) and not kwargs.pop("asfile", False):
         text, entities = (await message._client.parser.parse(response)).values()
-        entities = [MessageEntity._parse(message._client, ent, {}) for ent in entities]
+        entities = [MessageEntity._parse(message._client, ent, {}) for ent in (entities or [])]
 
         if len(text) >= 4096 and not hasattr(message, "heroku_grepped"):
             try:
@@ -406,6 +406,7 @@ async def answer(
                     
                 )
             else:
+                kwargs.pop("file", None)
                 result = await (message.edit_text if edit else message.answer)(
                     text,
                     entities=entities,

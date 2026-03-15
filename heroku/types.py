@@ -36,6 +36,9 @@ import requests
 from pyrogram import raw
 from pyrogram.client import Client
 from pyrogram.enums import ChatType
+from pyrogram.errors import PeerIdInvalid
+from pyrogram.parser import Parser
+from pyrogram.parser.html import HTML, Parser as HTMLParser, utils
 from pyrogram.types import Object
 from pyrogram.storage.sqlite_storage import (
     SQLiteStorage,
@@ -1424,6 +1427,54 @@ class SQLiteStringStorage(SQLiteStorage):
         await self.user_id(user_id)
         await self.is_bot(is_bot)
         await self.date(0)
+
+class HTML(HTML):
+    async def parse(self, text: str) -> dict:
+        # Strip whitespaces from the beginning and the end, but preserve closing tags
+        text = re.sub(r"^\s*(<[\w<>=\s\"]*>)\s*", r"\1", text)
+        text = re.sub(r"\s*(</[\w</>]*>)\s*$", r"\1", text)
+        text = re.sub(
+            r"<tg-emoji emoji-id=(\d+)>([^<]+)</tg-emoji>",
+            r"<emoji id=\1>\2</emoji>",
+            text,
+        )
+
+        parser = HTMLParser(self.client)
+        parser.feed(utils.add_surrogates(text))
+        parser.close()
+
+        if parser.tag_entities:
+            unclosed_tags = []
+
+            for tag, entities in parser.tag_entities.items():
+                unclosed_tags.append(f"<{tag}> (x{len(entities)})")
+
+            logger.info("Unclosed tags: %s", ", ".join(unclosed_tags))
+
+        entities = []
+
+        for entity in parser.entities:
+            if isinstance(entity, raw.types.InputMessageEntityMentionName):
+                try:
+                    if self.client is not None:
+                        entity.user_id = await self.client.resolve_peer(entity.user_id)
+                except PeerIdInvalid:
+                    continue
+
+            entities.append(entity)
+
+        # Remove zero-length entities
+        entities = list(filter(lambda x: x.length > 0, entities))
+
+        return {
+            "message": utils.remove_surrogates(parser.text),
+            "entities": sorted(entities, key=lambda e: e.offset) or None
+        }
+
+class PatchedParser(Parser):
+    def __init__(self, client):
+        super().__init__(client)
+        self.html = HTML(client)
 
 class InlineResult(Object):
     """Single inline result"""

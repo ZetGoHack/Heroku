@@ -54,7 +54,7 @@ def get_args(message: typing.Union[Message, str]) -> typing.List[str]:
     :param message: Message or string to get arguments from
     :return: List of arguments
     """
-    if not (message := getattr(message, "message", message)):
+    if not (message := getattr(message, "content", message)):
         return False
 
     if len(message := message.split(maxsplit=1)) <= 1:
@@ -76,7 +76,7 @@ def get_args_raw(message: typing.Union[Message, str]) -> str:
     :param message: Message or string to get arguments from
     :return: Raw string of arguments
     """
-    if not (message := getattr(message, "text", message)):
+    if not (message := getattr(message, "content", message)):
         return False
 
     return args[1] if len(args := message.split(maxsplit=1)) > 1 else ""

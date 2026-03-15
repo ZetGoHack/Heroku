@@ -377,7 +377,7 @@ class TestMod(loader.Module):
         await utils.answer(
             message,
             placeholders_msg,
-            file = banner
+            link_preview_options = banner,
         )
 
 

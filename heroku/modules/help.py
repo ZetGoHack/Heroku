@@ -17,8 +17,7 @@ import logging
 import re
 
 # from pyrogram.extensions.html import CUSTOM_EMOJIS
-from pyrogram.types import Message
-from pyrogram.raw.types import InputMediaWebPage
+from pyrogram.types import Message, LinkPreviewOptions
 
 
 from .. import loader, utils
@@ -264,13 +263,15 @@ class Help(loader.Module):
 
         args = utils.get_args_raw(message)
 
-        banner = str(self.config["banner_url"])
+        kwargs = dict()
 
         if self.config["banner_url"] and self.config["media_quote"] is True:
-            banner = InputMediaWebPage(str(self.config["banner_url"]))
+            kwargs["link_preview_options"] = LinkPreviewOptions(
+                url=str(self.config["banner_url"]), is_disabled=False, show_above_text=not self.config["invert_media"]
+            )
 
-        if not self.config["banner_url"]:
-            banner = None
+        if self.config["banner_url"]:
+            kwargs["file"] = self.config["banner_url"]
 
         force = False
         if "-f" in args:
@@ -413,8 +414,7 @@ class Help(loader.Module):
                         else f"\n\n{self.strings('partial_load')}"
                     ),
                 ),
-                file=banner,
-                invert_media=self.config["invert_media"],
+                link_preview_options = banner,
             )
         elif only_loaded:
             await utils.answer(
@@ -428,8 +428,7 @@ class Help(loader.Module):
                         else f"\n\n{self.strings('partial_load')}"
                     ),
                 ),
-                file=banner,
-                invert_media=self.config["invert_media"],
+                link_preview_options = banner,
             )
         else:
             await utils.answer(
@@ -444,8 +443,7 @@ class Help(loader.Module):
                         else f"\n\n{self.strings('partial_load')}"
                     ),
                 ),
-                file=banner,
-                invert_media=self.config["invert_media"],
+                link_preview_options = banner,
             )
 
     @loader.command(ru_doc="| Ссылка на чат помощи", ua_doc="| посилання для чату служби підтримки", de_doc="| Link zum Support-Chat")
