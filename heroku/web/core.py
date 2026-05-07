@@ -51,7 +51,7 @@ class Web(root.Web):
         self.running = asyncio.Event()
         self.ready = asyncio.Event()
         self.client_data = {}
-        self.app = web.Application()
+        self.app = web.Application(client_max_size=1024 * 1024)
         self.proxypasser = None
         self._username = None
         self._password = None

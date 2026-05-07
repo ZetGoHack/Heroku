@@ -62,7 +62,7 @@ class Web:
         self._qr_task = None
         self._2fa_needed = None
         self._sessions = []
-        self._ratelimit = {"__global_count__": 0}
+        self._ratelimit = {"__global_count__": []}
         self.api_token = kwargs.pop("api_token")
         self.data_root = kwargs.pop("data_root")
         self.connection = kwargs.pop("connection")
@@ -488,12 +488,15 @@ class Web:
     async def web_auth(self, request: web.Request) -> web.Response:
         if self._check_session(request):
             return web.Response(body=request.cookies.get("session", "unauthorized"))
-        
-        if self._ratelimit["__global_count__"] >= 5:
-            await self._close_tunnel("Global rate limit exceeded")
+
+        global_auth_hits = self._ratelimit["__global_count__"]
+        now = time.time()
+        global_auth_hits[:] = [ts for ts in global_auth_hits if now - ts < 3 * 60]
+        if len(global_auth_hits) >= 5:
+            logger.warning("Web auth rate limit exceeded")
             return web.Response(status=429)
-        
-        self._ratelimit["__global_count__"] += 1
+
+        global_auth_hits.append(now)
 
         token = utils.rand(8)
 
@@ -511,8 +514,9 @@ class Web:
         xff = request.headers.get("X-FORWARDED-FOR", "")
         xff_ips = [ip.strip() for ip in xff.split(",") if ip.strip()]
         if len(xff_ips) > 10:
-            await self._close_tunnel(
-                f"X-Forwarded-For contains {len(xff_ips)} hops"
+            logger.warning(
+                "Web auth denied: X-Forwarded-For contains %s hops",
+                len(xff_ips),
             )
             return web.Response(status=429)
 
@@ -553,7 +557,9 @@ class Web:
                     )
                 ).json()
                 cities += [
-                    f"<i>{utils.get_lang_flag(res['country_code'])} {res['country_name']} {res['region_name']} {res['city']} {res['zip_code']}</i>"
+                    utils.escape_non_html(
+                        f"<i>{utils.get_lang_flag(res['country_code'])} {res['country_name']} {res['region_name']} {res['city']} {res['zip_code']}</i>"
+                    )
                 ]
             except Exception:
                 pass
@@ -573,7 +579,7 @@ class Web:
                     chat_id=user[1].tg_id,
                     text=(
                         "🪐🔐 <b>Click button below to confirm web application"
-                        f" ops</b>\n\n<b>Client IP</b>: {ips}\n{cities}\n<i>If you did"
+                        f" ops</b>\n\n<b>Client IP</b>: {utils.escape_html(ips)}\n{cities}\n<i>If you did"
                         " not request any codes, simply ignore this message</i>"
                     ),
                     disable_web_page_preview=True,
@@ -592,10 +598,14 @@ class Web:
         session = f"heroku_{utils.rand(16)}"
 
         if not ops:
-            # If no auth message was sent, just leave it empty
-            # probably, request was a bug and user doesn't have
-            # inline bot or did not authorize any sessions
-            return web.Response(body=session)
+            logger.warning(
+                "Web auth denied: no owner confirmation messages could be sent"
+            )
+            return web.Response(
+                status=503,
+                text="unable to request owner confirmation",
+                headers={"Cache-Control": "no-store"},
+            )
 
         if not await main.heroku.wait_for_web_auth(token):
             for op in ops:
