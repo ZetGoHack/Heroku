@@ -248,7 +248,7 @@ class Strings:
                 if self._translator is not None
                 else self._base_strings.get(key)
             )
-            or self._base_strings.get(key, "Unknown strings")
+            or self._base_strings.get(key, f"Unknown strings: {key}")
         )
 
     def __call__(
