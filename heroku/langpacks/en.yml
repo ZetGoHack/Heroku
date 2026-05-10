@@ -271,6 +271,7 @@ heroku_backup:
   invalid_args: "🚫 <b>Please specify the correct frequency in hours, or `0` to disable</b>"
   backup_caption: '<tg-emoji emoji-id=5469718869536940860>👆</tg-emoji> <b>This is your database backup. Do not share it with anyone, it contains personal information. If you need to restore it, use</b> <pre><code class="language-heroku">{prefix}restoredb</code></pre> <b>in response to this file.</b>'
   backupall_info: '👆 <b>This is your backup of the database and modules. Do not give it to anyone, it contains personal information. If you need to restore it, use</b> <pre><code class="language-heroku">{prefix}restoreall</code></pre> <b>in response to this file.</b>'
+  restoring_backup: "<tg-emoji emoji-id=5774134533590880843>🔄</tg-emoji> <b>Restoring backup, installing dependencies and modules...</b>"
   all_restored_bot: "Your full backup has been restored, restarting..."
   all_restored: "<tg-emoji emoji-id=5774134533590880843>🔄</tg-emoji> <b>Your full backup has been restored, restarting...</b>"
   reply_to_file: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Reply with .json or .zip file</b>"

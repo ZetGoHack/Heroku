@@ -240,6 +240,7 @@ heroku_backup:
   invalid_args: "🚫 <b>Plz sp3c1fy 7h3 c0rr3c7 fr3qu3ncy 1n hr5, 0r `0` 2 d154bl3</b>"
   backup_caption: '<tg-emoji emoji-id=5469718869536940860>👆</tg-emoji> <b>7h15 15 ur DB b4ckup. D0 n07 sh4r3 17 w17h 4ny1, 17 c0n741n5 p3r50n4l 1nf0. 1f u n33d 2 r3570r3 17, u53</b> <pre><code class="language-heroku">{prefix}restoredb</code></pre> <b>1n r35p0n53 2 7h15 f1l3.</b>'
   backupall_info: '👆 <b>7h15 15 ur b4ckup 0f DB & m0d5. D0 n07 g1v3 17 2 4ny1, 17 c0n741n5 p3r50n4l 1nf0. 1f u n33d 2 r3570r3 17, u53</b> <pre><code class="language-heroku">{prefix}restoreall</code></pre> <b>1n r35p0n53 2 7h15 f1l3.</b>'
+  restoring_backup: "<tg-emoji emoji-id=5774134533590880843>🔄</tg-emoji> <b>R3570r1ng b4ckup, 1n574ll1ng d3p5 & m0d5...</b>"
   all_restored: "<tg-emoji emoji-id=5774134533590880843>🔄</tg-emoji> <b>Ur full b4ckup h45 b33n r3570r3d, r3574r71ng...</b>"
   all_restored_bot: "🔄 Ur full b4ckup h45 b33n r3570r3d, r3574r71ng..."
   reply_to_file: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>R3ply w17h .json 0r .zip f1l3</b>"

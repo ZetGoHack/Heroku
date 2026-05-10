@@ -240,6 +240,7 @@ heroku_backup:
   invalid_args: "🚫 <b>正しい頻度を時間単位で指定するか、無効にする場合は `0` を指定してください</b>"
   backup_caption: '<tg-emoji emoji-id=5469718869536940860>👆</tg-emoji> <b>これはデータベースのバックアップです。個人情報が含まれているため、誰とも共有しないでください。復元する必要がある場合は、このファイルへの返信として</b> <pre><code class="language-heroku">{prefix}restoredb</code></pre> <b>を使用してください。</b>'
   backupall_info: '👆 <b>これはデータベースとモジュールのバックアップです。個人情報が含まれているため、誰にも渡さないでください。復元する必要がある場合は、このファイルへの返信として</b> <pre><code class="language-heroku">{prefix}restoreall</code></pre> <b>を使用してください。</b>'
+  restoring_backup: "<tg-emoji emoji-id=5774134533590880843>🔄</tg-emoji> <b>バックアップを復元し、依存関係とモジュールをインストールしています...</b>"
   all_restored: "<tg-emoji emoji-id=5774134533590880843>🔄</tg-emoji> <b>完全バックアップが復元されました。再起動しています...</b>"
   all_restored_bot: "🔄 完全バックアップが復元されました。再起動しています..."
   reply_to_file: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>.json または .zip ファイルに返信してください</b>"

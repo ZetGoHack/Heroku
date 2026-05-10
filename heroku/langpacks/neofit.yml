@@ -240,6 +240,7 @@ heroku_backup:
   invalid_args: "🚫 <b>ValueError: int expected</b>"
   backup_caption: '<tg-emoji emoji-id=5469718869536940860>👆</tg-emoji> <b>SQL Dump. Contains PII. Restore:</b> <pre><code class="language-heroku">{prefix}restoredb</code></pre> <b>(stdin).</b>'
   backupall_info: '👆 <b>Full System Snapshot (DB + Mods). Contains PII. Restore:</b> <pre><code class="language-heroku">{prefix}restoreall</code></pre> <b>(stdin).</b>'
+  restoring_backup: "<tg-emoji emoji-id=5774134533590880843>🔄</tg-emoji> <b>Restoring snapshot. Installing deps and modules...</b>"
   all_restored: "<tg-emoji emoji-id=5774134533590880843>🔄</tg-emoji> <b>Snapshot restored. Rebooting...</b>"
   all_restored_bot: "🔄 Snapshot restored. Rebooting..."
   reply_to_file: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>IOError: Reply with .json/.zip required</b>"
