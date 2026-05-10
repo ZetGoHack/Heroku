@@ -1241,6 +1241,42 @@ class LoaderMod(loader.Module):
         modules = [m.strip() for m in raw_list if m.strip()]
 
         if len(modules) == 1:
+            if not self.lookup(modules[0]):
+                suggestions = self._get_unload_suggestions(modules[0])
+                if suggestions:
+                    form = await self.inline.form(
+                        "<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji>",
+                        message,
+                        silent=True,
+                    )
+                    if form:
+                        await form.edit(
+                            self.strings("unload_suggestions").format(
+                                utils.escape_html(modules[0])
+                            ),
+                            reply_markup=[
+                                [
+                                    {
+                                        "text": label,
+                                        "callback": self._inline__unload_suggested,
+                                        "args": (classname, force),
+                                    }
+                                ]
+                                for classname, label in suggestions
+                            ]
+                            + [
+                                [
+                                    {
+                                        "text": self.strings("cancel").replace(
+                                            "🚫", "❌"
+                                        ),
+                                        "action": "close",
+                                    }
+                                ]
+                            ],
+                        )
+                    return
+
             msg = await self.unload_module(modules[0], force=force)
         else:
             success = []
@@ -1248,7 +1284,7 @@ class LoaderMod(loader.Module):
             msg = ""
             for module in modules:
                 status = await self.unload_module(module)
-                if "🚫" in status or "😖" in status:
+                if "❌" in status or "🚫" in status or "😖" in status:
                     if "💡" in status:
                         status = status.split("<code>")[0]
 
@@ -1268,10 +1304,63 @@ class LoaderMod(loader.Module):
 
         await utils.answer(message, msg)
 
+    def _get_unload_suggestions(
+        self,
+        query: str,
+        limit: int = 3,
+    ) -> list[tuple[str, str]]:
+        query = query.lower()
+        scored = []
+
+        for module in self.allmodules.modules:
+            if self._is_core_module(module):
+                continue
+
+            classname = module.__class__.__name__
+            public_name = str(getattr(module, "name", "") or module.strings["name"])
+            names = {
+                classname,
+                classname[:-3] if classname.endswith("Mod") else classname,
+                public_name,
+            }
+            score = max(
+                difflib.SequenceMatcher(None, query, name.lower()).ratio()
+                for name in names
+                if name
+            )
+            label = public_name
+            scored.append((score, classname.lower(), classname, label))
+
+        return [
+            (classname, label)
+            for _, _, classname, label in sorted(scored, reverse=True)[:limit]
+        ]
+
+    def _is_core_module(self, module) -> bool:
+        module_name = getattr(module.__class__, "__module__", "")
+        if not module_name.startswith("heroku.modules."):
+            return False
+
+        module_file = module_name.rsplit(".", 1)[-1]
+        return os.path.isfile(
+            os.path.join(utils.get_base_dir(), "modules", f"{module_file}.py")
+        )
+
+    async def _inline__unload_suggested(
+        self,
+        call: InlineCall,
+        module: str,
+        force: bool = False,
+    ):
+        await call.edit(await self.unload_module(module, force=force))
+
     async def unload_module(self, module: str, force: bool = False) -> str:
         instance = self.lookup(module)
 
-        if issubclass(instance.__class__, loader.Library):
+        if instance and self._is_core_module(instance):
+            return self.strings("unload_core").format(module)
+
+        if instance and issubclass(instance.__class__, loader.Library):
             return self.strings("cannot_unload_lib")
 
         try:
