@@ -803,17 +803,19 @@ class UpdaterMod(loader.Module):
                 utils.get_platform_emoji() if c.heroku_me.premium is True else "Heroku"
             ),
             reply_markup=[
-                {
-                    "text": "✅",
-                    "callback": self.ubstop_func,
-                    "style": "primary",
-                },
-            ],
-            [
-                {
-                    "text": "❌",
-                    "action": "close",
-                    "style": "primary"
-                }
+                [
+                    {
+                        "text": "✅",
+                        "callback": self.ubstop_func,
+                        "style": "primary",
+                    },
+                ],
+                [
+                   {
+                        "text": "❌",
+                        "action": "close",
+                        "style": "primary"
+                    }
+                ]
             ]
         )
