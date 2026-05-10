@@ -140,6 +140,18 @@ class InlineManager(
     def _build_dp(self) -> Dispatcher:
         dp = Dispatcher()
 
+        for handler_id, (update_type, handler) in self._bot_update_handlers.items():
+            register_fn = _BOT_UPDATE_TYPE_REGISTERS.get(update_type)
+            if register_fn:
+                try:
+                    register_fn(dp, handler)
+                except Exception:
+                    logger.exception(
+                        "Failed to re-register bot update handler %s for update type %s",
+                        handler_id,
+                        update_type,
+                    )
+
         dp.inline_query.register(
             self._inline_handler,
             lambda _: True,
@@ -159,18 +171,6 @@ class InlineManager(
             self._message_handler,
             lambda *_: True,
         )
-
-        for handler_id, (update_type, handler) in self._bot_update_handlers.items():
-            register_fn = _BOT_UPDATE_TYPE_REGISTERS.get(update_type)
-            if register_fn:
-                try:
-                    register_fn(dp, handler)
-                except Exception:
-                    logger.exception(
-                        "Failed to re-register bot update handler %s for update type %s",
-                        handler_id,
-                        update_type,
-                    )
 
         return dp
 
