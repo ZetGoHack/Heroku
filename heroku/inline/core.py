@@ -50,6 +50,15 @@ if typing.TYPE_CHECKING:
     from ..loader import Modules
 
 
+
+def _make_handler_wrapper(handler: typing.Callable, update_type: str) -> typing.Callable:
+    async def wrapper(*args, **kwargs):
+        update = args[0] if args else next(iter(kwargs.values()), None)
+        return await handler(update)
+    return wrapper
+
+
+
 _BOT_UPDATE_TYPE_REGISTERS = {
     "message": lambda dp, handler: dp.message.register(handler, lambda *_: True),
     "edited_message": lambda dp, handler: dp.edited_message.register(handler, lambda *_: True),
@@ -346,7 +355,7 @@ class InlineManager(
             )
             return
 
-        self._bot_update_handlers[handler_id] = (update_type, handler)
+        self._bot_update_handlers[handler_id] = (update_type, _make_handler_wrapper(handler, update_type))
         logger.debug(
             "Registered bot update handler %s for update type %s",
             handler_id,
