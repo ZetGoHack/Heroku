@@ -1086,21 +1086,19 @@ class HerokuConfigMod(loader.Module):
                     for opt in visible
                 ]
             else:
+                cat_lines = [
+                    "∟ ▫️ <code>{}</code>: {}".format(
+                        utils.escape_html(p), fmt_value(p)
+                    )
+                    for p in section_params
+                ]
                 cat_text = [
                     self.strings["category_header"].format(
                         utils.escape_html(section_name)
-                    )
+                    ),
+                    "<blockquote expandable>" + "\n".join(cat_lines),
+                    "</blockquote>",
                 ]
-                cat_text.append("<blockquote expandable>")
-                cat_text.extend(
-                    [
-                        "∟ ▫️ <code>{}</code>: {}".format(
-                            utils.escape_html(p), fmt_value(p)
-                        )
-                        for p in section_params
-                    ]
-                )
-                cat_text.append("</blockquote>")
                 sections.append("\n".join(cat_text))
                 btns.append(
                     {
