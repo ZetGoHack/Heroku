@@ -1051,6 +1051,8 @@ class Modules:
                 )
 
                 loaded += [await self.register_module(spec, module_name, origin)]
+
+                logger.debug("Successfully loaded %s from filesystem")
             except Exception as e:
                 logger.exception("Failed to load module %s due to %s:", mod, e)
 
