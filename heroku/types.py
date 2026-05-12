@@ -161,6 +161,8 @@ def _make_safe_client_proxy():
         def __getattribute__(self, name: str):
             if name in SafeClientProxy._BLOCKED_MAGIC:
                 raise AttributeError("Access denied")
+            if name in type(self).__dict__:
+                return object.__getattribute__(self, name)
             if name in SafeClientProxy._BLOCKED_ATTRS:
                 logger.warning(
                     "Blocked access to client.%s from %s",
