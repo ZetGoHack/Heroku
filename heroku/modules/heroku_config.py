@@ -51,18 +51,21 @@ class HerokuConfigMod(loader.Module):
     @staticmethod
     def prep_value(value: typing.Any) -> typing.Any:
         if isinstance(value, str):
-            return f"</b><code>{utils.escape_html(value.strip())}</code><b>"
+            return f"<b><code>{utils.escape_html(value.strip())}</code></b>"
 
         if isinstance(value, list) and value:
             return (
-                "</b><code>[</code>\n    "
+                "<b><code>[</code></b>\n    "
                 + "\n    ".join(
-                    [f"<code>{utils.escape_html(str(item))}</code>" for item in value]
+                    [
+                        f"<b><code>{utils.escape_html(str(item))}</code></b>"
+                        for item in value
+                    ]
                 )
-                + "\n<code>]</code><b>"
+                + "\n<b><code>]</code></b>"
             )
 
-        return f"</b><code>{utils.escape_html(value)}</code><b>"
+        return f"<b><code>{utils.escape_html(value)}</code></b>"
 
     def hide_value(self, value: typing.Any) -> str:
         if isinstance(value, list) and value:
@@ -1010,7 +1013,7 @@ class HerokuConfigMod(loader.Module):
         elif folder is not None:
             params = list(module.config)
             option_lines = [
-                "▫️ <code>{}</code>: <b>{}</b>".format(
+                "▫️ <code>{}</code>: {}".format(
                     utils.escape_html(p), fmt_value(p)
                 )
                 for p in params
@@ -1068,7 +1071,7 @@ class HerokuConfigMod(loader.Module):
                     continue
                 sections.append(
                     "\n".join(
-                        "▫️ <code>{}</code>: <b>{}</b>".format(
+                        "▫️ <code>{}</code>: {}".format(
                             utils.escape_html(p), fmt_value(p)
                         )
                         for p in visible
