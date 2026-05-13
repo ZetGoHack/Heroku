@@ -173,15 +173,7 @@ sudo apt update && sudo apt upgrade -y && sudo apt install python3 git python3-p
 
 </details>
 
-<details>
-  <summary><b>🧃Jamhost</b></summary>
-    
-1. Перейдите в [@jamhostbot](https://t.me/jamhostbot) и напишите команду `/pay`
-2. Оплатите подписку на сайте
-3. После оплаты напишите команду <code>/install</code> боту, выберите " <b>🪐 Heroku</b> " в списке юзерботов и выберите нужный сервер
-4. Войдите, используя ссылку, предоставленную ботом
 
-</details>
 
 ## Дополнительные функции
 
