@@ -240,6 +240,153 @@ class Evaluator(loader.Module):
         await self.ecpp(message, c=True)
 
     @loader.command()
+    async def ers(self, message: Message):
+        try:
+            subprocess.check_output(
+                ["rustc", "--version"],
+                stderr=subprocess.STDOUT,
+                timeout=10,
+            )
+        except subprocess.TimeoutExpired:
+            await utils.answer(
+                message,
+                self.strings("no_compiler").format(
+                    "5424780918776671920",
+                    "Rust (rustc)",
+                ),
+            )
+            return
+        except Exception:
+            await utils.answer(
+                message,
+                self.strings("no_compiler").format(
+                    "5424780918776671920",
+                    "Rust (rustc)",
+                ),
+            )
+            return
+
+        code = utils.get_args_raw(message)
+        reply = await message.get_reply_message()
+
+        if not code and reply and reply.text:
+            code = reply.message
+
+        message = await utils.answer(message, self.strings("compiling"))
+        error = False
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file = os.path.join(tmpdir, "code.rs")
+            with open(file, "w") as f:
+                f.write(code)
+
+            try:
+                result = subprocess.check_output(
+                    ["rustc", "code.rs", "-o", "code"],
+                    cwd=tmpdir,
+                    stderr=subprocess.STDOUT,
+                    timeout=30,
+                ).decode()
+            except subprocess.CalledProcessError as e:
+                result = e.output.decode()
+                error = True
+            except subprocess.TimeoutExpired:
+                result = "Compilation timeout"
+                error = True
+
+            if not result:
+                try:
+                    result = subprocess.check_output(
+                        ["./code"],
+                        cwd=tmpdir,
+                        stderr=subprocess.STDOUT,
+                        timeout=10,
+                    ).decode()
+                except subprocess.CalledProcessError as e:
+                    result = e.output.decode()
+                    error = True
+                except subprocess.TimeoutExpired:
+                    result = "Execution timeout"
+                    error = True
+
+        with contextlib.suppress(MessageIdInvalidError):
+            await utils.answer(
+                message,
+                self.strings("err" if error else "eval").format(
+                    "5424780918776671920",
+                    "rust",
+                    utils.escape_html(code),
+                    "error" if error else "output",
+                    utils.escape_html(result),
+                ),
+            )
+
+    @loader.command()
+    async def eg(self, message: Message):
+        try:
+            subprocess.check_output(
+                ["go", "version"],
+                stderr=subprocess.STDOUT,
+                timeout=10,
+            )
+        except subprocess.TimeoutExpired:
+            await utils.answer(
+                message,
+                self.strings("no_compiler").format(
+                    "4994652309293105740",
+                    "Go",
+                ),
+            )
+            return
+        except Exception:
+            await utils.answer(
+                message,
+                self.strings("no_compiler").format(
+                    "4994652309293105740",
+                    "Go",
+                ),
+            )
+            return
+
+        code = utils.get_args_raw(message)
+        reply = await message.get_reply_message()
+
+        if not code and reply and reply.text:
+            code = reply.message
+
+        message = await utils.answer(message, self.strings("compiling"))
+        error = False
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file = os.path.join(tmpdir, "code.go")
+            with open(file, "w") as f:
+                f.write(code)
+
+            try:
+                result = subprocess.check_output(
+                    ["go", "run", "code.go"],
+                    cwd=tmpdir,
+                    stderr=subprocess.STDOUT,
+                    timeout=30,
+                ).decode()
+            except subprocess.CalledProcessError as e:
+                result = e.output.decode()
+                error = True
+            except subprocess.TimeoutExpired:
+                result = "Execution timeout"
+                error = True
+
+        with contextlib.suppress(MessageIdInvalidError):
+            await utils.answer(
+                message,
+                self.strings("err" if error else "eval").format(
+                    "4994652309293105740",
+                    "go",
+                    utils.escape_html(code),
+                    "error" if error else "output",
+                    utils.escape_html(result),
+                ),
+            )
+
+    @loader.command()
     async def enode(self, message: Message):
         try:
             subprocess.check_output(
