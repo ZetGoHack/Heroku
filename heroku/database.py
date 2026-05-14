@@ -54,7 +54,10 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 _DB_PROTECTED_OWNERS = {"HerokuPluginSecurity"}
-_DB_ALLOWED_WRITERS = {f"{__package__}.modules.heroku_plugin_security"}
+_DB_ALLOWED_WRITERS = {
+    f"{__package__}.loader",
+    f"{__package__}.modules.heroku_plugin_security",
+}
 
 
 class NoAssetsChannel(Exception):
