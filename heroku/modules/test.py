@@ -158,20 +158,29 @@ class TestMod(loader.Module):
         force: bool = False,
         lvl: typing.Union[int, None] = None,
     ):
+        raw_args = utils.get_args_raw(message) if isinstance(message, Message) else ""
+        args = raw_args.split()
+        if "-f" in args or "--force" in args:
+            force = True
+            args = [arg for arg in args if arg not in {"-f", "--force"}]
+
         if not isinstance(lvl, int):
-            args = utils.get_args_raw(message)
             if args:
                 try:
                     try:
-                        lvl = int(args.split()[0])
+                        lvl = int(args[0])
                     except ValueError:
-                        lvl = getattr(logging, args.split()[0].upper(), None)
+                        lvl = getattr(logging, args[0].upper(), None)
                 except IndexError:
                     lvl = None
             else:
                 lvl = None
 
         if not isinstance(lvl, int):
+            if force:
+                await utils.answer(message, self.strings("set_loglevel"))
+                return
+
             try:
                 if self.inline.init_complete:
                     await utils.answer(
@@ -224,10 +233,6 @@ class TestMod(loader.Module):
         if (
             lvl < logging.WARNING
             and not force
-            and (
-                not isinstance(message, Message)
-                or "force_insecure" not in message.raw_text.lower()
-            )
         ):
             try:
                 if not self.inline.init_complete:
@@ -258,11 +263,19 @@ class TestMod(loader.Module):
             return
 
         if len(logs) <= 2:
-            back_button = {"text": self.strings["back"], "callback": self.logs}
             await utils.answer(
                 message,
                 self.strings("no_logs").format(named_lvl),
-                reply_markup=back_button,
+                **(
+                    {}
+                    if force
+                    else {
+                        "reply_markup": {
+                            "text": self.strings["back"],
+                            "callback": self.logs,
+                        },
+                    }
+                ),
             )
             return
 
@@ -283,20 +296,19 @@ class TestMod(loader.Module):
             ),
         )
 
-        if getattr(message, "out", True):
-            await message.delete()
+        caption = self.strings("logs_caption").format(named_lvl, *other)
 
         if isinstance(message, Message):
             await utils.answer(
                 message,
-                logs,
-                caption=self.strings("logs_caption").format(named_lvl, *other),
+                caption,
+                file=logs,
             )
         else:
             await self._client.send_file(
                 message.form["chat"],
                 logs,
-                caption=self.strings("logs_caption").format(named_lvl, *other),
+                caption=caption,
                 reply_to=message.form["top_msg_id"],
             )
 
