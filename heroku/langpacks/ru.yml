@@ -124,7 +124,7 @@ heroku_settings:
   deauth_cancel: "🚫 Отмена"
   deauth_confirm_btn: "😢 Удалить"
   uninstall: "😢 <b>Удаляю Heroku...</b>"
-  uninstalled: "😢 <b>Heroku удалена. Веб-интерфейс все еще активен, можно добавить другие аккаунты!</b>"
+  uninstalled: "😢 <b>Heroku удалена.</b>"
   cmd_nn_list: "<tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>NoNick включен для этих команд:</b>\n\n<blockquote expandable>{}</blockquote>"
   user_nn_list: "<tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>NoNick включен для этих пользователей:</b>\n\n<blockquote expandable>{}</blockquote>"
   chat_nn_list: "<tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>NoNick включен для этих чатов:</b>\n\n<blockquote expandable>{}</blockquote>"
@@ -181,17 +181,9 @@ terminal:
 
 
 heroku_web:
-  privacy_leak: "⚠️ <b>Эта команда дает доступ к веб-интерфейсу Heroku. Ее выполнение в публичных чатах является угрозой безопасности. Предпочтительно выполнять ее в <a href='tg://openmessage?user_id={}'>Избранных сообщениях</a>. Выполни</b> <code>{}proxypass force_insecure</code> <b>чтобы отключить это предупреждение</b>"
-  privacy_leak_nowarn: "⚠️ <b>Эта команда дает доступ к веб-интерфейсу Heroku. Ее выполнение в публичных чатах является угрозой безопасности. Предпочтительно выполнять ее в <a href='tg://openmessage?user_id={}'>Избранных сообщениях</a>.</b>"
-  opening_tunnel: "🔁 <b>Открываю тоннель к веб-интерфейсу Heroku...</b>"
-  tunnel_opened: "🎉 <b>Тоннель открыт. Эта ссылка будет активна не более 20 минут</b>"
-  tunnel_opened_pass: "🎉 <b>Тоннель открыт. Эта ссылка будет активна не более 20 минут</b>\n\n🔐 <b>Логин:</b> <code>{}</code>\n🔑 <b>Пароль:</b> <code>{}</code>"
   host_denied: "<tg-emoji emoji-id=6037254263187443802>💬</tg-emoji> Команды добавления сессий не доступны на вашем хостинге, свяжитесь с администрацией вашего хостинга."
-  web_btn: "🌍 Веб-интерфейс"
-  _cmd_doc_weburl: "Открыть тоннель к веб-интерфейсу Heroku"
   btn_yes: "🚸 Все равно подтвердить"
   btn_no: "🔻 Закрыть"
-  lavhost_web: "✌️ <b>По этой ссылке ты попадешь в веб-интерфейс Heroku на lavHost</b>\n\n<i>💡 Тебе нужно будет авторизоваться, используя данные, указанные при настройке lavHost</i>"
   invalid_target: "Ответьте на сообщение человека, которого хотите добавить, или укажите его корректный @username/id."
   cant_add_self: "Вы не можете добавить самого себя."
   add_user_confirm: "Вы действительно хотите добавить аккаунт {} ({})?"

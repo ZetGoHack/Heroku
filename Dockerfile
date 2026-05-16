@@ -54,6 +54,4 @@ RUN git fetch origin "${HEROKU_REF}" && git checkout "${HEROKU_REF}" && git pull
 
 RUN pip install --no-warn-script-location --no-cache-dir -U -r requirements.txt
 
-EXPOSE 8080
 CMD ["python", "-m", "heroku", "--root"]
-

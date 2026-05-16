@@ -107,7 +107,6 @@ class InlineManager(
         self._units: typing.Dict[str, dict] = {}
         self._custom_map: typing.Dict[str, callable] = {}
         self.fsm: typing.Dict[str, str] = {}
-        self._web_auth_tokens: typing.List[str] = []
         self._error_events: typing.Dict[str, asyncio.Event] = {}
 
         self._markup_ttl = 60 * 60 * 24
@@ -369,20 +368,6 @@ class InlineManager(
 
         if self.init_complete and self._dp:
             asyncio.ensure_future(self._restart_polling())
-
-    def pop_web_auth_token(self, token: str) -> bool:
-        """
-        Check if web confirmation button was pressed
-        :param token: Token to check
-        :type token: str
-        :return: `True` if token was found, `False` otherwise
-        :rtype: bool
-        """
-        if token not in self._web_auth_tokens:
-            return False
-
-        self._web_auth_tokens.remove(token)
-        return True
 
     async def _invoke_unit(self, unit_id: str, message: Message) -> Message:
         event = asyncio.Event()

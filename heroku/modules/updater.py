@@ -344,9 +344,6 @@ class UpdaterMod(loader.Module):
 
         self.set("restart_ts", time.time())
 
-        with contextlib.suppress(Exception):
-            await main.heroku.web.stop()
-
         handler = logging.getLogger().handlers[0]
         handler.setLevel(logging.CRITICAL)
 

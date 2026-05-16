@@ -1,8 +1,5 @@
 #!/bin/bash
 
-PORT=3429 # Port to run the server on
-echo "EXTERNAL_PORT=$PORT" >.env
-
 eval "git clone https://github.com/coddrago/Heroku"
 cd Heroku
 
@@ -45,8 +42,8 @@ else
 fi
 
 printf "\033[0;34mBuilding docker image...\e[0m"
-sudo docker-compose up -d --build 1>heroku-install.log 2>&1
+sudo docker-compose build 1>heroku-install.log 2>&1
 printf "\033[0;32m - success\e[0m\n"
 
-printf "\033[0;32mFollow this url to continue installation:\e[0m\n"
-ssh "-o StrictHostKeyChecking=no" "-R 80:127.0.0.1:$PORT" "nokey@localhost.run" 2>&1 | grep "tunneled"
+printf "\033[0;32mStarting Heroku setup in console mode...\e[0m\n"
+sudo docker-compose run --rm worker

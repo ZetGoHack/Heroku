@@ -124,7 +124,7 @@ heroku_settings:
   deauth_cancel: "🚫 Abbrechen"
   deauth_confirm_btn: "😢 Entfernen"
   uninstall: "😢 <b>Heroku wird entfernt...</b>"
-  uninstalled: "😢 <b>Heroku wurde entfernt. Die Web-Oberfläche ist weiterhin aktiv, und andere Konten können hinzugefügt werden!</b>"
+  uninstalled: "😢 <b>Heroku wurde entfernt.</b>"
   cmd_nn_list: "<tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>NoNick ist für folgende Befehle aktiviert:</b>\n\n<blockquote expandable>{}</blockquote>"
   user_nn_list: "<tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>NoNick ist für folgende Benutzer aktiviert:</b>\n\n<blockquote expandable>{}</blockquote>"
   chat_nn_list: "<tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>NoNick ist für folgende Chats aktiviert:</b>\n\n<blockquote expandable>{}</blockquote>"
@@ -180,16 +180,9 @@ terminal:
   inline_hint_desc: "Beginnen Sie, einen Befehl einzugeben"
 
 heroku_web:
-  privacy_leak: "⚠️ <b>Dieser Befehl gewährt Zugriff auf die Heroku-Weboberfläche. Die Ausführung in öffentlichen Chats stellt ein Sicherheitsrisiko dar. Es wird empfohlen, dies in den <a href='tg://openmessage?user_id={}'>Gespeicherten Nachrichten</a> auszuführen. Führe</b> <code>{}proxypass force_insecure</code> <b>aus, um diese Warnung zu deaktivieren</b>"
-  privacy_leak_nowarn: "⚠️ <b>Dieser Befehl gewährt Zugriff auf die Heroku-Weboberfläche. Die Ausführung in öffentlichen Chats stellt ein Sicherheitsrisiko dar. Es wird empfohlen, dies in den <a href='tg://openmessage?user_id={}'>Gespeicherten Nachrichten</a> auszuführen.</b>"
-  opening_tunnel: "🔁 <b>Öffne Tunnel zur Heroku-Weboberfläche...</b>"
-  tunnel_opened: "🎉 <b>Der Tunnel ist geöffnet. Dieser Link bleibt maximal 20 Minuten aktiv</b>"
-  tunnel_opened_pass: "🎉 <b>Der Tunnel ist geöffnet. Dieser Link bleibt maximal 20 Minuten aktiv</b>\n\n🔐 <b>Login:</b> <code>{}</code>\n🔑 <b>Passwort:</b> <code>{}</code>"
   host_denied: "<tg-emoji emoji-id=6037254263187443802>💬</tg-emoji> Befehle zum Hinzufügen von Sitzungen sind auf Ihrem Hosting nicht verfügbar, wenden Sie sich an die Verwaltung Ihres Hostings."
-  web_btn: "🌍 Web-Oberfläche"
   btn_yes: "🚸 Trotzdem öffnen"
   btn_no: "🔻 Schließen"
-  lavhost_web: "✌️ <b>Über diesen Link gelangst du zur Heroku-Weboberfläche auf lavHost</b>\n\n<i>💡 Du musst dich mit den bei der lavHost-Einrichtung angegebenen Daten anmelden</i>"
   invalid_target: "Antworten Sie auf die Nachricht der Person, die Sie hinzufügen möchten, oder geben Sie eine gültige @username/ID an."
   cant_add_self: "Du kannst dich nicht selbst hinzufügen."
   add_user_confirm: "Möchten Sie das Konto {} ({}) wirklich hinzufügen?"
@@ -215,7 +208,6 @@ heroku_web:
   switch_insecure: "🚫 <b>Kontoübertragung fehlgeschlagen:</b> Inline-Menü nicht verfügbar. Gib <code>{}switchacc force_insecure</code> ein, um fortzufahren."
   switch_failed: "🚫 <b>Kontoübertragung fehlgeschlagen:</b> <code>{}</code>"
   _cmd_doc_switchacc: "Userbot auf ein anderes Telegram-Konto übertragen"
-  _cmd_doc_weburl: "Öffnet einen Tunnel zur Heroku-Weboberfläche"
 
 heroku_backup:
   period: "⌚️ <b>Die Unit «ALPHA»</b> erstellt regelmäßig Backups. Diese Einstellungen können später geändert werden.\n\nBitte wählen Sie die Backup-Häufigkeit\n\n<b>🚫 Es ist daher nicht möglich, Module, die mit dem Befehl .lm aus Dateien heruntergeladen wurden, wiederherzustellen! Seien Sie vorsichtig und führen Sie vor der Wiederherstellung .backupmods aus.</b>"

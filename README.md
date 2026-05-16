@@ -60,8 +60,6 @@
 
 ### VPS/VDS
 > **Note for VPS/VDS Users:**  
-> Add `--proxy-pass` to enable SSH tunneling  
-> Add `--no-web` for console-only setup  
 > Add `--root` for root users (to avoid entering force_insecure)
 <details> <summary><b>Ubuntu / Debian</b></summary>
 
