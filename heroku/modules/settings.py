@@ -298,71 +298,196 @@ class CoreMod(loader.Module):
     @loader.command()
     async def addalias(self, message: Message):
 
-        if len(args := utils.get_args_raw(message).split()) < 2:
+        args_raw = utils.get_args_raw(message)
+        if not args_raw:
             await utils.answer(message, self.strings("alias_args"))
             return
 
-        alias, cmd, *rest = args
-        rest = " ".join(rest) if rest else None
-        alias = alias.lower().strip()
+        alias_lines = []
+        for line in args_raw.splitlines():
+            line = line.strip()
+            if not line:
+                continue
 
-        if alias in self.allmodules.aliases:
+            if "," in line:
+                parts = [part.strip() for part in line.split(",")]
+                last = parts[-1].split(maxsplit=1)
+                if len(last) < 2:
+                    await utils.answer(message, self.strings("alias_args"))
+                    return
+
+                aliases = [part.lower() for part in parts[:-1] if part]
+                aliases.append(last[0].lower())
+                command = last[1]
+            else:
+                args = line.split(maxsplit=1)
+                if len(args) < 2:
+                    await utils.answer(message, self.strings("alias_args"))
+                    return
+
+                aliases = [args[0].lower()]
+                command = args[1]
+
+            command_parts = command.split(maxsplit=1)
+            cmd = command_parts[0]
+            rest = command_parts[1] if len(command_parts) > 1 else None
+
+            if cmd not in self.allmodules.commands:
+                await utils.answer(
+                    message,
+                    self.strings("no_command").format(utils.escape_html(cmd)),
+                )
+                return
+
+            alias_lines.append((aliases, cmd, rest))
+
+        if not alias_lines:
+            await utils.answer(message, self.strings("alias_args"))
+            return
+
+        added_lines = []
+        skipped_lines = []
+        planned_aliases = {}
+        stored_aliases = {**self.get("aliases", {})}
+
+        for aliases, cmd, rest in alias_lines:
+            target = f"{cmd} {rest}" if rest else cmd
+            added_aliases = []
+
+            for alias in aliases:
+                if alias in self.allmodules.aliases:
+                    skipped_lines.append(
+                        self.strings("alias_exists").format(
+                            alias=utils.escape_html(alias),
+                            command=utils.escape_html(self.allmodules.aliases[alias]),
+                        )
+                    )
+                    continue
+
+                if alias in planned_aliases:
+                    skipped_lines.append(
+                        self.strings("alias_exists").format(
+                            alias=utils.escape_html(alias),
+                            command=utils.escape_html(planned_aliases[alias]),
+                        )
+                    )
+                    continue
+
+                if not self.allmodules.add_alias(alias, cmd, rest):
+                    await utils.answer(
+                        message,
+                        self.strings("no_command").format(utils.escape_html(cmd)),
+                    )
+                    return
+
+                stored_aliases[alias] = target
+                planned_aliases[alias] = target
+                added_aliases.append(alias)
+
+            if added_aliases:
+                added_lines.append((added_aliases, target))
+
+        if added_lines:
+            self.set("aliases", stored_aliases)
+
+        if len(added_lines) == 1 and len(added_lines[0][0]) == 1 and not skipped_lines:
             await utils.answer(
                 message,
-                self.strings("alias_exists").format(
-                    alias=utils.escape_html(alias),
-                    command=utils.escape_html(self.allmodules.aliases[alias]),
+                self.strings("alias_created").format(
+                    utils.escape_html(added_lines[0][0][0])
                 ),
             )
             return
 
-        if self.allmodules.add_alias(alias, cmd, rest):
-            self.set(
-                "aliases",
-                {
-                    **self.get("aliases", {}),
-                    alias: f"{cmd} {rest}" if rest else cmd,
-                },
+        added_count = sum(len(aliases) for aliases, _ in added_lines)
+        response = []
+
+        if added_lines:
+            response.append(
+                self.strings("aliases_created").format(
+                    count=added_count,
+                    aliases="\n".join(
+                        self.strings("aliases_created_line").format(
+                            aliases=utils.escape_html(", ".join(aliases)),
+                            command=utils.escape_html(target),
+                        )
+                        for aliases, target in added_lines
+                    ),
+                )
             )
-            await utils.answer(
-                message,
-                self.strings("alias_created").format(utils.escape_html(alias)),
-            )
-        else:
-            await utils.answer(
-                message,
-                self.strings("no_command").format(utils.escape_html(cmd)),
-            )
+
+        response.extend(skipped_lines)
+
+        await utils.answer(message, "\n\n".join(response))
 
     @loader.command()
     async def delalias(self, message: Message):
-        args = utils.get_args(message)
+        args_raw = utils.get_args_raw(message)
 
-        if len(args) != 1:
+        if not args_raw:
             await utils.answer(message, self.strings("delalias_args"))
             return
 
-        if args[0] in {"-c", "--clear"}:
+        if args_raw.strip() in {"-c", "--clear"}:
             self.allmodules.aliases.clear()
             self.set("aliases", {})
             await utils.answer(message, self.strings("aliases_cleared"))
             return
 
-        alias = args[0].lower().strip()
+        aliases = []
+        seen_aliases = set()
+        for line in args_raw.splitlines():
+            for alias in line.split(","):
+                alias = alias.lower().strip()
+                if alias and alias not in seen_aliases:
+                    aliases.append(alias)
+                    seen_aliases.add(alias)
 
-        if not self.allmodules.remove_alias(alias):
-            await utils.answer(
-                message,
-                self.strings("no_alias").format(utils.escape_html(alias)),
-            )
+        if not aliases:
+            await utils.answer(message, self.strings("delalias_args"))
             return
 
         current = self.get("aliases", {})
-        current.pop(alias, None)
-        self.set("aliases", current)
+        removed_aliases = []
+        missed_aliases = []
+
+        for alias in aliases:
+            if not self.allmodules.remove_alias(alias):
+                missed_aliases.append(alias)
+                continue
+
+            current.pop(alias, None)
+            removed_aliases.append(alias)
+
+        if removed_aliases:
+            self.set("aliases", current)
+
+        if len(removed_aliases) == 1 and not missed_aliases:
+            await utils.answer(
+                message,
+                self.strings("alias_removed").format(
+                    utils.escape_html(removed_aliases[0])
+                ),
+            )
+            return
+
+        response = []
+        if removed_aliases:
+            response.append(
+                self.strings("aliases_removed").format(
+                    count=len(removed_aliases),
+                    aliases=utils.escape_html(", ".join(removed_aliases)),
+                )
+            )
+
+        response.extend(
+            self.strings("no_alias").format(utils.escape_html(alias))
+            for alias in missed_aliases
+        )
+
         await utils.answer(
             message,
-            self.strings("alias_removed").format(utils.escape_html(alias)),
+            "\n\n".join(response),
         )
 
     @loader.command()
