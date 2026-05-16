@@ -12,6 +12,9 @@
 
 import typing
 
+if typing.TYPE_CHECKING:
+    from .database import Database
+
 
 class PointerList(list):
     """Pointer to list saved in database"""
@@ -27,7 +30,7 @@ class PointerList(list):
         self._module = module
         self._key = key
         self._default = default
-        super().__init__(db.get(module, key, default))
+        super().__init__(db._get_raw(module, key, default))
 
     @property
     def data(self) -> list:
@@ -98,7 +101,7 @@ class PointerList(list):
         self._db.set(self._module, self._key, list(self))
 
     def tolist(self):
-        return self._db.get(self._module, self._key, self._default)
+        return self._db._get_raw(self._module, self._key, self._default)
 
 
 class PointerDict(dict):
@@ -115,7 +118,7 @@ class PointerDict(dict):
         self._module = module
         self._key = key
         self._default = default
-        super().__init__(db.get(module, key, default))
+        super().__init__(db._get_raw(module, key, default))
 
     @property
     def data(self) -> dict:
@@ -131,7 +134,7 @@ class PointerDict(dict):
         return f"PointerDict({dict(self)})"
 
     def __bool__(self) -> bool:
-        return bool(self._db.get(self._module, self._key, self._default))
+        return bool(self._db._get_raw(self._module, self._key, self._default))
 
     def __setitem__(self, key: str, value: typing.Any):
         super().__setitem__(key, value)
@@ -171,7 +174,7 @@ class PointerDict(dict):
         self._db.set(self._module, self._key, dict(self))
 
     def todict(self):
-        return self._db.get(self._module, self._key, self._default)
+        return self._db._get_raw(self._module, self._key, self._default)
 
 
 class BaseSerializingMiddlewareDict:
