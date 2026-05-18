@@ -193,6 +193,7 @@ terminal:
   inline_hint: "Tewminaw"
   inline_hint_desc: "Stawt typing a command, senpai OwO"
 
+  exec_error: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Execution ewwow:</b>\n<code>{}</code>"
 heroku_web:
   host_denied: "<tg-emoji emoji-id=6037254263187443802>💬</tg-emoji> Session addition commands awe nyot avaiwabwe on youw hosting, pwease contact youw hosting administwation."
   btn_yes: "🚸 Confiwm anyway"
@@ -223,6 +224,9 @@ heroku_web:
   switch_failed: "🚫 <b>Switch account faiwed:</b> <code>{}</code>"
   _cmd_doc_switchacc: "Twansfew usewbot to anothew Tewegwam account"
 
+  name: HerokuAccounts
+  _cls_doc: Inwine account management
+  _cmd_doc_addacc: '[usew/id/wepwy] - Add anyothew account thwough inwine wogin'
 heroku_backup:
   period: "⌚️ <b>Da unit «AWPHA»</b> cweates weguwaw backups. Dese settings can be changed watew.\n\nPwease sewect da backup fwequency\n\n<b>🚫 It is dus impossibwe to westowe moduwes downwoaded fwom fiwes with da .lm command! Be cawefuw and do .backupmods befowe westowing.</b>"
   saved: "✅ Da pewiodicity is saved! It can be changed with <code>{prefix}set_backup_period</code>"
@@ -254,6 +258,7 @@ heroku_backup:
   _cmd_doc_backupall: "Cweates a genyewaw backup copy (moduwes + database)"
   _cmd_doc_restoreall: "Westowes a common backup (base + moduwes)"
 
+  name: HerokuBackup
 presets:
   name: "Pwesets"
   _fun_title: "🪩 Entewtainment moduwes"
@@ -283,6 +288,13 @@ presets:
   remove_from_folder_usage: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>UwU specify fowdew and mowduw to wemove. </b> <code>{prefix}removefromfolder <fowdew> <mowduw></code>"
   removed_from_folder: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Mowduw {} wemoved fwom fowdew</b> <code>{}</code>"
   module_not_in_folder: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Mowduw {} is nyot in fowdew {}</b>"
+  _cmd_doc_presets: "| Packs of moduwes to woad"
+  _cmd_doc_loadpreset: "Custom pweset woader. Wepwy to a fiwe ow send a fiwe with da command."
+  _cmd_doc_addtofolder: "<fowdew> <moduwe> - Add moduwe to a custom fowdew"
+  _cmd_doc_folderload: "<fowdew> - Send a custom fowdew as a pweset fiwe"
+  _cmd_doc_removefromfolder: "<fowdew> <moduwe> - Wemove moduwe fwom a custom fowdew"
+  _cmd_doc_loadaliases: "Woad awiases fwom fiwe. Send a fiwe with da command ow wepwy to a fiwe."
+  _cmd_doc_aliasload: "Send awiases as a fiwe"
   _cls_doc: "Suggests nyew Hewoku usews a packs of moduwes to woad"
 
 settings:
@@ -338,6 +350,9 @@ settings:
   cmc_done: "<b>Cleawed DB fow moduwule {}</b>"
   mod_enabled: "Moduwule {} enabwed"
   mod_disabled: "Moduwule {} disabwed"
+  cmd_enabled: "Command {} enabwed in moduwule {}"
+  cmd_disabled: "Command {} disabwed in moduwule {}"
+  not_a_user: "<tg-emoji emoji-id=5447644880824181073>⚠️</tg-emoji> <b>Entity {} is nyot a usew o_O</b>"
   who_to_blacklist: "<tg-emoji emoji-id=5382187118216879236>❓</tg-emoji> <b>Who to bwackwist?</b>"
   who_to_unblacklist: "<tg-emoji emoji-id=5382187118216879236>❓</tg-emoji> <b>Who to unbwackwist?</b>"
   _cmd_doc_addalias: "Set an awias fow a command"
@@ -348,11 +363,16 @@ settings:
   _cmd_doc_delalias: "<awias|-c|--clear> - Wemove an awias ow aww awiases"
   _cmd_doc_heroku: "Get Hewoku vewsion"
   _cmd_doc_setprefix: "<prefix> [owner] - Sets command pwefix"
+  _cmd_doc_togglecmd: "<moduwe> <command> ow <command> - Enabwe ow disabwe a command"
+  _cmd_doc_togglemod: "<moduwe> - Enabwe ow disabwe a whole moduwe"
+  _cmd_doc_clearmodule: "<moduwe> - Cweaw aww database entwies fow a moduwe"
   _cmd_doc_unblacklist: "<chat_id> - Unbwackwist da bot fwom opewating somewhewe"
   _cmd_doc_unblacklistuser: "[user_id] - Awwow dis usew to wun pewmitted commands"
   _cfg_nonstandart_prefixes: "Awwow nyon-standawt pwefixes wike fwags ow mowe dan onye symbow"
   _cls_doc: "Contwow cowe usewbot settings"
 
+  cmd404: <tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>Command nyot found</b>
+  mod404: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Watchew {} nyot found</b>
 heroku_config:
   name: "HewokuConfig"
   choose_core: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Choose a categowy</b>"
@@ -411,6 +431,7 @@ inline_stuff:
   _cmd_doc_ch_heroku_bot: "<username> - Change youw Hewoku inwine bot usewnyame"
   _cls_doc: "Pwovides suppowt fow inwine stuff"
 
+  _cmd_doc_ch_bot_token: <token> - Change inwine bot token
 test:
   name: "Testew"
   set_loglevel: "<tg-emoji emoji-id=5355133243773435190>🚫</tg-emoji> <b>Pwease specify vewbosity as an integew ow stwing</b>"
@@ -485,6 +506,9 @@ updater:
   ignore: "🚫 Ignyowe"
   changelog: '<tg-emoji emoji-id=5434144690511290129>📰</tg-emoji> <b>Changewog of da wast majow update:</b><blockquote expandable>{}</blockquote>'
 
+  _cmd_doc_autoupdate: Toggwe automatic updates
+  _cmd_doc_changelog: Show changewog of the wast majow update
+  _cmd_doc_ubstop: Stop youw usewbot
 api_protection:
   name: "APIWimitew"
   warning: "⚠️ <b>WAWNING!</b>\n\nYouw account exceeded da wimit of wequests, specified in config. In owdew to pwevent Tewegwam API Fwood, usewbot has been <b>fuwwy fwozen</b> fow {} seconds. Fuwdew info is pwovided in attached fiwe. \n\nIt is wecommended to get hewp in <code>{prefix}support</code> gwoup!\n\nIf you dink, dat it is an intended behaviow, den wait untiw usewbot gets unwocked and nyext time, when you wiww be going to pewfowm such an opewation, use <code>{prefix}suspend_api_protect</code> &lt;time in seconds&gt;"
@@ -520,6 +544,10 @@ help:
   core_notice: "<tg-emoji emoji-id=5355133243773435190>☝️</tg-emoji> <b>Dis is a cowe moduwe. You can't unwoad it nyow wepwace</b>"
   show_preview_in_help: "Show # meta bannyew in hewp pweview [moduwe] pwease~ :3 OwO"
 
+  _cls_doc: Shows hewp fow moduwes and commands
+  _cmd_doc_help: '[moduwe] - Show hewp fow moduwes and commands'
+  _cmd_doc_helphide: <moduwe ...> - Hide ow show moduwes in hewp
+  _cmd_doc_support: Show suppowt chat wink
 heroku_info:
   info_message: "{}\n<blockquote>┌\n├  【<tg-emoji emoji-id=5883964170268840032>👤</tg-emoji>】 <b>Ownew</b>: {me}\n├  【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>Vewsion</b>: {version}\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5778335621491723621>📷</tg-emoji>】 <b>Pwefix</b>: {prefix}⠀ ⠀ \n├  【<tg-emoji emoji-id=5843799474362652262>🔄</tg-emoji>】 <b>Uptime</b>: {uptime}\n├  【<tg-emoji emoji-id=5879770735999717115>👤</tg-emoji>】 <b>Bwanch</b>: {branch}\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5775887550262546277>❗️</tg-emoji>】 <b>CPU</b>: {cpu_usage}\n├  【<tg-emoji emoji-id=5931409969613116639>🛡</tg-emoji>】 <b>WAM</b>: {ram_usage}\n├  【<tg-emoji emoji-id=5931472654660800739>📊</tg-emoji>】 <b>Ping</b>: {ping}\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5926783847453692661>🛡</tg-emoji>】 <b>Update</b>: {upd}\n├  【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>Host</b>: {platform}\n├  【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>OS</b>: {os}\n├  【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>Pydon Vewsion</b>: {python_ver}\n└</blockquote>"
   non_detectable: "<tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> <b>Dis component cannyot be detected on youw sewvew!</b>"
@@ -535,10 +563,10 @@ heroku_info:
   _cfg_cst_btn: "Custom button fow info. Weave empty to wemove button"
   _cfg_banner: "UWW to image bannew"
   desc: "<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <b>Usewbot — what is it?</b>\n\n<tg-emoji emoji-id=5472238129849048175>😎</tg-emoji> A usewbot wefews to a <b>diwd-pawty pwogwam</b> dat intewacts with da Tewegwam API to pewfowm <b>automated tasks on behawf of a usew</b>. Dese usewbots can be used to automate vawious tasks such as <b>sending messages, joining channyews, downwoading media, and much mowe</b>.\n\n<tg-emoji emoji-id=5474667187258006816>😎</tg-emoji> Usewbots awe diffewent fwom weguwaw Tewegwam bots as <b>dey wun on da usew's account</b> wader dan a bot account. Dis means dat usewbots can access mowe featuwes and have gweatew fwexibiwity in tewms of da actions dey can pewfowm.\n\n<tg-emoji emoji-id=5472267631979405211>🚫</tg-emoji> Howevew, it is impowtant to nyote dat <b>usewbots awe nyot officiawwy suppowted by Tewegwam</b> and deiw use may viowate da pwatfowm's tewms of sewvice. As such, <b>usews shouwd exewcise caution when using usewbots</b> and ensuwe dat dey awe nyot being used fow mawicious puwposes.\n\n"
-  no_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> Whewe is da wink ow wepwy to da font?"  
+  no_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> Whewe is da wink ow wepwy to da font?"
   no_banner: "<tg-emoji emoji-id=6010394680179562842>😶</tg-emoji> <b>Nyothing was found at da specified wink </b><code>{link></code><b>.\n\nCheck da integwity of youw fiwe at da wink, and awso make suwe dat da wink points diwectwy to da fiwe.</b>"
-  font_installed: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Font instawwed successfuwwy!</b>\n<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <i>You can nyow enjoy using it.</i>"  
-  incorrect_format_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>Invawid font fowmat!</b>\n<blockquote>Suppowted fowmats -> otf, ttf</blockquote>"  
+  font_installed: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Font instawwed successfuwwy!</b>\n<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <i>You can nyow enjoy using it.</i>"
+  incorrect_format_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>Invawid font fowmat!</b>\n<blockquote>Suppowted fowmats -> otf, ttf</blockquote>"
   incorrect_img_format: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>Invawid image fowmat</b>\n<blockquote>Suppowted fowmats -> jpg, jpeg, png, bmp, webp</blockquote>"
   _cmd_doc_ubinfo: "Send info aka 'What is Hewoku?'"
   _cmd_doc_info: "Send usewbot info"
@@ -546,6 +574,7 @@ heroku_info:
   _ihandle_doc_info: "Send usewbot info"
   _cls_doc: "Show usewbot info"
 
+  name: HerokuInfo
 loader:
   name: "Woadew"
   link: "<tg-emoji emoji-id=5256113064821926998>📁</tg-emoji> <b>Fiwe of</b> {class_name}\n\n<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>{prefix}lm in wepwy to dis message to instaww</b>\n\n<tg-emoji emoji-id=4916086774649848789>🔗</tg-emoji> <code>{prefix}dlm {url}</code>\n\n{not_exact}"
@@ -628,6 +657,10 @@ loader:
   dlm_all_from_repo_error_somemods: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Some moduwes faiwed to instaww... sowwy senpai :c</b>\n"
   show_banner_doc: "Show # meta bannyew wike pweview? Pwease? :3"
 
+  '404': <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Moduwe nyot found >w<</b>
+  _cmd_doc_dlmall: Instaww aww moduwes fwom sewected wepositowy
+  _cmd_doc_ml: <moduwe> - Send moduwe as a fiwe
+  result: "<emoji document_id=5337183664630709422>🔎</emoji> <b>Seawch wesuwt fow</b> <code>{query}</code>\n\n<emoji document_id=5258270535710317499>📦</emoji> <b>{name}</b> by <b>{dev}</b>\n<emoji document_id=5879813604068298387>ℹ️</emoji> <i>{cls_doc}</i>\n<emoji document_id=5372981976804366741>🤖</emoji> <b>Commands:</b>\n{commands}\n\n<emoji document_id=5188377234380954537>🪐</emoji> <code>{prefix}dlmod {mhash}</code>"
 translations:
   name: "Twanswations"
   lang_saved: "{} <b>Wangwuage saved!</b>"
@@ -657,7 +690,7 @@ translations:
   action_cancelled: "<b>Action cancewwed... uwu</b>"
   lang_deleted: "<b>Wanguage successfuwwy deweted~ yippee</b>"
   _cls_doc: "Pwocesses intewnaw twanswations"
-  
+
 
 eval:
   name: "Evawuwatow"
@@ -673,6 +706,8 @@ eval:
   _cmd_doc_ebf: "Evawuates Bwainf*ck code"
   _cmd_doc_ec: "Evawuates C code"
   _cmd_doc_ecpp: "Evawuates C++ code"
+  _cmd_doc_ers: "Evawuates Wust code"
+  _cmd_doc_eg: "Evawuates Go code"
   _cmd_doc_enode: "Evawuates Nyode.js code"
   _cmd_doc_ephp: "Evawuates PHP code"
   _cmd_doc_eruby: "Evawuates Wuby code"
@@ -750,3 +785,11 @@ $inline:
   button403: "You awe nyot awwowed to pwess dis button! >w<"
   keep_id: "⚠️ Do nyot wemove ID! {}"
   no_query_results: "<tg-emoji emoji-id=5440660757194744323>‼️</tg-emoji> <b>Faiwed to cweate fowm UwU</b>\n\nPossibwe ways to fix the ewwow:\n\n1. Westawt Hewoku: <code>{prefix}westart</code>\n\n2. Enabwe inwine mode fow the bot: go to @BotFathew, send /mybots, cwick Bot Settings -> Inwine Mode -> On\n\n3. Cweate a new bot: send the command <code>{prefix}ch_hewoku_bot</code> <@botname>"
+heroku_plugin_security:
+  name: HikkaPluginSecurity
+  _cls_doc: Manage extewnaw moduwe secuwity ovewwides
+  _cmd_doc_external: <moduwe> - Deny fuww usewbot access fow moduwe
+  _cmd_doc_unexternal: <moduwe> - Gwant fuww usewbot access fow moduwe
+  no_hash: <emoji document_id=5210952531676504517>🚫</emoji> <b>You must specify a moduwe name</b>
+  hash_not_found: <emoji document_id=5210952531676504517>🚫</emoji> <b>Moduwe with this name nyot found</b>
+  hash_not_found_suggest: <emoji document_id=5312383351217201533>⚠️</emoji> <b>No matches. Cwosest:</b> <code>{}</code>

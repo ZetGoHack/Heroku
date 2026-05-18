@@ -91,6 +91,10 @@ heroku_security:
   _cmd_doc_sgroupadd: "<имя> [пользователь или ответ] - Добавить пользователя в группу безопасности"
   _cmd_doc_sgroupdel: "<имя> [пользователь или ответ] - Удалить пользователя из группы безопасности"
 
+  name: HerokuSecurity
+  cancel_btn: 🚫 Отмена
+  confirm_btn: 👑 Подтвердить
+  li: <tg-emoji emoji-id=4974307891025543730>▫️</tg-emoji> <b><a href="tg://user?id={}">{}</a></b>
 heroku_settings:
   watchers: "<tg-emoji emoji-id=5424885441100782420>👀</tg-emoji> <b>Смотрители:</b>\n\n<blockquote expandable><b>{}</b></blockquote>"
   mod404: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Смотритель {} не найден</b>"
@@ -151,6 +155,7 @@ heroku_settings:
   core_protection_removed: "🔓 <b>Защита ядра успешно удалена</b>"
   core_protection_enabled: "🔓 <b>Защита ядра успешно установлена</b>"
 
+  name: HerokuSettings
 terminal:
   fw_protect: "Задержка между редактированиями"
   what_to_kill: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Ответь на выполняемую команду для ее завершения</b>"
@@ -180,6 +185,9 @@ terminal:
   inline_hint_desc: "Начните вводить команду"
 
 
+  name: Terminal
+  _cls_doc: Запуск shell-команд
+  exec_error: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Ошибка выполнения:</b>\n<code>{}</code>"
 heroku_web:
   host_denied: "<tg-emoji emoji-id=6037254263187443802>💬</tg-emoji> Команды добавления сессий не доступны на вашем хостинге, свяжитесь с администрацией вашего хостинга."
   btn_yes: "🚸 Все равно подтвердить"
@@ -210,6 +218,9 @@ heroku_web:
   switch_failed: "🚫 <b>Ошибка переноса:</b> <code>{}</code>"
   _cmd_doc_switchacc: "Перенести юзербота на другой Telegram-аккаунт"
 
+  name: HerokuAccounts
+  _cls_doc: Управление аккаунтами через inline
+  _cmd_doc_addacc: '[user/id/reply] - Добавить другой аккаунт через inline-вход'
 heroku_backup:
   period: "⌚️ <b>Юнит «ALPHA»</b> создает регулярные резервные копии. Эти настройки можно изменить позже.\n\nПожалуйста, выберите периодичность резервного копирования\n\n<b>🚫 Таким образом невозможно восстановить модули скачанные с файлов командой .lm! Будьте осторожны и делайте .backupmods перед восстановлением.</b>"
   saved: "✅ Периодичность сохранена! Ее можно изменить с помощью <code>{prefix}set_backup_period</code>"
@@ -241,6 +252,7 @@ heroku_backup:
   _cmd_doc_backupall: "Создаёт общую резервную копию (модули + база)"
   _cmd_doc_restoreall: "Восстанавливает общую резервную копию (база + модули)"
 
+  name: HerokuBackup
 presets:
   _fun_title: "🪩 Развлекательные модули"
   _fun_desc: "Забавные модули — анимации, спам, игры, и др."
@@ -269,8 +281,16 @@ presets:
   remove_from_folder_usage: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Укажи папку и модуль для удаления. </b> <code>{prefix}removefromfolder <папка> <модуль></code>"
   removed_from_folder: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Модуль {} удален из папки</b> <code>{}</code>"
   module_not_in_folder: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Модуль {} не находится в папке {}</b>"
+  _cmd_doc_presets: "| Пакеты модулей для загрузки"
+  _cmd_doc_loadpreset: "Загрузить пользовательский пресет. Отправь файл с командой или ответь командой на файл."
+  _cmd_doc_addtofolder: "<папка> <модуль> - Добавить модуль в пользовательскую папку"
+  _cmd_doc_folderload: "<папка> - Отправить пользовательскую папку файлом пресета"
+  _cmd_doc_removefromfolder: "<папка> <модуль> - Удалить модуль из пользовательской папки"
+  _cmd_doc_loadaliases: "Загрузить алиасы из файла. Отправь файл с командой или ответь командой на файл."
+  _cmd_doc_aliasload: "Отправить алиасы файлом"
   _cls_doc: "Предлагает новым пользователям Heroku готовые сборки модулей для загрузки"
 
+  name: Presets
 settings:
   choose_installation: "<tg-emoji emoji-id=5363805650327450240>🪐</tg-emoji> <b>Выберите вариант установки Heroku:</b>"
   vds_install: "<tg-emoji emoji-id=5471952986970267163>💎</tg-emoji> Процесс установки на VDS выполняется одной командой:\n<pre><code class=\"language-shell\">sudo apt update &amp;&amp; sudo apt upgrade -y &amp;&amp; sudo apt install git python3-pip &amp;&amp; git clone https://github.com/coddrago/Heroku &amp;&amp; cd Heroku &amp;&amp; pip install -r requirements.txt &amp;&amp; python3 -m heroku</code></pre>\n<i>Примечание: Если у вас отсутствуют права sudo, исключите соответствующую часть команды.</i>"
@@ -318,6 +338,9 @@ settings:
   cmc_done: "<b>База данных очищена для модуля {}</b>"
   mod_enabled: "Модуль {} включён"
   mod_disabled: "Модуль {} отключён"
+  cmd_enabled: "Команда {} включена в модуле {}"
+  cmd_disabled: "Команда {} отключена в модуле {}"
+  not_a_user: "<tg-emoji emoji-id=5447644880824181073>⚠️</tg-emoji> <b>Сущность {} не является пользователем</b>"
   who_to_blacklist: "<tg-emoji emoji-id=5382187118216879236>❓</tg-emoji> <b>Кого заблокировать то?</b>"
   who_to_unblacklist: "<tg-emoji emoji-id=5382187118216879236>❓</tg-emoji> <b>Кого разблокировать то?</b>"
   _cmd_doc_addalias: "Установить алиас для команды"
@@ -328,9 +351,15 @@ settings:
   _cmd_doc_delalias: "<алиас|-c|--clear> - Удалить алиас или все алиасы"
   _cmd_doc_heroku: "Показать версию Heroku"
   _cmd_doc_setprefix: "<префикс> [владелец] - Установить префикс команд"
+  _cmd_doc_togglecmd: "<модуль> <команда> или <команда> - Включить или отключить команду"
+  _cmd_doc_togglemod: "<модуль> - Включить или отключить весь модуль"
+  _cmd_doc_clearmodule: "<модуль> - Очистить все записи базы данных для модуля"
   _cmd_doc_unblacklist: "[чат] - Включить бота где-либо"
   _cmd_doc_unblacklistuser: "[пользователь] - Разрешить пользователю выполнять команды"
 
+  name: Settings
+  cmd404: <tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>Команда не найдена</b>
+  mod404: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Смотритель {} не найден</b>
 heroku_config:
   choose_core: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Выбери категорию</b>"
   configure: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Выбери модуль для настройки</b>"
@@ -374,6 +403,7 @@ heroku_config:
   _cmd_doc_config: "Настроить модули"
   _cmd_doc_fconfig: "<модуль> <настройка> <значение> - установить значение конфига для модуля"
 
+  name: HerokuConfig
 inline_stuff:
   bot_username_invalid: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Неправильный ник бота. Он должен заканчиваться на</b> <code>bot</code> <b>и быть не короче чем 5 символов</b>"
   token_invalid: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Указанный токен бота недействителен. Он должен содержать 8-10 цифр, </b><code>:</code> <b>и 34-36 символов</b>"
@@ -386,6 +416,9 @@ inline_stuff:
   prefix_reset: "🔀 Префикс сброшен!"
   _cmd_doc_ch_heroku_bot: "<юзернейм> - Изменить юзернейм инлайн бота"
 
+  name: InlineStuff
+  _cls_doc: Настройка inline-бота
+  _cmd_doc_ch_bot_token: <token> - Изменить токен inline-бота
 test:
   set_loglevel: "<tg-emoji emoji-id=5355133243773435190>🚫</tg-emoji> <b>Укажи уровень логов числом или строкой</b>"
   no_logs: "<tg-emoji emoji-id=5355133243773435190>🤷‍♀️</tg-emoji> <b>У тебя нет логов уровня</b> <code>{}</code><b>.</b>"
@@ -413,6 +446,7 @@ test:
   logs_cleared: "🗑 <b>Логи очищены</b>"
   _cmd_doc_clearlogs: "Очистить логи"
 
+  name: Test
 updater:
   source: "<tg-emoji emoji-id=5208634061085492935>📖</tg-emoji> <b>Исходный код можно прочитать</b> <a href='{}'>здесь</a>"
   restarting_caption: "<tg-emoji emoji-id=5208622108191506906>🕗</tg-emoji> <b>Твоя {} перезагружается...</b>"
@@ -456,6 +490,10 @@ updater:
   _cmd_doc_update: "Скачивает обновления юзербота"
   _cmd_doc_rollback: "Откатывает обновления юзербота"
 
+  name: Updater
+  _cmd_doc_autoupdate: Переключить автообновления
+  _cmd_doc_changelog: Показать changelog последнего крупного обновления
+  _cmd_doc_ubstop: Остановить юзербота
 heroku_plugin_security:
   name: "HikkaPluginSecurity"
   no_hash: "<emoji document_id=5210952531676504517>🚫</emoji> <b>Нужно указать название модуля</b>"
@@ -472,6 +510,9 @@ heroku_plugin_security:
   already_allowed: "<emoji document_id=5312383351217201533>⚠️</emoji> <b>Доступ к .session уже разрешён для</b> <code>{}</code>"
   already_denied: "<emoji document_id=5312383351217201533>⚠️</emoji> <b>Доступ к .session уже запрещён для</b> <code>{}</code>"
 
+  _cls_doc: Управление ограничениями безопасности внешних модулей
+  _cmd_doc_external: <module> - Запретить модулю полный доступ к юзерботу
+  _cmd_doc_unexternal: <module> - Разрешить модулю полный доступ к юзерботу
 api_protection:
   warning: "<tg-emoji emoji-id=5447644880824181073>⚠️</tg-emoji> <b>ВНИМАНИЕ!</b>\n\nАккаунт вышел за лимиты запросов, указанные в конфиге. С целью предотвращения флуда Telegram API, юзербот был <b>полностью заморожен</b> на {} секунд. Дополнительная информация прикреплена в файле ниже. \n\nРекомендуется обратиться за помощью в <code>{prefix}support</code> группу!\n\nЕсли ты считаешь, что это запланированное поведение юзербота, просто подожди, пока закончится таймер и в следующий раз, когда запланируешь выполнять такую ресурсозатратную операцию, используй <code>{prefix}suspend_api_protect</code> &lt;время в секундах&gt;"
   args_invalid: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Неверные аргументы</b>"
@@ -489,7 +530,8 @@ api_protection:
   local_url: "🏠 Локальная ссылка"
   _cmd_doc_api_fw_protection: "Включить/выключить защиту API"
   _cmd_doc_suspend_api_protect: "<время в секундах> - Заморозить защиту API на N секунд"
-  
+  name: APILimiter
+  _cls_doc: Помогает юзерботу не спамить Telegram API
 help:
   undoc: "<tg-emoji emoji-id=5469741319330996757>💫</tg-emoji> Нет описания"
   all_header: "<b>{} модулей доступно, {} скрыто:</b>"
@@ -508,6 +550,7 @@ help:
   _cmd_doc_support: "Показать ссылку на чат помощи Heroku"
   show_preview_in_help: "Показать # meta banner в превью help [module] ?"
 
+  name: Help
 heroku_info:
   info_message: "{}\n<blockquote>┌\n├  【<tg-emoji emoji-id=5883964170268840032>👤</tg-emoji>】 <b>𝙾𝚠𝚗𝚎𝚛</b>: {me}\n├  【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>𝚅𝚎𝚛𝚜𝚒𝚘𝚗</b>: {version}\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5778335621491723621>📷</tg-emoji>】 <b>𝙿𝚛𝚎𝚏𝚒𝚡</b>: {prefix}⠀ ⠀ \n├  【<tg-emoji emoji-id=5843799474362652262>🔄</tg-emoji>】 <b>𝚄𝚙𝚝𝚒𝚖𝚎</b>: {uptime}\n├  【<tg-emoji emoji-id=5879770735999717115>👤</tg-emoji>】 <b>𝙱𝚛𝚊𝚗𝚌𝚑</b>: {branch}\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5775887550262546277>❗️</tg-emoji>】 <b>𝙲𝙿𝚄</b>: {cpu_usage}\n├  【<tg-emoji emoji-id=5931409969613116639>🛡</tg-emoji>】 <b>𝚁𝙰𝙼</b>: {ram_usage}\n├  【<tg-emoji emoji-id=5931472654660800739>📊</tg-emoji>】 <b>𝙿𝚒𝚗𝚐</b>: {ping}\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5926783847453692661>🛡</tg-emoji>】 <b>𝚄𝚙𝚍𝚊𝚝𝚎</b>: {upd}\n├  【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>𝙷𝚘𝚜𝚝</b>: {platform}\n├  【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>𝙾𝚂</b>: {os}\n├  【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>𝙿𝚢𝚝𝚑𝚘𝚗 𝚅𝚎𝚛𝚜𝚒𝚘𝚗</b>: {python_ver}\n└</blockquote>"
   non_detectable: "<tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> <b>Этот компонент невозможно обнаружить на вашем сервере!</b>"
@@ -533,6 +576,8 @@ heroku_info:
   _cmd_doc_info: "Отправляет информацию о боте"
   _cmd_doc_setinfo: "<текст> - Изменить текст в .info"
 
+  name: HerokuInfo
+  _cls_doc: Показать информацию о юзерботе
 loader:
   link: "<tg-emoji emoji-id=5256113064821926998>📁</tg-emoji> <b>Файл</b> {class_name}\n\n<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>{prefix}lm в ответ на это сообщение для установки</b>\n\n<tg-emoji emoji-id=4916086774649848789>🔗</tg-emoji> <code>{prefix}dlm {url}</code>\n\n{not_exact}"
   file: "<tg-emoji emoji-id=5256113064821926998>📁</tg-emoji> <b>Файл</b> {class_name}\n\n<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>{prefix}lm в ответ на это сообщение для установки</b>\n\n{not_exact}"
@@ -615,6 +660,12 @@ loader:
   dlm_all_from_repo_error_somemods: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Не удалось установить некоторые модули:</b>\n"
   show_banner_doc: "Показать мета-баннера как превью ?"
 
+  name: Loader
+  '404': <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Модуль не найден</b>
+  _cmd_doc_dlmall: Установить все модули из выбранного репозитория
+  _cmd_doc_ml: <module> - Отправить модуль файлом
+  result: "<emoji document_id=5337183664630709422>🔎</emoji> <b>Результат поиска по</b> <code>{query}</code>\n\n<emoji document_id=5258270535710317499>📦</emoji> <b>{name}</b> от <b>{dev}</b>\n<emoji document_id=5879813604068298387>ℹ️</emoji> <i>{cls_doc}</i>\n<emoji document_id=5372981976804366741>🤖</emoji> <b>Команды:</b>\n{commands}\n\n<emoji document_id=5188377234380954537>🪐</emoji> <code>{prefix}dlmod {mhash}</code>"
+  not_subscribed: <emoji document_id=5210952531676504517>🚫</emoji> <b>Сначала нужно подписаться на канал модуля</b>
 translations:
   lang_saved: "{} <b>Язык сохранён!</b>"
   pack_saved: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Пакет переводов сохранён!</b>"
@@ -643,6 +694,8 @@ translations:
   action_cancelled: "<b>Действие отменено<\b>"
   lang_deleted: "<b>Язык успешно удалён<\b>"
 
+  name: Translations
+  _cls_doc: Управляет внутренними переводами
 eval:
   eval: "<tg-emoji emoji-id={}>💻</tg-emoji><b> Код:</b>\n<pre><code class=\"language-{}\">{}</code></pre>\n\n<tg-emoji emoji-id=5197688912457245639>✅</tg-emoji><b> Результат:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"
   err: "<tg-emoji emoji-id={}>💻</tg-emoji><b> Код:</b>\n<pre><code class=\"language-{}\">{}</code></pre>\n\n<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Ошибка:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"
@@ -657,18 +710,22 @@ eval:
   _cmd_doc_ebf: "Выполняет Brainf*ck код"
   _cmd_doc_ec: "Выполняет C код"
   _cmd_doc_ecpp: "Выполняет C++ код"
+  _cmd_doc_ers: "Выполняет Rust код"
+  _cmd_doc_eg: "Выполняет Go код"
   _cmd_doc_enode: "Выполняет Node.js код"
   _cmd_doc_ephp: "Выполняет PHP код"
   _cmd_doc_eruby: "Выполняет Ruby код"
 
+  name: Evaluator
 translate:
   no_args: "<tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> <b>Не указаны аргументы</b>"
   error: "<tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> <b>Не удалось перевести текст</b>"
   language: "ru"
-  translated_text: "<tg-emoji emoji-id=5787344001862471785>🔁</tg-emoji> Переведённый текст:\n<blockquote>{tr_text} <\/blockquote>"
+  translated_text: "<tg-emoji emoji-id=5787344001862471785>🔁</tg-emoji> Переведённый текст:\n<blockquote>{tr_text} </blockquote>"
   _cls_doc: "Переводит текст (очевидно)"
   _cmd_doc_tr: "[язык] [текст] - Перевести текст"
 
+  name: Translator
 quickstart:
   base: "<tg-emoji emoji-id=5463379725441341739>🪐</tg-emoji> <b>Привет.</b> Твой юзербот <b>{}</b> теперь установлен.\n\n<tg-emoji emoji-id=5134202243486057363>💫</tg-emoji> <b>Нужна помощь?</b> Заходи в <a href=\"https://t.me/heroku_talks\">наш чат поддержки</a>. Мы помогаем <b>всем</b>.\n\n<tg-emoji emoji-id=4940480187436369099>💁‍♀️</tg-emoji> <b>Краткое руководство:</b>\n\n<tg-emoji emoji-id=5456197350416486261>1️⃣</tg-emoji> <b>Напиши</b> <code>.help</code><b>, чтобы увидеть список модулей</b>\n<tg-emoji emoji-id=5456261689026581678>2️⃣</tg-emoji> <b>Напиши</b> <code>.help &lt;Имя модуля/команда&gt;</code><b>, чтобы увидеть описание модуля</b>\n<tg-emoji emoji-id=5458366235886522404>3️⃣</tg-emoji> <b>Напиши</b> <code>.dlmod &lt;ссылка&gt;</code><b>, чтобы загрузить модуль по ссылке</b>\n<tg-emoji emoji-id=5456207331920483861>4️⃣</tg-emoji> <b>Напиши</b> <code>.loadmod</code> <b>в ответ на файл, чтобы загрузить из него модуль</b>\n<tg-emoji emoji-id=5456185418997340146>5️⃣</tg-emoji> <b>Напиши</b> <code>.unloadmod &lt;Имя модуля&gt;</code><b>, чтобы выгрузить модуль</b>\n\n<tg-emoji emoji-id=5456178297941561360>💡</tg-emoji> <b>Heroku поддерживает модули от Hikka, Friendly-Telegram и GeekTG, а также свои собственные.</b>\n"
   lavhost: "✌️ <b>Твой юзербот установлен на lavHost</b>. Вступи в @lavhost, чтобы получать важные уведомления и обновления. Все вопросы, связанные с платформой, следует задавать в @lavhostchat."
@@ -676,6 +733,8 @@ quickstart:
   language: "🇷🇺 Русский"
   btn_support: "🥷 Чат поддержки"
 
+  name: Quickstart
+  _cls_doc: Уведомляет пользователя об установке юзербота
 $validators:
   boolean: "логическим значением"
   positive: "положительным "

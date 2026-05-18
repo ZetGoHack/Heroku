@@ -217,7 +217,7 @@ class CoreMod(loader.Module):
 
             if not isinstance(entity, User):
                 return await utils.answer(
-                    message, f"The entity {args[1]} is not a User"
+                    message, self.strings("not_a_user").format(args[1])
                 )
 
             if entity.id != self.tg_id:
@@ -546,7 +546,9 @@ class CoreMod(loader.Module):
             except Exception:
                 pass
 
-            await utils.answer(message, f"Command {cmd} enabled in module {module_key}")
+            await utils.answer(
+                message, self.strings("cmd_enabled").format(cmd, module_key)
+            )
         else:
             current.append(cmd)
             disabled_commands[module_key] = current
@@ -562,7 +564,7 @@ class CoreMod(loader.Module):
                     self.allmodules.aliases.pop(alias, None)
 
             await utils.answer(
-                message, f"Command {cmd} disabled in module {module_key}"
+                message, self.strings("cmd_disabled").format(cmd, module_key)
             )
 
     @loader.command()
