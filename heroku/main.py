@@ -383,20 +383,28 @@ def parse_arguments() -> dict:
         "--proxy-host",
         dest="proxy_host",
         action="store",
-        help="MTProto proxy host, without port",
+        help="Proxy host, without port",
     )
     parser.add_argument(
         "--proxy-port",
         dest="proxy_port",
         action="store",
         type=int,
-        help="MTProto proxy port",
+        help="Proxy port",
+    )
+    parser.add_argument(
+        "--type-proxy",
+        dest="proxy_type",
+        action="store",
+        default="mtproxy",
+        choices=("mtproxy", "socks5", "http"),
+        help="Proxy type: mtproxy, socks5 or http",
     )
     parser.add_argument(
         "--proxy-secret",
         dest="proxy_secret",
         action="store",
-        help="MTProto proxy secret",
+        help="MTProto proxy secret; required for --type-proxy mtproxy",
     )
     parser.add_argument(
         "--root",
@@ -497,20 +505,42 @@ class Heroku:
 
     def _get_proxy(self):
         """
-        Get proxy tuple from --proxy-host, --proxy-port and --proxy-secret
+        Get proxy settings from --type-proxy, --proxy-host, --proxy-port
+        and --proxy-secret
         and connection to use (depends on proxy - provided or not)
         """
-        match (
-            self.arguments.proxy_host,
-            self.arguments.proxy_port,
-            self.arguments.proxy_secret,
-        ):
-            case (host, port, secret) if host and port and secret:
-                logging.debug("Using proxy: %s:%s", host, port)
-                self.proxy = (host, port, secret)
-                self.conn = ConnectionTcpMTProxyRandomizedIntermediate
-            case _:
-                self.proxy, self.conn = None, ConnectionTcpFull
+        host = self.arguments.proxy_host
+        port = self.arguments.proxy_port
+        secret = self.arguments.proxy_secret
+        proxy_type = (self.arguments.proxy_type or "mtproxy").lower()
+
+        if not host and not port and not secret:
+            self.proxy, self.conn = None, ConnectionTcpFull
+            return
+
+        if not host or not port:
+            raise ValueError("--proxy-host and --proxy-port must be passed together")
+
+        if proxy_type == "mtproxy":
+            if not secret:
+                raise ValueError("--proxy-secret is required for --type-proxy mtproxy")
+
+            logging.debug("Using MTProxy: %s:%s", host, port)
+            self.proxy = (host, port, secret)
+            self.conn = ConnectionTcpMTProxyRandomizedIntermediate
+            return
+
+        if secret:
+            raise ValueError(
+                "--proxy-secret can only be used with --type-proxy mtproxy")
+
+        logging.debug("Using %s proxy: %s:%s", proxy_type, host, port)
+        self.proxy = {
+            "proxy_type": proxy_type,
+            "addr": host,
+            "port": port,
+        }
+        self.conn = ConnectionTcpFull
 
     def _read_sessions(self):
         """Gets sessions from environment and data directory"""
