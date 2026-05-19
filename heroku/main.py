@@ -43,7 +43,10 @@ from herokutl.errors import (
     PhoneNumberInvalidError,
     SessionPasswordNeededError,
 )
-from herokutl.errors.rpcerrorlist import YouBlockedUserError
+from herokutl.errors.rpcerrorlist import (
+    AuthKeyUnregisteredError,
+    YouBlockedUserError,
+)
 from herokutl.network.connection import (
     ConnectionTcpFull,
     ConnectionTcpMTProxyRandomizedIntermediate,
@@ -924,7 +927,7 @@ class Heroku:
                     "and don't put spaces in it."
                 )
                 self.sessions.remove(session)
-            except InteractiveAuthRequired:
+            except (AuthKeyUnregisteredError, InteractiveAuthRequired):
                 logging.error(
                     "Session %s was terminated and re-auth is required",
                     session.filename,
