@@ -104,15 +104,35 @@ class BaseTranslator:
     def gettext(self, text: str) -> typing.Any:
         return self.getkey(text) or text
 
-    async def load_module_translations(self, pack_url: str) -> typing.Union[bool, dict]:
+    async def load_module_translations(self, pack_url: str, cache_path: Path = None) -> typing.Union[bool, dict]:
         try:
-            data = yaml.load((await utils.run_sync(requests.get, pack_url)).text)
+            content = (await utils.run_sync(requests.get, pack_url)).text
+            data = yaml.load(content)
         except Exception:
             logger.exception("Unable to decode %s", pack_url)
-            return False
+            data = None
+            content = None
 
         if not isinstance(data, dict):
-            return {}
+            if cache_path and cache_path.exists():
+                try:
+                    data = yaml.load(cache_path.read_text(encoding="utf-8"))
+                except Exception:
+                    logger.exception("Unable to decode cached %s", cache_path)
+                    return False
+
+                if not isinstance(data, dict):
+                    return {}
+
+            else:
+                return {}
+
+        if cache_path and content is not None:
+            try:
+                cache_path.parent.mkdir(parents=True, exist_ok=True)
+                cache_path.write_text(content, encoding="utf-8")
+            except Exception:
+                logger.exception("Failed to save `%s`'s cache copy", pack_url)
 
         if any(len(key) != 2 for key in data):
             return data

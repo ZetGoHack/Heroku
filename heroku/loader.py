@@ -668,8 +668,11 @@ BASE_DIR = (
 )
 
 LOADED_MODULES_DIR = os.path.join(BASE_DIR, "loaded_modules")
+MODULES_LANGPACKS_DIR = os.path.join(LOADED_MODULES_DIR, "langpacks")
 LOADED_MODULES_PATH = Path(LOADED_MODULES_DIR)
+MODULES_LANGPACKS_PATH = Path(MODULES_LANGPACKS_DIR)
 LOADED_MODULES_PATH.mkdir(parents=True, exist_ok=True)
+MODULES_LANGPACKS_PATH.mkdir(parents=True, exist_ok=True)
 
 
 def _iter_module_files(
@@ -1734,7 +1737,10 @@ class Modules:
             )
 
             if pack_url and (
-                transations := await self.translator.load_module_translations(pack_url)
+                transations := await self.translator.load_module_translations(
+                    pack_url,
+                    MODULES_LANGPACKS_PATH / f"{self.client.tg_id}_{mod.__class__.__name__}.yml",
+                )
             ):
                 mod.strings.external_strings = transations
 
