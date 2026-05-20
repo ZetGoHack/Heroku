@@ -156,5 +156,5 @@ class QueryGallery(InlineUnit):
                 )
             ]
 
-        await query.answer(result, cache_time=0)
+        await self.bot(query.answer(result, cache_time=0))
         return True
