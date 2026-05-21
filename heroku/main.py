@@ -435,6 +435,12 @@ def parse_arguments() -> dict:
         help="Disable git checks and updates",
     )
     parser.add_argument(
+        "--no-web",
+        dest="no_web",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
         "--wipe",
         "-w",
         dest="wipe",
