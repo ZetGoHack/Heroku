@@ -13,7 +13,6 @@
 import asyncio
 import collections
 import copy
-import inspect
 import json
 import logging
 import os
@@ -54,11 +53,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-_DB_PROTECTED_OWNERS = {"HerokuPluginSecurity"}
-_DB_ALLOWED_WRITERS = {
-    f"{__package__}.loader",
-    f"{__package__}.modules.heroku_plugin_security",
-}
 
 
 class NoAssetsChannel(Exception):
@@ -364,11 +358,6 @@ class Database(dict):
 
     def set(self, owner: str, key: str, value: JSONSerializable) -> bool:
         """Set database key"""
-        if owner in _DB_PROTECTED_OWNERS:
-            caller = self._get_write_caller()
-            if caller not in _DB_ALLOWED_WRITERS:
-                self._reject_write(owner, key, caller)
-
         if not utils.is_serializable(owner):
             raise RuntimeError(
                 "Attempted to write object to "
@@ -394,11 +383,6 @@ class Database(dict):
         return self.save()
 
     def __setitem__(self, owner: str, value: JSONSerializable) -> None:
-        if owner in _DB_PROTECTED_OWNERS:
-            caller = self._get_write_caller()
-            if caller not in _DB_ALLOWED_WRITERS:
-                self._reject_write(owner, "<dict>", caller)
-
         if not utils.is_serializable(owner):
             raise RuntimeError(
                 "Attempted to write object to "
@@ -417,31 +401,7 @@ class Database(dict):
 
     def update(self, *args, **kwargs) -> None:
         items = dict(*args, **kwargs)
-        for owner in items.keys():
-            if owner in _DB_PROTECTED_OWNERS:
-                caller = self._get_write_caller()
-                if caller not in _DB_ALLOWED_WRITERS:
-                    self._reject_write(owner, "<dict>", caller)
         return super().update(items)
-
-    @staticmethod
-    def _get_write_caller() -> typing.Optional[str]:
-        for frame_info in inspect.stack():
-            mod = frame_info.frame.f_globals.get("__name__", None)
-            if not mod or mod == __name__ or mod == f"{__package__}.pointers":
-                continue
-            return mod
-        return None
-
-    @staticmethod
-    def _reject_write(owner: str, key: str, caller: typing.Optional[str]):
-        logger.warning(
-            "Blocked db write to protected owner=%s key=%s from %s",
-            owner,
-            key,
-            caller or "<unknown>",
-        )
-        raise PermissionError("Database write to protected owner is restricted")
 
     def pointer(
         self,
