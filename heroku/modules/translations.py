@@ -274,8 +274,10 @@ class Translations(loader.Module):
         await utils.answer(
             message,
             self.strings[
-                "pack_saved"
-                if await self.allmodules.reload_translations()
-                else "check_pack"
+                (
+                    "pack_saved"
+                    if await self.allmodules.reload_translations()
+                    else "check_pack"
+                )
             ],
         )

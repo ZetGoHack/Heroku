@@ -800,13 +800,17 @@ class HerokuSecurityMod(loader.Module):
             else (
                 (
                     f"{duration // (24 * 60 * 60)} "
-                    + self.strings[f"day{'s' if duration // (24 * 60 * 60) > 1 else ''}"]
+                    + self.strings[
+                        f"day{'s' if duration // (24 * 60 * 60) > 1 else ''}"
+                    ]
                 )
                 if duration >= 24 * 60 * 60
                 else (
                     (
                         f"{duration // (60 * 60)} "
-                        + self.strings[f"hour{'s' if duration // (60 * 60) > 1 else ''}"]
+                        + self.strings[
+                            f"hour{'s' if duration // (60 * 60) > 1 else ''}"
+                        ]
                     )
                     if duration >= 60 * 60
                     else (

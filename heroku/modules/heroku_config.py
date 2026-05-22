@@ -218,9 +218,11 @@ class HerokuConfigMod(loader.Module):
 
         await call.edit(
             self.strings[
-                "configuring_option"
-                if isinstance(obj_type, bool)
-                else "configuring_option_lib"
+                (
+                    "configuring_option"
+                    if isinstance(obj_type, bool)
+                    else "configuring_option_lib"
+                )
             ].format(
                 utils.escape_html(option),
                 utils.escape_html(mod),
@@ -821,9 +823,11 @@ class HerokuConfigMod(loader.Module):
                 case "Boolean":
                     await call.edit(
                         self.strings[
-                            "configuring_option"
-                            if isinstance(obj_type, bool)
-                            else "configuring_option_lib"
+                            (
+                                "configuring_option"
+                                if isinstance(obj_type, bool)
+                                else "configuring_option_lib"
+                            )
                         ].format(*args),
                         reply_markup=additonal_button_row
                         + self._generate_bool_markup(mod, config_opt, obj_type),
@@ -832,9 +836,11 @@ class HerokuConfigMod(loader.Module):
                 case "Series":
                     await call.edit(
                         self.strings[
-                            "configuring_option"
-                            if isinstance(obj_type, bool)
-                            else "configuring_option_lib"
+                            (
+                                "configuring_option"
+                                if isinstance(obj_type, bool)
+                                else "configuring_option_lib"
+                            )
                         ].format(*args),
                         reply_markup=additonal_button_row
                         + self._generate_series_markup(call, mod, config_opt, obj_type),
@@ -843,9 +849,11 @@ class HerokuConfigMod(loader.Module):
                 case "Choice":
                     await call.edit(
                         self.strings[
-                            "configuring_option"
-                            if isinstance(obj_type, bool)
-                            else "configuring_option_lib"
+                            (
+                                "configuring_option"
+                                if isinstance(obj_type, bool)
+                                else "configuring_option_lib"
+                            )
                         ].format(*args),
                         reply_markup=additonal_button_row
                         + self._generate_choice_markup(call, mod, config_opt, obj_type),
@@ -854,9 +862,11 @@ class HerokuConfigMod(loader.Module):
                 case "MultiChoice":
                     await call.edit(
                         self.strings[
-                            "configuring_option"
-                            if isinstance(obj_type, bool)
-                            else "configuring_option_lib"
+                            (
+                                "configuring_option"
+                                if isinstance(obj_type, bool)
+                                else "configuring_option_lib"
+                            )
                         ].format(*args),
                         reply_markup=additonal_button_row
                         + self._generate_multi_choice_markup(
@@ -866,9 +876,11 @@ class HerokuConfigMod(loader.Module):
                     return
 
         text = self.strings[
-            "configuring_option"
-            if isinstance(obj_type, bool)
-            else "configuring_option_lib"
+            (
+                "configuring_option"
+                if isinstance(obj_type, bool)
+                else "configuring_option_lib"
+            )
         ].format(*args)
 
         parsed_text, parsed_entities = html.parse(text)
@@ -1462,9 +1474,11 @@ class HerokuConfigMod(loader.Module):
         for opt, val in updates:
             lines.append(
                 self.strings[
-                    "option_saved"
-                    if isinstance(instance, loader.Module)
-                    else "option_saved_lib"
+                    (
+                        "option_saved"
+                        if isinstance(instance, loader.Module)
+                        else "option_saved_lib"
+                    )
                 ].format(utils.escape_html(opt), utils.escape_html(mod), val)
             )
 
