@@ -11,13 +11,13 @@
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
 import asyncio
+import io
 import json
 import logging
 import random
 import time
 import typing
 
-from aiogram.types import BufferedInputFile
 from herokutl.tl import functions
 from herokutl.tl.tlobject import TLRequest
 from herokutl.tl.types import Message
@@ -167,7 +167,8 @@ class APIRatelimiterMod(loader.Module):
                             self._ratelimiter,
                             indent=4,
                         ).encode()
-                        report = BufferedInputFile(report_bytes, "local_fw_report.json")
+                        report = io.BytesIO(report_bytes)
+                        report.name = "local_fw_report.json"
 
                         await self.inline.bot.send_document(
                             self.tg_id,

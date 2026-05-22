@@ -516,8 +516,6 @@ class TerminalMod(loader.Module):
     @loader.inline_handler()
     async def exec_inline_handler(self, query):
         """Execute terminal command via inline"""
-        from aiogram.types import InlineQueryResultArticle, InputTextMessageContent
-
         raw = query.query.strip()
         if raw.lower().startswith("exec"):
             raw = raw[4:].strip()
@@ -527,77 +525,64 @@ class TerminalMod(loader.Module):
             return cmd[:15] + "..." if len(cmd) > 15 else cmd
 
         if not raw:
-            await self.inline.bot.answer_inline_query(
-                inline_query_id=query.id,
-                results=[
-                    InlineQueryResultArticle(
-                        id="hint",
+            await query.answer(
+                [
+                    await query.builder.article(
                         title=self.strings("inline_hint"),
                         description=self.strings("inline_hint_desc"),
-                        input_message_content=InputTextMessageContent(
-                            message_text=self.strings("inline_hint"),
-                            parse_mode="HTML",
+                        text=self.strings("inline_hint"),
+                        parse_mode="HTML",
+                        thumb=self.inline._web_document(
+                            BANNER_OK, width=640, height=640
                         ),
-                        thumbnail_url=BANNER_OK,
-                        thumbnail_width=640,
-                        thumbnail_height=640,
+                        id="hint",
                     )
                 ],
                 cache_time=0,
-                is_personal=True,
+                private=True,
             )
             return
 
         if self._is_dangerous(raw):
-            await self.inline.bot.answer_inline_query(
-                inline_query_id=query.id,
-                results=[
-                    InlineQueryResultArticle(
-                        id="dangerous",
+            await query.answer(
+                [
+                    await query.builder.article(
                         title=self.strings("inline_hint"),
                         description=short_cmd(raw),
-                        input_message_content=InputTextMessageContent(
-                            message_text=self.strings("dangerous_command").format(
-                                utils.escape_html(raw)
-                            ),
-                            parse_mode="HTML",
+                        text=self.strings("dangerous_command").format(
+                            utils.escape_html(raw)
                         ),
-                        thumbnail_url=BANNER_BAD,
-                        thumbnail_width=640,
-                        thumbnail_height=640,
+                        parse_mode="HTML",
+                        thumb=self.inline._web_document(
+                            BANNER_BAD, width=640, height=640
+                        ),
+                        id="dangerous",
                     )
                 ],
                 cache_time=0,
-                is_personal=True,
+                private=True,
             )
             return
 
         uid = utils.rand(8)
         self._inline_pending[uid] = raw
 
-        await self.inline.bot.answer_inline_query(
-            inline_query_id=query.id,
-            results=[
-                InlineQueryResultArticle(
-                    id=uid,
+        await query.answer(
+            [
+                await query.builder.article(
                     title=self.strings("inline_hint"),
                     description=short_cmd(raw),
-                    input_message_content=InputTextMessageContent(
-                        message_text=self.strings("exec_confirm").format(
-                            utils.escape_html(raw)
-                        ),
-                        parse_mode="HTML",
-                    ),
-                    thumbnail_url=BANNER_OK,
-                    thumbnail_width=640,
-                    thumbnail_height=640,
-                    reply_markup=self.inline.generate_markup(
+                    text=self.strings("exec_confirm").format(utils.escape_html(raw)),
+                    parse_mode="HTML",
+                    thumb=self.inline._web_document(BANNER_OK, width=640, height=640),
+                    buttons=self.inline.generate_markup(
                         self._build_inline_exec_markup(uid)
                     ),
+                    id=uid,
                 )
             ],
             cache_time=0,
-            is_personal=True,
+            private=True,
         )
 
     @loader.callback_handler()

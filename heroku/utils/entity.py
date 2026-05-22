@@ -17,7 +17,6 @@ from urllib.parse import urlparse
 import emoji
 import herokutl
 import requests
-from aiogram.types import Message as AiogramMessage
 from herokutl import hints
 from herokutl.tl.custom.message import Message
 from herokutl.tl.functions.account import UpdateNotifySettingsRequest
@@ -590,7 +589,7 @@ async def get_user(message: Message) -> typing.Optional[User]:
     return None
 
 
-def get_chat_id(message: typing.Union[Message, AiogramMessage]) -> int:
+def get_chat_id(message: Message) -> int:
     """
     Get the chat ID, but without -100 if its a channel
     :param message: Message to get chat ID from

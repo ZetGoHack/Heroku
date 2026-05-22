@@ -29,9 +29,9 @@ from logging.handlers import RotatingFileHandler
 from collections.abc import Coroutine
 
 import herokutl
-from aiogram.exceptions import TelegramNetworkError, TelegramRetryAfter
-from herokutl.errors import PersistentTimestampOutdatedError
+from herokutl.errors import PersistentTimestampOutdatedError, TimeoutError
 from herokutl.errors.rpcbaseerrors import ServerError, RPCError
+from herokutl.errors.rpcerrorlist import FloodWaitError
 
 from . import utils
 from ._internal import (
@@ -45,7 +45,7 @@ from .tl_cache import CustomTelegramClient
 from .types import BotInlineCall, Module, CoreOverwriteError
 
 INTERNET_ERRORS = (
-    TelegramNetworkError,
+    TimeoutError,
     asyncio.exceptions.TimeoutError,
     ServerError,
     PersistentTimestampOutdatedError,
@@ -85,7 +85,7 @@ def override_text(exception: Exception) -> typing.Optional[str]:
     """Returns error-specific description if available, else `None`"""
 
     match exception:
-        case TelegramNetworkError() | asyncio.exceptions.TimeoutError():
+        case TimeoutError() | asyncio.exceptions.TimeoutError():
             return (
                 "✈️ <b>You have problems with internet connection on your server.</b>"
             )
@@ -105,8 +105,8 @@ def override_text(exception: Exception) -> typing.Optional[str]:
         case ModuleNotFoundError():
             return f"📦 {traceback.format_exception_only(type(exception), exception)[0].split(':')[1].strip()}"
 
-        case TelegramRetryAfter():
-            return f"✋ <b>Bot is hitting limits on {type(exception.method).__name__!r} method and got {exception.retry_after} seconds floodwait</b>"
+        case FloodWaitError():
+            return f"✋ <b>Bot is hitting limits and got {exception.seconds} seconds floodwait</b>"
 
         case _:
             return None
@@ -299,7 +299,7 @@ class TelegramLogsHandler(logging.Handler):
     async def _show_full_trace(
         self,
         call: BotInlineCall,
-        bot: "aiogram.Bot",  # type: ignore  # noqa: F821
+        bot,
         item: HerokuException,
     ):
         chunks = (
@@ -457,9 +457,9 @@ class TelegramLogsHandler(logging.Handler):
                 try:
                     await func()
                     break
-                except TelegramRetryAfter as e:
+                except FloodWaitError as e:
                     attempt += 1
-                    await asyncio.sleep(e.retry_after)
+                    await asyncio.sleep(e.seconds)
                 except RuntimeError:
                     logging.debug(
                         "RuntimeError in sender, probably event loop is closed, skipping",
@@ -612,7 +612,7 @@ def init():
             msg = record.getMessage()
             return "Failed to fetch updates" not in msg and "Sleep" not in msg
 
-    logging.getLogger("aiogram.dispatcher").addFilter(NoFetchUpdatesFilter())
+    logging.getLogger("herokutl.network").addFilter(NoFetchUpdatesFilter())
     handler = logging.StreamHandler()
     handler.setLevel(logging.INFO)
     handler.setFormatter(_main_formatter)
@@ -624,5 +624,4 @@ def init():
     logging.getLogger("herokutl").setLevel(logging.WARNING)
     logging.getLogger("matplotlib").setLevel(logging.WARNING)
     logging.getLogger("aiohttp").setLevel(logging.WARNING)
-    logging.getLogger("aiogram").setLevel(logging.WARNING)
     logging.captureWarnings(True)

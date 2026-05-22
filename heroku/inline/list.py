@@ -19,14 +19,7 @@ import time
 import traceback
 import typing
 
-from aiogram.types import (
-    CallbackQuery,
-    InlineKeyboardMarkup,
-    InlineQuery,
-    InlineQueryResultArticle,
-    InputTextMessageContent,
-)
-from aiogram.exceptions import TelegramRetryAfter
+from herokutl.errors.rpcerrorlist import FloodWaitError
 from herokutl.errors.rpcerrorlist import ChatSendInlineForbiddenError
 from herokutl.extensions.html import CUSTOM_EMOJIS
 from herokutl.tl.types import Message
@@ -253,7 +246,7 @@ class List(InlineUnit):
 
     async def _list_page(
         self: "InlineManager",
-        call: CallbackQuery,
+        call,
         page: typing.Union[int, str],
         unit_id: str = None,
     ):
@@ -270,19 +263,20 @@ class List(InlineUnit):
         self._units[unit_id]["current_index"] = page
 
         try:
-            await self.bot.edit_message_text(
-                inline_message_id=call.inline_message_id,
-                text=self.sanitise_text(
+            await self._bot_client.edit_message(
+                call.inline_message_id,
+                self.sanitise_text(
                     self._units[unit_id]["strings"][
                         self._units[unit_id]["current_index"]
                     ]
                 ),
-                reply_markup=self._list_markup(unit_id),
+                parse_mode="HTML",
+                buttons=self._list_markup(unit_id),
             )
             await call.answer()
-        except TelegramRetryAfter as e:
+        except FloodWaitError as e:
             await call.answer(
-                f"Got FloodWait. Wait for {e.retry_after} seconds",
+                f"Got FloodWait. Wait for {e.seconds} seconds",
                 show_alert=True,
             )
         except Exception:
@@ -290,8 +284,8 @@ class List(InlineUnit):
             await call.answer("Error occurred", show_alert=True)
             return
 
-    def _list_markup(self: "InlineManager", unit_id: str) -> InlineKeyboardMarkup:
-        """Generates aiogram markup for `list`"""
+    def _list_markup(self: "InlineManager", unit_id: str):
+        """Generates Telethon markup for `list`"""
         callback = functools.partial(self._list_page, unit_id=unit_id)
         return self.generate_markup(
             self._units[unit_id].get("custom_buttons", [])
@@ -303,7 +297,7 @@ class List(InlineUnit):
             + [[{"text": "🔻 Close", "callback": callback, "args": ("close",)}]],
         )
 
-    async def _list_inline_handler(self: "InlineManager", inline_query: InlineQuery):
+    async def _list_inline_handler(self: "InlineManager", inline_query):
         for unit in self._units.copy().values():
             if (
                 inline_query.from_user.id == self._me
@@ -313,15 +307,13 @@ class List(InlineUnit):
                 try:
                     await inline_query.answer(
                         [
-                            InlineQueryResultArticle(
-                                id=utils.rand(20),
+                            await inline_query.builder.article(
                                 title="Heroku",
-                                input_message_content=InputTextMessageContent(
-                                    message_text=self.sanitise_text(unit["strings"][0]),
-                                    parse_mode="HTML",
-                                    disable_web_page_preview=True,
-                                ),
-                                reply_markup=self._list_markup(inline_query.query),
+                                text=self.sanitise_text(unit["strings"][0]),
+                                parse_mode="HTML",
+                                link_preview=False,
+                                buttons=self._list_markup(inline_query.query),
+                                id=utils.rand(20),
                             )
                         ],
                         cache_time=60,

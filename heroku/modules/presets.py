@@ -67,7 +67,6 @@ PRESETS = {
         "https://github.com/amm1edev/ame_repo/raw/refs/heads/main/filter.py",
         "https://mods.codrago.life/id.py",
         "https://mods.codrago.life/autoclicker.py",
-        "https://github.com/archquise/H.Modules/raw/refs/heads/main/aiogram3/hikarichat.py",
         "https://raw.githubusercontent.com/SenkoGuardian/SenModules/refs/heads/My-Modules/Gemini.py",
         "https://raw.githubusercontent.com/yummy1gay/modules/main/yg_checks.py",
         "https://raw.githubusercontent.com/coddrago/modules/main/chatmodule.py",
@@ -332,7 +331,7 @@ class Presets(loader.Module):
             ],
         )
 
-    async def aiogram_watcher(self, message: BotInlineMessage):
+    async def bot_watcher(self, message: BotInlineMessage):
         if message.text != "/presets" or message.from_user.id != self._client.tg_id:
             return
 

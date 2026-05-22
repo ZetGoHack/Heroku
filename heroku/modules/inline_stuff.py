@@ -113,7 +113,7 @@ class InlineStuff(loader.Module):
         self._db.set("heroku.inline", "bot_token", args)
         await utils.answer(message, self.strings("bot_updated"))
 
-    async def aiogram_watcher(self, message: BotInlineMessage):
+    async def bot_watcher(self, message: BotInlineMessage):
         match message.text:
             case "/start":
                 await message.answer_photo(
@@ -185,7 +185,7 @@ class InlineStuff(loader.Module):
 
     async def restart(self, call: InlineCall, message):
         await call.edit(self.strings["restart"])
-        await self.invoke("restart", "-f", message=message, peer=self.inline.bot.id)
+        await self.invoke("restart", "-f", message=message, peer=self.inline.bot_id)
 
     async def reset_prefix(self, call: InlineCall, message):
         await message.answer(self.strings["prefix_reset"])

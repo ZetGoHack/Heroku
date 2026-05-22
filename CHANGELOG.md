@@ -117,8 +117,8 @@
 - fix permission denied in info 
 - add hiding the phone in htl
 - add more protection for official telegram account (777000)
-- add button styles support for aiogram 3.25.0+ (danger, primary, success)
-- add premium emoji support in buttons via icon_custom_emoji_id (aiogram 3.25.0+)
+- add button styles support for the inline bot stack (danger, primary, success)
+- add premium emoji support in buttons via icon_custom_emoji_id
 - add aliases export/import
 - add folders
 - restrict inline queries for not allowed users
@@ -192,7 +192,7 @@
 - update dockerfile
 - update heroku-tl to 1.1.3
 - fixed error with "method not mounted"
-- added log "aiogram sleep" to ignore filter
+- added bot polling sleep log to ignore filter
 
 ## 🪐 Heroku 1.7.0
 
@@ -215,7 +215,7 @@
 - fix close btn
 - fix native imports
 - added converting Hikka backups to Heroku
-- updated to aiogram 3.20.0
+- updated inline bot stack
 - fix some bugs with buttons in inline
 
 ## 🪐 Heroku 1.6.8
@@ -260,7 +260,7 @@
 ## 🌑 Heroku 1.6.6 beta
 
 - formatting ruff
-- add webapp support in InlineKeyboardButton
+- add webapp support in inline buttons
 - add random version name
 - fix UnicodeDecodeError in windows
 - add a new language Ukrainian
@@ -587,7 +587,7 @@
 - Add `@loader.command`, `@loader.watcher`, `@loader.inline_handler`, `@loader.callback_handler`
 - Add support for multiple watchers
 - Add support for command translate directly in decorator (`@loader.command(ru_doc="Привет")`)
-- Add support for :obj:`aiogram.types.Message` in `utils.get_chat_id`
+- Add support for bot messages in `utils.get_chat_id`
 - Add human-readable error message when trying to unload core module
 - Replace `print` with `logging.info` in main script to make url visible in logs
 - Automatically react to module post in developer's channel if possible
@@ -623,7 +623,7 @@
 - New `.e` error format
 - Ignore folder creation error
 - Fix unload error in module without commands
-- Rework aiogram media processing on edit
+- Rework inline media processing on edit
 
 ## 🌑 Heroku 1.2.10
 
@@ -900,7 +900,7 @@
 - Add additional foolchecks
 - Migrate to walrus operator where necessary
 - Remove redundant code block
-- Add default aiogram parse mode
+- Add default inline bot parse mode
 - Rename some core stuff which was not supposed to be used by external developers
 
 ## 🌑 Heroku 1.1.15

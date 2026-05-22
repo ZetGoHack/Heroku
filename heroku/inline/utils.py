@@ -22,30 +22,16 @@ import typing
 from copy import deepcopy
 from urllib.parse import urlparse
 
-from aiogram.types import (
-    CallbackQuery,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    InputFile,
-    WebAppInfo,
-    CopyTextButton,
-    InputMediaAnimation,
-    InputMediaAudio,
-    InputMediaDocument,
-    InputMediaPhoto,
-    InputMediaVideo,
-)
-
-from aiogram.enums import ButtonStyle
-
-from aiogram.exceptions import (
-    TelegramBadRequest,
-    TelegramAPIError,
-    TelegramRetryAfter,
+from herokutl.errors.rpcbaseerrors import RPCError
+from herokutl.errors.rpcerrorlist import (
+    FloodWaitError,
+    MediaPrevInvalidError,
+    MessageNotModifiedError,
 )
 
 from .. import utils
 from ..types import HerokuReplyMarkup
+from .tl import make_button
 from .types import InlineCall, InlineUnit
 
 if typing.TYPE_CHECKING:
@@ -76,15 +62,15 @@ class Utils(InlineUnit):
     def _generate_markup(
         self: "InlineManager",
         markup_obj: typing.Optional[typing.Union[HerokuReplyMarkup, str]],
-    ) -> typing.Optional[InlineKeyboardMarkup]:
+    ) -> typing.Optional[typing.List[typing.List[typing.Any]]]:
         """Generate markup for form or list of `dict`s"""
         if not markup_obj:
             return None
 
-        if isinstance(markup_obj, InlineKeyboardMarkup):
+        if hasattr(markup_obj, "SUBCLASS_OF_ID"):
             return markup_obj
 
-        markup = InlineKeyboardMarkup(inline_keyboard=[])
+        markup = []
 
         map_ = (
             self._units[markup_obj]["buttons"]
@@ -144,7 +130,7 @@ class Utils(InlineUnit):
                         btn_kwargs["style"] = style
 
                     if emoji_id := self._get_button_emoji_id(button):
-                        btn_kwargs["icon_custom_emoji_id"] = emoji_id
+                        btn_kwargs["icon"] = int(emoji_id)
 
                     match True:
                         case _ if "url" in button:
@@ -157,7 +143,7 @@ class Utils(InlineUnit):
                             btn_kwargs["url"] = button["url"]
 
                         case _ if "callback" in button:
-                            btn_kwargs["callback_data"] = button["_callback_data"]
+                            btn_kwargs["data"] = button["_callback_data"]
 
                             if setup_callbacks:
                                 self._custom_map[button["_callback_data"]] = {
@@ -177,20 +163,13 @@ class Utils(InlineUnit):
                             )
 
                         case _ if "data" in button:
-                            btn_kwargs["callback_data"] = button["data"]
+                            btn_kwargs["data"] = button["data"]
 
                         case _ if "web_app" in button:
-                            if isinstance(button["web_app"], str):
-                                btn_kwargs["web_app"] = WebAppInfo(
-                                    url=button["web_app"]
-                                )
-                            else:
-                                btn_kwargs["web_app"] = WebAppInfo(**button["web_app"])
+                            btn_kwargs["web_app"] = button["web_app"]
 
                         case _ if "copy" in button:
-                            btn_kwargs["copy_text"] = CopyTextButton(
-                                text=button["copy"]
-                            )
+                            btn_kwargs["copy_text"] = button["copy"]
 
                         case _ if "switch_inline_query_current_chat" in button:
                             btn_kwargs["switch_inline_query_current_chat"] = button[
@@ -213,7 +192,7 @@ class Utils(InlineUnit):
                             )
                             continue
 
-                    line.append(InlineKeyboardButton(**btn_kwargs))
+                    line.append(make_button(**btn_kwargs))
 
                 except KeyError:
                     logger.exception(
@@ -226,7 +205,7 @@ class Utils(InlineUnit):
                     logger.exception(f"Unexpected error creating button: {e}")
                     return None
 
-            markup.inline_keyboard.append(line)
+            markup.append(line)
 
         return markup
 
@@ -339,7 +318,7 @@ class Utils(InlineUnit):
         disable_security: typing.Optional[bool] = None,
         always_allow: typing.Optional[typing.List[int]] = None,
         disable_web_page_preview: bool = True,
-        query: typing.Optional[CallbackQuery] = None,
+        query: typing.Optional[typing.Any] = None,
         unit_id: typing.Optional[str] = None,
         inline_message_id: typing.Optional[str] = None,
         chat_id: typing.Optional[int] = None,
@@ -441,13 +420,15 @@ class Utils(InlineUnit):
         media = next(
             (media for media in [photo, file, video, audio, gif] if media), None
         )
+        if isinstance(media, dict):
+            media = media["url"]
 
         if isinstance(media, bytes):
             media = io.BytesIO(media)
             media.name = "upload.mp4"
 
         if isinstance(media, io.BytesIO):
-            media = InputFile(filename=media)
+            media.name = getattr(media, "name", "upload.mp4")
 
         kind = (
             "file"
@@ -459,43 +440,12 @@ class Utils(InlineUnit):
             )
         )
 
-        match kind:
-            case "file":
-                media = InputMediaDocument(media=media, caption=text, parse_mode="HTML")
-            case "photo":
-                media = InputMediaPhoto(media=media, caption=text, parse_mode="HTML")
-            case "audio":
-                if isinstance(audio, dict):
-                    media = InputMediaAudio(
-                        media=audio["url"],
-                        title=audio.get("title"),
-                        performer=audio.get("performer"),
-                        duration=audio.get("duration"),
-                        caption=text,
-                        parse_mode="HTML",
-                    )
-                else:
-                    media = InputMediaAudio(
-                        media=audio,
-                        caption=text,
-                        parse_mode="HTML",
-                    )
-            case "video":
-                media = InputMediaVideo(media=media, caption=text, parse_mode="HTML")
-            case "gif":
-                media = InputMediaAnimation(
-                    media=media, caption=text, parse_mode="HTML"
-                )
-
         if media is None and text is None and reply_markup:
             try:
-                await self.bot.edit_message_reply_markup(
-                    **(
-                        {"inline_message_id": inline_message_id}
-                        if inline_message_id
-                        else {"chat_id": chat_id, "message_id": message_id}
-                    ),
-                    reply_markup=self.generate_markup(reply_markup),
+                await self._bot_client.edit_message(
+                    inline_message_id or chat_id,
+                    (unit.get("text") or "") if inline_message_id else message_id,
+                    buttons=self.generate_markup(reply_markup),
                 )
             except Exception:
                 return False
@@ -508,94 +458,62 @@ class Utils(InlineUnit):
 
         if media is None:
             try:
-                await self.bot.edit_message_text(
+                await self._bot_client.edit_message(
+                    inline_message_id or chat_id,
+                    None if inline_message_id else message_id,
                     text,
-                    **(
-                        {"inline_message_id": inline_message_id}
-                        if inline_message_id
-                        else {"chat_id": chat_id, "message_id": message_id}
-                    ),
-                    disable_web_page_preview=disable_web_page_preview,
-                    reply_markup=self.generate_markup(
+                    parse_mode="HTML",
+                    link_preview=not disable_web_page_preview,
+                    buttons=self.generate_markup(
                         reply_markup
                         if isinstance(reply_markup, list)
                         else unit.get("buttons", [])
                     ),
                 )
-            except TelegramBadRequest as e:
-                if "there is no text in the message to edit" not in str(e):
-                    raise
-
-                try:
-                    await self.bot.edit_message_caption(
-                        caption=text,
-                        **(
-                            {"inline_message_id": inline_message_id}
-                            if inline_message_id
-                            else {"chat_id": chat_id, "message_id": message_id}
-                        ),
-                        reply_markup=self.generate_markup(
-                            reply_markup
-                            if isinstance(reply_markup, list)
-                            else unit.get("buttons", [])
-                        ),
-                    )
-                except Exception:
-                    return False
-                else:
-                    return True
-            except TelegramAPIError as e:
-                if True:  # TODO "" in e.message
-                    if query:
-                        with contextlib.suppress(Exception):
-                            await query.answer()
-                elif True:  # TODO "" in e.message
+            except MessageNotModifiedError:
+                return True
+            except RPCError:
+                if query:
                     with contextlib.suppress(Exception):
-                        await query.answer(
-                            "I should have edited some message, but it is deleted :("
-                        )
-
+                        await query.answer()
                 return False
-            except TelegramRetryAfter as e:
-                logger.info("Sleeping %ss on aiogram FloodWait...", e.retry_after)
-                await asyncio.sleep(e.retry_after)
+            except FloodWaitError as e:
+                logger.info("Sleeping %ss on Telethon FloodWait...", e.seconds)
+                await asyncio.sleep(e.seconds)
                 return await self._edit_unit(**utils.get_kwargs())
-
-                return False
             else:
                 return True
 
         try:
-            await self.bot.edit_message_media(
-                **(
-                    {"inline_message_id": inline_message_id}
-                    if inline_message_id
-                    else {"chat_id": chat_id, "message_id": message_id}
-                ),
-                media=media,
-                reply_markup=self.generate_markup(
+            await self._bot_client.edit_message(
+                inline_message_id or chat_id,
+                None if inline_message_id else message_id,
+                text,
+                parse_mode="HTML",
+                file=media,
+                force_document=kind == "file",
+                buttons=self.generate_markup(
                     reply_markup
                     if isinstance(reply_markup, list)
                     else unit.get("buttons", [])
                 ),
             )
-        except TelegramRetryAfter as e:
-            logger.info("Sleeping %ss on aiogram FloodWait...", e.retry_after)
-            await asyncio.sleep(e.retry_after)
+        except FloodWaitError as e:
+            logger.info("Sleeping %ss on Telethon FloodWait...", e.seconds)
+            await asyncio.sleep(e.seconds)
             return await self._edit_unit(**utils.get_kwargs())
-        except TelegramAPIError:
-            if True:  # TODO
-                with contextlib.suppress(Exception):
-                    await query.answer(
-                        "I should have edited some message, but it is deleted :("
-                    )
-                return False
+        except (RPCError, MediaPrevInvalidError):
+            with contextlib.suppress(Exception):
+                await query.answer(
+                    "I should have edited some message, but it is deleted :("
+                )
+            return False
         else:
             return True
 
     async def _delete_unit_message(
         self: "InlineManager",
-        call: typing.Optional[CallbackQuery] = None,
+        call: typing.Optional[typing.Any] = None,
         unit_id: typing.Optional[str] = None,
         chat_id: typing.Optional[int] = None,
         message_id: typing.Optional[int] = None,
@@ -604,8 +522,8 @@ class Utils(InlineUnit):
         if getattr(getattr(call, "message", None), "chat", None):
             try:
                 await self.bot.delete_message(
-                    chat_id=call.message.chat.id,
-                    message_id=call.message.message_id,
+                    call.message.chat.id,
+                    call.message.message_id,
                 )
             except Exception:
                 return False
@@ -614,7 +532,7 @@ class Utils(InlineUnit):
 
         if chat_id and message_id:
             try:
-                await self.bot.delete_message(chat_id=chat_id, message_id=message_id)
+                await self.bot.delete_message(chat_id, message_id)
             except Exception:
                 return False
 

@@ -21,16 +21,7 @@ import traceback
 import typing
 from urllib.parse import urlparse
 
-from aiogram.types import (
-    CallbackQuery,
-    InlineKeyboardMarkup,
-    InlineQuery,
-    InlineQueryResultGif,
-    InlineQueryResultPhoto,
-    InputMediaAnimation,
-    InputMediaPhoto,
-)
-from aiogram.exceptions import TelegramBadRequest, TelegramRetryAfter
+from herokutl.errors.rpcerrorlist import FloodWaitError, MediaPrevInvalidError
 from herokutl.errors.rpcerrorlist import ChatSendInlineForbiddenError
 from herokutl.extensions.html import CUSTOM_EMOJIS
 from herokutl.tl.types import Message
@@ -394,7 +385,7 @@ class Gallery(InlineUnit):
 
     async def _gallery_slideshow_loop(
         self: "InlineManager",
-        call: CallbackQuery,
+        call,
         unit_id: typing.Optional[str] = None,
     ):
         while True:
@@ -420,21 +411,25 @@ class Gallery(InlineUnit):
 
     async def _gallery_slideshow(
         self: "InlineManager",
-        call: CallbackQuery,
+        call,
         unit_id: typing.Optional[str] = None,
     ):
         if not self._units[unit_id].get("slideshow", False):
             self._units[unit_id]["slideshow"] = True
-            await self.bot.edit_message_reply_markup(
-                inline_message_id=call.inline_message_id,
-                reply_markup=self._gallery_markup(unit_id),
+            await self._bot_client.edit_message(
+                call.inline_message_id,
+                self._get_caption(unit_id, self._units[unit_id]["current_index"]),
+                parse_mode="HTML",
+                buttons=self._gallery_markup(unit_id),
             )
             await call.answer("✅ Slideshow on")
         else:
             del self._units[unit_id]["slideshow"]
-            await self.bot.edit_message_reply_markup(
-                inline_message_id=call.inline_message_id,
-                reply_markup=self._gallery_markup(unit_id),
+            await self._bot_client.edit_message(
+                call.inline_message_id,
+                self._get_caption(unit_id, self._units[unit_id]["current_index"]),
+                parse_mode="HTML",
+                buttons=self._gallery_markup(unit_id),
             )
             await call.answer("🚫 Slideshow off")
             return
@@ -448,7 +443,7 @@ class Gallery(InlineUnit):
 
     async def _gallery_back(
         self: "InlineManager",
-        call: CallbackQuery,
+        call,
         unit_id: typing.Optional[str] = None,
     ):
         queue = self._units[unit_id]["photos"]
@@ -465,14 +460,18 @@ class Gallery(InlineUnit):
             return
 
         try:
-            await self.bot.edit_message_media(
-                inline_message_id=call.inline_message_id,
-                media=self._get_current_media(unit_id),
-                reply_markup=self._gallery_markup(unit_id),
+            media, caption, force_document = self._get_current_media(unit_id)
+            await self._bot_client.edit_message(
+                call.inline_message_id,
+                caption,
+                parse_mode="HTML",
+                file=media,
+                force_document=force_document,
+                buttons=self._gallery_markup(unit_id),
             )
-        except TelegramRetryAfter as e:
+        except FloodWaitError as e:
             await call.answer(
-                f"Got FloodWait. Wait for {e.retry_after} seconds",
+                f"Got FloodWait. Wait for {e.seconds} seconds",
                 show_alert=True,
             )
         except Exception:
@@ -483,7 +482,7 @@ class Gallery(InlineUnit):
     def _get_current_media(
         self: "InlineManager",
         unit_id: str,
-    ) -> typing.Union[InputMediaPhoto, InputMediaAnimation]:
+    ) -> typing.Tuple[str, str, bool]:
         """Return current media, which should be updated in gallery"""
         media = self._get_next_photo(unit_id)
         try:
@@ -493,27 +492,27 @@ class Gallery(InlineUnit):
             ext = None
 
         if self._units[unit_id].get("gif", False) or ext in {".gif", ".mp4"}:
-            return InputMediaAnimation(
-                media=media,
-                caption=self._get_caption(
+            return (
+                media,
+                self._get_caption(
                     unit_id,
                     index=self._units[unit_id]["current_index"],
                 ),
-                parse_mode="HTML",
+                True,
             )
 
-        return InputMediaPhoto(
-            media=media,
-            caption=self._get_caption(
+        return (
+            media,
+            self._get_caption(
                 unit_id,
                 index=self._units[unit_id]["current_index"],
             ),
-            parse_mode="HTML",
+            False,
         )
 
     async def _gallery_page(
         self: "InlineManager",
-        call: CallbackQuery,
+        call,
         page: typing.Union[int, str],
         unit_id: typing.Optional[str] = None,
     ):
@@ -555,19 +554,23 @@ class Gallery(InlineUnit):
                 asyncio.ensure_future(self._load_gallery_photos(unit_id))
 
         try:
-            await self.bot.edit_message_media(
-                inline_message_id=call.inline_message_id,
-                media=self._get_current_media(unit_id),
-                reply_markup=self._gallery_markup(unit_id),
+            media, caption, force_document = self._get_current_media(unit_id)
+            await self._bot_client.edit_message(
+                call.inline_message_id,
+                caption,
+                parse_mode="HTML",
+                file=media,
+                force_document=force_document,
+                buttons=self._gallery_markup(unit_id),
             )
-        except TelegramBadRequest:
+        except MediaPrevInvalidError:
             logger.debug("Error fetching photo content, attempting load next one")
             del self._units[unit_id]["photos"][self._units[unit_id]["current_index"]]
             self._units[unit_id]["current_index"] -= 1
             return await self._gallery_page(call, page, unit_id)
-        except TelegramRetryAfter as e:
+        except FloodWaitError as e:
             await call.answer(
-                f"Got FloodWait. Wait for {e.retry_after} seconds",
+                f"Got FloodWait. Wait for {e.seconds} seconds",
                 show_alert=True,
             )
             return
@@ -600,8 +603,8 @@ class Gallery(InlineUnit):
             else caption() if callable(caption) else ""
         )
 
-    def _gallery_markup(self: "InlineManager", unit_id: str) -> InlineKeyboardMarkup:
-        """Generates aiogram markup for `gallery`"""
+    def _gallery_markup(self: "InlineManager", unit_id: str):
+        """Generates Telethon markup for `gallery`"""
         callback = functools.partial(self._gallery_page, unit_id=unit_id)
         unit = self._units[unit_id]
         return self.generate_markup(
@@ -665,7 +668,7 @@ class Gallery(InlineUnit):
             )
         )
 
-    async def _gallery_inline_handler(self: "InlineManager", inline_query: InlineQuery):
+    async def _gallery_inline_handler(self: "InlineManager", inline_query):
         for unit in self._units.copy().values():
             if (
                 inline_query.from_user.id == self._me
@@ -680,22 +683,35 @@ class Gallery(InlineUnit):
                         ext = None
 
                     args = {
-                        "thumbnail_url": "https://img.icons8.com/fluency/344/loading.png",
-                        "caption": self._get_caption(unit["uid"], index=0),
+                        "text": self._get_caption(unit["uid"], index=0),
                         "parse_mode": "HTML",
-                        "reply_markup": self._gallery_markup(unit["uid"]),
+                        "buttons": self._gallery_markup(unit["uid"]),
                         "id": utils.rand(20),
                         "title": "Processing inline gallery",
                     }
 
                     if unit.get("gif", False) or ext in {".gif", ".mp4"}:
                         await inline_query.answer(
-                            [InlineQueryResultGif(gif_url=unit["photo_url"], **args)]
+                            [
+                                await inline_query.builder.document(
+                                    unit["photo_url"],
+                                    type="gif",
+                                    **args,
+                                )
+                            ]
                         )
                         return
 
                     await inline_query.answer(
-                        [InlineQueryResultPhoto(photo_url=unit["photo_url"], **args)],
+                        [
+                            await inline_query.builder.photo(
+                                unit["photo_url"],
+                                id=args["id"],
+                                text=args["text"],
+                                parse_mode=args["parse_mode"],
+                                buttons=args["buttons"],
+                            )
+                        ],
                         cache_time=0,
                     )
                 except Exception as e:
