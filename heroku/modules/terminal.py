@@ -312,6 +312,14 @@ class InlineMessageEditor:
         self.start_time = time.time()
         self.process = None
 
+    def reset(self, command: str):
+        self.command = command
+        self.stdout = ""
+        self.stderr = ""
+        self.rc = None
+        self.start_time = time.time()
+        self.process = None
+
     def update_process(self, process):
         self.process = process
 
@@ -340,7 +348,7 @@ class InlineMessageEditor:
             text += self.strings["time_exec"].format(round(exec_time, 2))
 
         reply_markup = (
-            self.reply_markup(self.command)
+            self.reply_markup(self)
             if callable(self.reply_markup)
             else self.reply_markup
         )
@@ -436,42 +444,55 @@ class TerminalMod(loader.Module):
         )
         self.activecmds = {}
         self._inline_pending: typing.Dict[str, str] = {}
-
-    @staticmethod
-    def _build_inline_exec_query(cmd: str = "") -> str:
-        query = f"exec {cmd}".strip()
-        query = query[:250]
-        return f"{query} "
+        self._inline_sessions: typing.Dict[str, InlineMessageEditor] = {}
 
     def _build_inline_exec_markup(
         self,
-        cmd: str,
         uid: typing.Optional[str] = None,
     ) -> typing.List[typing.List[typing.Dict[str, str]]]:
-        markup = []
+        if not uid:
+            return []
 
-        if uid:
-            markup.append(
-                [
-                    {
-                        "text": self.strings("btn_execute"),
-                        "data": f"terminal/exec/{uid}",
-                    }
-                ]
-            )
+        return [
+            [
+                {
+                    "text": self.strings("btn_execute"),
+                    "data": f"terminal/exec/{uid}",
+                }
+            ]
+        ]
 
-        markup.append(
+    def _build_inline_continue_markup(
+        self,
+        editor: InlineMessageEditor,
+        session_uid: str,
+    ) -> typing.List[typing.List[typing.Dict[str, typing.Any]]]:
+        if editor.rc is None:
+            return []
+
+        return [
             [
                 {
                     "text": self.strings("btn_continue"),
-                    "switch_inline_query_current_chat": self._build_inline_exec_query(
-                        cmd
-                    ),
+                    "input": self.strings("btn_continue"),
+                    "handler": self.inline__continue_input,
+                    "args": (session_uid,),
                 }
             ]
-        )
+        ]
 
-        return markup
+    def _register_inline_session(self, session_uid: str, inline_message_id: str):
+        self.inline._units[session_uid] = {
+            "type": "form",
+            "text": self.strings("exec_running"),
+            "buttons": [],
+            "caller": None,
+            "chat": None,
+            "message_id": None,
+            "top_msg_id": None,
+            "uid": session_uid,
+            "inline_message_id": inline_message_id,
+        }
 
     @loader.command(alias="exec")
     async def terminalcmd(self, message):
@@ -571,7 +592,7 @@ class TerminalMod(loader.Module):
                     thumbnail_width=640,
                     thumbnail_height=640,
                     reply_markup=self.inline.generate_markup(
-                        self._build_inline_exec_markup(raw, uid)
+                        self._build_inline_exec_markup(uid)
                     ),
                 )
             ],
@@ -598,16 +619,53 @@ class TerminalMod(loader.Module):
             )
             return
 
-        await call.edit(self.strings("exec_running"))
+        self._register_inline_session(uid, call.inline_message_id)
+
+        from ..inline.types import InlineMessage
+
+        form = InlineMessage(
+            inline_manager=self.inline,
+            unit_id=uid,
+            inline_message_id=call.inline_message_id,
+        )
+
+        await form.edit(self.strings("exec_running"))
 
         editor = InlineMessageEditor(
-            form=call,
+            form=form,
             command=cmd,
             strings=self.strings,
             config=self.config,
-            reply_markup=self._build_inline_exec_markup,
+            reply_markup=lambda current_editor: self._build_inline_continue_markup(
+                current_editor,
+                uid,
+            ),
         )
+        self._inline_sessions[uid] = editor
 
+        asyncio.ensure_future(self._run_inline(cmd, editor))
+
+    async def inline__continue_input(self, call, query: str, session_uid: str):
+        editor = self._inline_sessions.get(session_uid)
+
+        if not editor:
+            return
+
+        query = query.strip()
+        if not query:
+            return
+
+        cmd = f"{editor.command} {query}".strip()
+
+        if self._is_dangerous(cmd):
+            await editor.form.edit(
+                self.strings("dangerous_command").format(utils.escape_html(cmd)),
+                reply_markup=self._build_inline_continue_markup(editor, session_uid),
+            )
+            return
+
+        editor.reset(cmd)
+        await editor.form.edit(self.strings("exec_running"))
         asyncio.ensure_future(self._run_inline(cmd, editor))
 
     async def _run_inline(self, cmd: str, editor: InlineMessageEditor):
