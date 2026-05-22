@@ -92,10 +92,10 @@ class TestMod(loader.Module):
                 "custom_message",
                 "<tg-emoji emoji-id=5920515922505765329>⚡️</tg-emoji> <b>𝙿𝚒𝚗𝚐: </b><code>{ping}</code><b> 𝚖𝚜 </b>\n<tg-emoji emoji-id=5900104897885376843>🕓</tg-emoji><b> 𝚄𝚙𝚝𝚒𝚖𝚎: </b><code>{uptime}</code>",
                 lambda: (
-                    self.strings("configping")
+                    self.strings["configping"]
                     + (
                         "\n"
-                        + self.strings("configpingph").format(
+                        + self.strings["configpingph"].format(
                             "\n" + utils.config_placeholders()
                         )
                         if utils.config_placeholders()
@@ -156,7 +156,7 @@ class TestMod(loader.Module):
             handler.handledbuffer = []
             handler.tg_buff = ""
 
-        await utils.answer(message, self.strings("logs_cleared"))
+        await utils.answer(message, self.strings["logs_cleared"])
 
     @loader.command()
     async def logs(
@@ -185,14 +185,14 @@ class TestMod(loader.Module):
 
         if not isinstance(lvl, int):
             if force:
-                await utils.answer(message, self.strings("set_loglevel"))
+                await utils.answer(message, self.strings["set_loglevel"])
                 return
 
             try:
                 if self.inline.init_complete:
                     await utils.answer(
                         message,
-                        self.strings("choose_loglevel"),
+                        self.strings["choose_loglevel"],
                         reply_markup=utils.chunks(
                             [
                                 {
@@ -211,12 +211,12 @@ class TestMod(loader.Module):
                             ],
                             2,
                         )
-                        + [[{"text": self.strings("cancel"), "action": "close"}]],
+                        + [[{"text": self.strings["cancel"], "action": "close"}]],
                     )
                 else:
                     raise
             except Exception as e:
-                await utils.answer(message, self.strings("set_loglevel") + f"\n{e}")
+                await utils.answer(message, self.strings["set_loglevel"] + f"\n{e}")
 
             return
 
@@ -243,14 +243,14 @@ class TestMod(loader.Module):
                     raise
 
                 cfg = {
-                    "text": self.strings("confidential").format(named_lvl),
+                    "text": self.strings["confidential"].format(named_lvl),
                     "reply_markup": [
                         {
-                            "text": self.strings("send_anyway"),
+                            "text": self.strings["send_anyway"],
                             "callback": self.logs,
                             "args": [True, lvl],
                         },
-                        {"text": self.strings("cancel"), "action": "close"},
+                        {"text": self.strings["cancel"], "action": "close"},
                     ],
                 }
                 if isinstance(message, Message):
@@ -261,7 +261,7 @@ class TestMod(loader.Module):
             except Exception:
                 await utils.answer(
                     message,
-                    self.strings("confidential_text").format(named_lvl),
+                    self.strings["confidential_text"].format(named_lvl),
                 )
 
             return
@@ -269,7 +269,7 @@ class TestMod(loader.Module):
         if len(logs) <= 2:
             await utils.answer(
                 message,
-                self.strings("no_logs").format(named_lvl),
+                self.strings["no_logs"].format(named_lvl),
                 **(
                     {}
                     if force
@@ -300,7 +300,7 @@ class TestMod(loader.Module):
             ),
         )
 
-        caption = self.strings("logs_caption").format(named_lvl, *other)
+        caption = self.strings["logs_caption"].format(named_lvl, *other)
 
         if isinstance(message, Message):
             await utils.answer(
@@ -321,15 +321,15 @@ class TestMod(loader.Module):
         try:
             time_sleep = float(utils.get_args_raw(message))
             if time_sleep > 86400 * 365 * 100:
-                await utils.answer(message, self.strings("suspend_invalid_time"))
+                await utils.answer(message, self.strings["suspend_invalid_time"])
             else:
                 await utils.answer(
                     message,
-                    self.strings("suspended").format(time_sleep),
+                    self.strings["suspended"].format(time_sleep),
                 )
                 time.sleep(time_sleep)
         except ValueError:
-            await utils.answer(message, self.strings("suspend_invalid_time"))
+            await utils.answer(message, self.strings["suspend_invalid_time"])
 
     @loader.command()
     async def ping(self, message: Message):

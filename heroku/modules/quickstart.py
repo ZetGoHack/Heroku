@@ -28,13 +28,13 @@ class Quickstart(loader.Module):
 
     async def client_ready(self):
         self.text = (
-            lambda: self.strings("base").format(
+            lambda: self.strings["base"].format(
                 utils.get_platform_emoji()
                 if self.client.heroku_me.premium is True
                 else "Heroku"
             )
             + (
-                "\n" + ((self.strings("lavhost") if "LAVHOST" in os.environ else ""))
+                "\n" + ((self.strings["lavhost"] if "LAVHOST" in os.environ else ""))
             ).rstrip()
         )
 
@@ -152,7 +152,7 @@ class Quickstart(loader.Module):
         self.mark = lambda: [
             [
                 {
-                    "text": self.strings("btn_support"),
+                    "text": self.strings["btn_support"],
                     "url": "https://t.me/heroku_talks",
                 }
             ],
@@ -189,5 +189,5 @@ class Quickstart(loader.Module):
         self._db.set(translations.__name__, "lang", lang)
         await self.allmodules.reload_translations()
 
-        await self.inline.bot(call.answer(self.strings("language_saved")))
+        await self.inline.bot(call.answer(self.strings["language_saved"]))
         await call.edit(text=self.text(), reply_markup=self.mark())

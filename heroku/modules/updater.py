@@ -51,18 +51,18 @@ class UpdaterMod(loader.Module):
             loader.ConfigValue(
                 "GIT_ORIGIN_URL",
                 "https://github.com/coddrago/Heroku",
-                lambda: self.strings("origin_cfg_doc"),
+                lambda: self.strings["origin_cfg_doc"],
                 validator=loader.validators.Link(),
             ),
             loader.ConfigValue(
                 "disable_notifications",
-                doc=lambda: self.strings("_cfg_doc_disable_notifications"),
+                doc=lambda: self.strings["_cfg_doc_disable_notifications"],
                 validator=loader.validators.Boolean(),
             ),
             loader.ConfigValue(
                 "autoupdate",
                 False,
-                doc=lambda: self.strings("_cfg_doc_autoupdate"),
+                doc=lambda: self.strings["_cfg_doc_autoupdate"],
                 validator=loader.validators.Boolean(),
             ),
         )
@@ -72,9 +72,9 @@ class UpdaterMod(loader.Module):
         self.config["autoupdate"] = state
 
         text = (
-            self.strings("autoupdate_on")
+            self.strings["autoupdate_on"]
             if state
-            else self.strings("autoupdate_off").format(prefix=self.get_prefix())
+            else self.strings["autoupdate_off"].format(prefix=self.get_prefix())
         )
 
         await self.inline.bot(call.answer(text, show_alert=True))
@@ -100,7 +100,7 @@ class UpdaterMod(loader.Module):
         )
 
         if diff.count("\n") >= 10:
-            res += self.strings("more").format(len(diff) - 10)
+            res += self.strings["more"].format(len(diff) - 10)
 
         return res
 
@@ -133,7 +133,7 @@ class UpdaterMod(loader.Module):
                         if announcement and announcement != previous:
                             await self.inline.bot.send_message(
                                 self.tg_id,
-                                self.strings("announcement").format(announcement),
+                                self.strings["announcement"].format(announcement),
                             )
                             self.set("announcement", announcement)
                     case _:
@@ -188,7 +188,7 @@ class UpdaterMod(loader.Module):
                 m = await self.inline.bot.send_photo(
                     self.tg_id,
                     "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/updated.png",
-                    caption=self.strings("update_required").format(
+                    caption=self.strings["update_required"].format(
                         utils.get_git_hash()[:6],
                         '<a href="https://github.com/coddrago/Heroku/compare/{}...{}">{}</a>'.format(
                             utils.get_git_hash()[:12],
@@ -211,7 +211,7 @@ class UpdaterMod(loader.Module):
                 m = await self.inline.bot.send_photo(
                     self.tg_id,
                     "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/updated.png",
-                    caption=self.strings("autoupdate_notifier").format(
+                    caption=self.strings["autoupdate_notifier"].format(
                         self.get_latest()[:6],
                         self.get_changelog(),
                         '<a href="https://github.com/coddrago/Heroku/compare/{}...{}">{}</a>'.format(
@@ -242,7 +242,7 @@ class UpdaterMod(loader.Module):
 
         if call.data == "heroku/ignore_upd":
             self.set("ignore_permanent", self.get_latest())
-            await self.inline.bot(call.answer(self.strings("latest_disabled")))
+            await self.inline.bot(call.answer(self.strings["latest_disabled"]))
             return
 
         await self._delete_all_upd_messages()
@@ -263,7 +263,7 @@ class UpdaterMod(loader.Module):
                 "<tg-emoji emoji-id=5192765204898783881>🌘</tg-emoji><tg-emoji emoji-id=5195311729663286630>🌘</tg-emoji><tg-emoji emoji-id=5195045669324201904>🌘</tg-emoji>",
             )
 
-        await utils.answer(message, self.strings("changelog").format(changelog))
+        await utils.answer(message, self.strings["changelog"].format(changelog))
 
     @loader.command()
     async def restart(self, message: Message):
@@ -275,18 +275,18 @@ class UpdaterMod(loader.Module):
                 or not self.inline.init_complete
                 or not await self.inline.form(
                     message=message,
-                    text=self.strings(
+                    text=self.strings[
                         "secure_boot_confirm" if secure_boot else "restart_confirm"
-                    ),
+                    ],
                     reply_markup=[
                         {
-                            "text": self.strings("btn_restart"),
+                            "text": self.strings["btn_restart"],
                             "callback": self.inline_restart,
                             "args": (secure_boot,),
                             "style": "primary",
                         },
                         {
-                            "text": self.strings("cancel"),
+                            "text": self.strings["cancel"],
                             "action": "close",
                             "style": "danger",
                         },
@@ -331,7 +331,7 @@ class UpdaterMod(loader.Module):
 
         msg_obj = await utils.answer(
             msg_obj,
-            self.strings("restarting_caption").format(
+            self.strings["restarting_caption"].format(
                 utils.get_platform_emoji()
                 if self._client.heroku_me.premium
                 else "Heroku"
@@ -428,20 +428,20 @@ class UpdaterMod(loader.Module):
                 or not await self.inline.form(
                     message=message,
                     text=(
-                        self.strings("update_confirm").format(
+                        self.strings["update_confirm"].format(
                             current, current[:8], upcoming, upcoming[:8]
                         )
                         if upcoming != current
-                        else self.strings("no_update")
+                        else self.strings["no_update"]
                     ),
                     reply_markup=[
                         {
-                            "text": self.strings("btn_update"),
+                            "text": self.strings["btn_update"],
                             "callback": self.inline_update,
                             "style": "primary",
                         },
                         {
-                            "text": self.strings("cancel"),
+                            "text": self.strings["cancel"],
                             "action": "close",
                             "style": "danger",
                         },
@@ -476,7 +476,7 @@ class UpdaterMod(loader.Module):
             if "LAVHOST" in os.environ:
                 msg_obj = await utils.answer(
                     msg_obj,
-                    self.strings("restarting_caption").format(
+                    self.strings["restarting_caption"].format(
                         utils.get_platform_emoji()
                         if self._client.heroku_me.premium
                         else "Heroku"
@@ -488,12 +488,12 @@ class UpdaterMod(loader.Module):
                 return
 
             with contextlib.suppress(Exception):
-                msg_obj = await utils.answer(msg_obj, self.strings("downloading"))
+                msg_obj = await utils.answer(msg_obj, self.strings["downloading"])
 
             req_update = await self.download_common()
 
             with contextlib.suppress(Exception):
-                msg_obj = await utils.answer(msg_obj, self.strings("installing"))
+                msg_obj = await utils.answer(msg_obj, self.strings["installing"])
 
             if req_update:
                 self.req_common()
@@ -510,7 +510,7 @@ class UpdaterMod(loader.Module):
     async def source(self, message: Message):
         await utils.answer(
             message,
-            self.strings("source").format(self.config["GIT_ORIGIN_URL"]),
+            self.strings["source"].format(self.config["GIT_ORIGIN_URL"]),
         )
 
     async def client_ready(self):
@@ -526,12 +526,12 @@ class UpdaterMod(loader.Module):
         self._markup = lambda: self.inline.generate_markup(
             [
                 {
-                    "text": self.strings("update"),
+                    "text": self.strings["update"],
                     "data": "heroku/update",
                     "style": "primary",
                 },
                 {
-                    "text": self.strings("ignore"),
+                    "text": self.strings["ignore"],
                     "data": "heroku/ignore_upd",
                     "style": "danger",
                 },
@@ -558,7 +558,7 @@ class UpdaterMod(loader.Module):
             await self.inline.bot.send_photo(
                 self.tg_id,
                 photo="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/unit_alpha.png",
-                caption=self.strings("autoupdate"),
+                caption=self.strings["autoupdate"],
                 reply_markup=self.inline.generate_markup(
                     [
                         [
@@ -680,7 +680,7 @@ class UpdaterMod(loader.Module):
         except Exception:
             took = "n/a"
 
-        msg = self.strings("success").format(utils.ascii_face(), took)
+        msg = self.strings["success"].format(utils.ascii_face(), took)
         ms = self.get("selfupdatemsg")
 
         if ":" in str(ms):
@@ -712,14 +712,14 @@ class UpdaterMod(loader.Module):
             modules_count = len(self.allmodules.modules)
 
         if modules_count <= len(self.allmodules.modules):
-            msg = self.strings(
+            msg = self.strings[
                 "secure_boot_complete" if secure_boot else "full_success"
-            ).format(utils.ascii_face(), took)
+            ].format(utils.ascii_face(), took)
         else:
             fails = modules_count - len(self.allmodules.modules)
-            msg = self.strings(
+            msg = self.strings[
                 "secure_boot_fail" if secure_boot else "full_fail"
-            ).format(utils.ascii_face(), took, fails)
+            ].format(utils.ascii_face(), took, fails)
 
         if ms is None:
             return
@@ -742,14 +742,14 @@ class UpdaterMod(loader.Module):
     @loader.command()
     async def rollback(self, message: Message):
         if not (args := utils.get_args_raw(message)).isdigit():
-            await utils.answer(message, self.strings("invalid_args"))
+            await utils.answer(message, self.strings["invalid_args"])
             return
         if int(args) > 10:
-            await utils.answer(message, self.strings("rollback_too_far"))
+            await utils.answer(message, self.strings["rollback_too_far"])
             return
         form = await self.inline.form(
             message=message,
-            text=self.strings("rollback_confirm").format(num=args),
+            text=self.strings["rollback_confirm"].format(num=args),
             reply_markup=[
                 [
                     {
@@ -770,7 +770,7 @@ class UpdaterMod(loader.Module):
         )
 
     async def rollback_confirm(self, call: InlineCall, number: int):
-        await utils.answer(call, self.strings("rollback_process").format(num=number))
+        await utils.answer(call, self.strings["rollback_process"].format(num=number))
         await asyncio.create_subprocess_shell(
             f"git reset --hard HEAD~{number}", stdout=asyncio.subprocess.PIPE
         )

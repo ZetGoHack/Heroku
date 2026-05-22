@@ -65,12 +65,12 @@ class Translator(loader.Module):
         """[lang] <text> - Translate text or reply to a message"""
         if not (args := utils.get_args_raw(message.raw_text)):
             text = None
-            lang = self.strings("language")
+            lang = self.strings["language"]
         else:
             lang = args.split(maxsplit=1)[0]
             if len(lang) != 2:
                 text = args
-                lang = self.strings("language")
+                lang = self.strings["language"]
             else:
                 try:
                     text = args.split(maxsplit=1)[1]
@@ -79,7 +79,7 @@ class Translator(loader.Module):
 
         if not text:
             if not (reply := await message.get_reply_message()):
-                await utils.answer(message, self.strings("no_args"))
+                await utils.answer(message, self.strings["no_args"])
                 return
 
             text = reply.raw_text
@@ -101,9 +101,9 @@ class Translator(loader.Module):
                 await utils.answer(message, tr_text)
             else:
                 await utils.answer(
-                    message, self.strings("translated_text").format(tr_text=tr_text)
+                    message, self.strings["translated_text"].format(tr_text=tr_text)
                 )
 
         except Exception:
             logger.exception("Unable to translate text")
-            await utils.answer(message, self.strings("error"))
+            await utils.answer(message, self.strings["error"])

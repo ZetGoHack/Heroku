@@ -74,7 +74,7 @@ class HerokuWebMod(loader.Module):
                 logger.error(f"Error while fetching user: {e}")
 
         if not user or not isinstance(user, User) or user.bot:
-            await utils.answer(message, self.strings("invalid_target"))
+            await utils.answer(message, self.strings["invalid_target"])
             return
 
         if user.id == self.tg_id or "force_insecure" in message.text.lower():
@@ -83,18 +83,18 @@ class HerokuWebMod(loader.Module):
 
         try:
             if not await self.inline.form(
-                self.strings("add_user_confirm").format(
+                self.strings["add_user_confirm"].format(
                     utils.escape_html(user.first_name),
                     user.id,
                 ),
                 message=message,
                 reply_markup=[
                     {
-                        "text": self.strings("btn_yes"),
+                        "text": self.strings["btn_yes"],
                         "callback": self._inline_login,
                         "args": (user,),
                     },
-                    {"text": self.strings("btn_no"), "action": "close"},
+                    {"text": self.strings["btn_no"], "action": "close"},
                 ],
                 photo="",
             ):
@@ -103,7 +103,7 @@ class HerokuWebMod(loader.Module):
         except Exception:
             await utils.answer(
                 message,
-                self.strings("add_user_insecure").format(
+                self.strings["add_user_insecure"].format(
                     utils.escape_html(user.first_name),
                     user.id,
                     utils.escape_html(self.get_prefix()),
@@ -121,18 +121,18 @@ class HerokuWebMod(loader.Module):
     ):
         reply_markup = [
             {
-                "text": self.strings("enter_number"),
-                "input": self.strings("your_phone_number"),
+                "text": self.strings["enter_number"],
+                "input": self.strings["your_phone_number"],
                 "handler": self.inline_phone_handler,
                 "args": (user, is_switch),
             }
         ]
 
-        fail = self.strings("incorrect_number") if after_fail else ""
+        fail = self.strings["incorrect_number"] if after_fail else ""
 
         await utils.answer(
             call,
-            fail + self.strings("enter_number_format"),
+            fail + self.strings["enter_number_format"],
             reply_markup=reply_markup,
             always_allow=[user.id],
         )
@@ -321,7 +321,7 @@ class HerokuWebMod(loader.Module):
             raise
 
     async def schedule_restart(self, call, client, is_switch: bool = False):
-        await utils.answer(call, self.strings("login_successful"))
+        await utils.answer(call, self.strings["login_successful"])
         # Yeah-yeah, ikr, but it's the only way to restart
         await asyncio.sleep(1)
         try:
@@ -335,8 +335,8 @@ class HerokuWebMod(loader.Module):
             logger.exception("Failed to finish inline login")
             await utils.answer(
                 call,
-                self.strings("switch_failed").format(utils.escape_html(str(e))),
-                reply_markup={"text": self.strings("btn_no"), "action": "close"},
+                self.strings["switch_failed"].format(utils.escape_html(str(e))),
+                reply_markup={"text": self.strings["btn_no"], "action": "close"},
             )
 
     async def inline_phone_handler(self, call, data, user, is_switch: bool = False):
@@ -352,8 +352,8 @@ class HerokuWebMod(loader.Module):
         except FloodWaitError as e:
             await utils.answer(
                 call,
-                self.strings("floodwait_error").format(e.seconds),
-                reply_markup={"text": self.strings("btn_no"), "action": "close"},
+                self.strings["floodwait_error"].format(e.seconds),
+                reply_markup={"text": self.strings["btn_no"], "action": "close"},
             )
             return
         except PhoneNumberInvalidError:
@@ -361,8 +361,8 @@ class HerokuWebMod(loader.Module):
             return
 
         reply_markup = {
-            "text": self.strings("enter_code"),
-            "input": self.strings("login_code"),
+            "text": self.strings["enter_code"],
+            "input": self.strings["login_code"],
             "handler": self.inline_code_handler,
             "args": (
                 client,
@@ -374,7 +374,7 @@ class HerokuWebMod(loader.Module):
 
         await utils.answer(
             call,
-            self.strings("code_sent"),
+            self.strings["code_sent"],
             reply_markup=reply_markup,
             always_allow=[user.id],
         )
@@ -383,8 +383,8 @@ class HerokuWebMod(loader.Module):
         self, call, data, client, phone, user, is_switch: bool = False
     ):
         _code_markup = {
-            "text": self.strings("enter_code"),
-            "input": self.strings("login_code"),
+            "text": self.strings["enter_code"],
+            "input": self.strings["login_code"],
             "handler": self.inline_code_handler,
             "args": (
                 client,
@@ -396,7 +396,7 @@ class HerokuWebMod(loader.Module):
         if not data or len(data) != 5:
             await utils.answer(
                 call,
-                self.strings("invalid_code"),
+                self.strings["invalid_code"],
                 reply_markup=_code_markup,
                 always_allow=[user.id],
             )
@@ -405,7 +405,7 @@ class HerokuWebMod(loader.Module):
         if any(c not in string.digits for c in data):
             await utils.answer(
                 call,
-                self.strings("invalid_code_digits"),
+                self.strings["invalid_code_digits"],
                 reply_markup=_code_markup,
                 always_allow=[user.id],
             )
@@ -416,8 +416,8 @@ class HerokuWebMod(loader.Module):
         except SessionPasswordNeededError:
             reply_markup = [
                 {
-                    "text": self.strings("enter_2fa"),
-                    "input": self.strings("your_2fa"),
+                    "text": self.strings["enter_2fa"],
+                    "input": self.strings["your_2fa"],
                     "handler": self.inline_2fa_handler,
                     "args": (
                         client,
@@ -429,7 +429,7 @@ class HerokuWebMod(loader.Module):
             ]
             await utils.answer(
                 call,
-                self.strings("2fa_enabled"),
+                self.strings["2fa_enabled"],
                 reply_markup=reply_markup,
                 always_allow=[user.id],
             )
@@ -437,14 +437,14 @@ class HerokuWebMod(loader.Module):
         except PhoneCodeExpiredError:
             reply_markup = [
                 {
-                    "text": self.strings("request_code"),
+                    "text": self.strings["request_code"],
                     "callback": self.inline_phone_handler,
                     "args": (phone, user, is_switch),
                 }
             ]
             await utils.answer(
                 call,
-                self.strings("code_expired"),
+                self.strings["code_expired"],
                 reply_markup=reply_markup,
                 always_allow=[user.id],
             )
@@ -452,7 +452,7 @@ class HerokuWebMod(loader.Module):
         except PhoneCodeInvalidError:
             await utils.answer(
                 call,
-                self.strings("invalid_code"),
+                self.strings["invalid_code"],
                 reply_markup=_code_markup,
                 always_allow=[user.id],
             )
@@ -460,8 +460,8 @@ class HerokuWebMod(loader.Module):
         except FloodWaitError as e:
             await utils.answer(
                 call,
-                self.strings("floodwait_error").format(e.seconds),
-                reply_markup={"text": self.strings("btn_no"), "action": "close"},
+                self.strings["floodwait_error"].format(e.seconds),
+                reply_markup={"text": self.strings["btn_no"], "action": "close"},
             )
             return
 
@@ -481,15 +481,15 @@ class HerokuWebMod(loader.Module):
 
         try:
             if not await self.inline.form(
-                self.strings("switch_confirm"),
+                self.strings["switch_confirm"],
                 message=message,
                 reply_markup=[
                     {
-                        "text": self.strings("btn_yes"),
+                        "text": self.strings["btn_yes"],
                         "callback": self._inline_login,
                         "args": (user, False, True),
                     },
-                    {"text": self.strings("btn_no"), "action": "close"},
+                    {"text": self.strings["btn_no"], "action": "close"},
                 ],
                 photo="",
             ):
@@ -497,7 +497,7 @@ class HerokuWebMod(loader.Module):
         except Exception:
             await utils.answer(
                 message,
-                self.strings("switch_insecure").format(
+                self.strings["switch_insecure"].format(
                     utils.escape_html(self.get_prefix())
                 ),
             )
@@ -506,8 +506,8 @@ class HerokuWebMod(loader.Module):
         self, call, data, client, phone, user, is_switch: bool = False
     ):
         _2fa_markup = {
-            "text": self.strings("enter_2fa"),
-            "input": self.strings("your_2fa"),
+            "text": self.strings["enter_2fa"],
+            "input": self.strings["your_2fa"],
             "handler": self.inline_2fa_handler,
             "args": (
                 client,
@@ -519,7 +519,7 @@ class HerokuWebMod(loader.Module):
         if not data:
             await utils.answer(
                 call,
-                self.strings("invalid_password"),
+                self.strings["invalid_password"],
                 reply_markup=_2fa_markup,
                 always_allow=[user.id],
             )
@@ -530,7 +530,7 @@ class HerokuWebMod(loader.Module):
         except PasswordHashInvalidError:
             await utils.answer(
                 call,
-                self.strings("invalid_password"),
+                self.strings["invalid_password"],
                 reply_markup=_2fa_markup,
                 always_allow=[user.id],
             )
@@ -538,8 +538,8 @@ class HerokuWebMod(loader.Module):
         except FloodWaitError as e:
             await utils.answer(
                 call,
-                self.strings("floodwait_error").format(e.seconds),
-                reply_markup={"text": self.strings("btn_no"), "action": "close"},
+                self.strings["floodwait_error"].format(e.seconds),
+                reply_markup={"text": self.strings["btn_no"], "action": "close"},
             )
             return
 

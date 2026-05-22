@@ -94,7 +94,7 @@ class Evaluator(loader.Module):
 
             await utils.answer(
                 message,
-                self.strings("err").format(
+                self.strings["err"].format(
                     "4985626654563894116",
                     "python",
                     utils.escape_html(args),
@@ -135,7 +135,7 @@ class Evaluator(loader.Module):
         with contextlib.suppress(MessageIdInvalidError):
             await utils.answer(
                 message,
-                self.strings("eval_py").format(
+                self.strings["eval_py"].format(
                     "4985626654563894116",
                     "python",
                     utils.escape_html(args),
@@ -170,7 +170,7 @@ class Evaluator(loader.Module):
         except subprocess.TimeoutExpired:
             await utils.answer(
                 message,
-                self.strings("no_compiler").format(
+                self.strings["no_compiler"].format(
                     "4986046904228905931" if c else "4985844035743646190",
                     "C (gcc)" if c else "C++ (g++)",
                 ),
@@ -179,7 +179,7 @@ class Evaluator(loader.Module):
         except Exception:
             await utils.answer(
                 message,
-                self.strings("no_compiler").format(
+                self.strings["no_compiler"].format(
                     "4986046904228905931" if c else "4985844035743646190",
                     "C (gcc)" if c else "C++ (g++)",
                 ),
@@ -187,7 +187,7 @@ class Evaluator(loader.Module):
             return
 
         code = utils.get_args_raw(message)
-        message = await utils.answer(message, self.strings("compiling"))
+        message = await utils.answer(message, self.strings["compiling"])
         error = False
         with tempfile.TemporaryDirectory() as tmpdir:
             file = os.path.join(tmpdir, "code.cpp")
@@ -226,7 +226,7 @@ class Evaluator(loader.Module):
         with contextlib.suppress(MessageIdInvalidError):
             await utils.answer(
                 message,
-                self.strings("err" if error else "eval").format(
+                self.strings["err" if error else "eval"].format(
                     "4986046904228905931" if c else "4985844035743646190",
                     "c" if c else "cpp",
                     utils.escape_html(code),
@@ -250,7 +250,7 @@ class Evaluator(loader.Module):
         except subprocess.TimeoutExpired:
             await utils.answer(
                 message,
-                self.strings("no_compiler").format(
+                self.strings["no_compiler"].format(
                     "5424780918776671920",
                     "Rust (rustc)",
                 ),
@@ -259,7 +259,7 @@ class Evaluator(loader.Module):
         except Exception:
             await utils.answer(
                 message,
-                self.strings("no_compiler").format(
+                self.strings["no_compiler"].format(
                     "5424780918776671920",
                     "Rust (rustc)",
                 ),
@@ -272,7 +272,7 @@ class Evaluator(loader.Module):
         if not code and reply and reply.text:
             code = reply.message
 
-        message = await utils.answer(message, self.strings("compiling"))
+        message = await utils.answer(message, self.strings["compiling"])
         error = False
         with tempfile.TemporaryDirectory() as tmpdir:
             file = os.path.join(tmpdir, "code.rs")
@@ -311,7 +311,7 @@ class Evaluator(loader.Module):
         with contextlib.suppress(MessageIdInvalidError):
             await utils.answer(
                 message,
-                self.strings("err" if error else "eval").format(
+                self.strings["err" if error else "eval"].format(
                     "5424780918776671920",
                     "rust",
                     utils.escape_html(code),
@@ -331,7 +331,7 @@ class Evaluator(loader.Module):
         except subprocess.TimeoutExpired:
             await utils.answer(
                 message,
-                self.strings("no_compiler").format(
+                self.strings["no_compiler"].format(
                     "4994652309293105740",
                     "Go",
                 ),
@@ -340,7 +340,7 @@ class Evaluator(loader.Module):
         except Exception:
             await utils.answer(
                 message,
-                self.strings("no_compiler").format(
+                self.strings["no_compiler"].format(
                     "4994652309293105740",
                     "Go",
                 ),
@@ -353,7 +353,7 @@ class Evaluator(loader.Module):
         if not code and reply and reply.text:
             code = reply.message
 
-        message = await utils.answer(message, self.strings("compiling"))
+        message = await utils.answer(message, self.strings["compiling"])
         error = False
         with tempfile.TemporaryDirectory() as tmpdir:
             file = os.path.join(tmpdir, "code.go")
@@ -377,7 +377,7 @@ class Evaluator(loader.Module):
         with contextlib.suppress(MessageIdInvalidError):
             await utils.answer(
                 message,
-                self.strings("err" if error else "eval").format(
+                self.strings["err" if error else "eval"].format(
                     "4994652309293105740",
                     "go",
                     utils.escape_html(code),
@@ -397,7 +397,7 @@ class Evaluator(loader.Module):
         except subprocess.TimeoutExpired:
             await utils.answer(
                 message,
-                self.strings("no_compiler").format(
+                self.strings["no_compiler"].format(
                     "4985643941807260310",
                     "Node.js",
                 ),
@@ -406,7 +406,7 @@ class Evaluator(loader.Module):
         except Exception:
             await utils.answer(
                 message,
-                self.strings("no_compiler").format(
+                self.strings["no_compiler"].format(
                     "4985643941807260310",
                     "Node.js",
                 ),
@@ -437,7 +437,7 @@ class Evaluator(loader.Module):
         with contextlib.suppress(MessageIdInvalidError):
             await utils.answer(
                 message,
-                self.strings("err" if error else "eval").format(
+                self.strings["err" if error else "eval"].format(
                     "4985643941807260310",
                     "javascript",
                     utils.escape_html(code),

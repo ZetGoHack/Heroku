@@ -216,7 +216,7 @@ class HerokuPluginSecurity(loader.Module):
         args = utils.get_args_raw(message)
 
         if not args:
-            await utils.answer(message, self.strings("no_hash"))
+            await utils.answer(message, self.strings["no_hash"])
             return
 
         query = args.strip()
@@ -226,12 +226,12 @@ class HerokuPluginSecurity(loader.Module):
             if closest:
                 await utils.answer(
                     message,
-                    self.strings("hash_not_found_suggest").format(
+                    self.strings["hash_not_found_suggest"].format(
                         utils.escape_html(closest)
                     ),
                 )
             else:
-                await utils.answer(message, self.strings("hash_not_found"))
+                await utils.answer(message, self.strings["hash_not_found"])
             return
 
         changed = self._internalize(mod)
@@ -246,7 +246,7 @@ class HerokuPluginSecurity(loader.Module):
 
         await utils.answer(
             message,
-            self.strings("external_removed" if changed else "already_internal").format(
+            self.strings["external_removed" if changed else "already_internal"].format(
                 mod.__class__.__name__
             ),
         )
@@ -257,7 +257,7 @@ class HerokuPluginSecurity(loader.Module):
         args = utils.get_args_raw(message)
 
         if not args:
-            await utils.answer(message, self.strings("no_hash"))
+            await utils.answer(message, self.strings["no_hash"])
             return
 
         query = args.strip()
@@ -267,12 +267,12 @@ class HerokuPluginSecurity(loader.Module):
             if closest:
                 await utils.answer(
                     message,
-                    self.strings("hash_not_found_suggest").format(
+                    self.strings["hash_not_found_suggest"].format(
                         utils.escape_html(closest)
                     ),
                 )
             else:
-                await utils.answer(message, self.strings("hash_not_found"))
+                await utils.answer(message, self.strings["hash_not_found"])
             return
 
         changed = self._externalize(mod)
@@ -287,7 +287,7 @@ class HerokuPluginSecurity(loader.Module):
 
         await utils.answer(
             message,
-            self.strings("external_restored" if changed else "already_external").format(
+            self.strings["external_restored" if changed else "already_external"].format(
                 mod.__class__.__name__
             ),
         )

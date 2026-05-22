@@ -90,16 +90,16 @@ class MessageEditor:
         await self.redraw()
 
     async def redraw(self):
-        text = self.strings("running").format(utils.escape_html(self.command))  # fmt: skip
+        text = self.strings["running"].format(utils.escape_html(self.command))  # fmt: skip
 
         if self.rc is not None:
-            text += self.strings("finished").format(utils.escape_html(str(self.rc)))
+            text += self.strings["finished"].format(utils.escape_html(str(self.rc)))
 
-        text += self.strings("stdout")
+        text += self.strings["stdout"]
         text += utils.escape_html(self.stdout[max(len(self.stdout) - 2048, 0) :])
         stderr = utils.escape_html(self.stderr[max(len(self.stderr) - 1024, 0) :])
-        text += (self.strings("stderr") + stderr) if stderr else ""
-        text += self.strings("end")
+        text += (self.strings["stderr"] + stderr) if stderr else ""
+        text += self.strings["end"]
 
         if self.rc is not None:
             exec_time = time.time() - self.start_time
@@ -155,7 +155,7 @@ class SudoMessageEditor(MessageEditor):
             and self.state == 1
         ):
             logger.debug("switching state to 0")
-            await utils.answer(self.message, self.strings("auth_fail"))
+            await utils.answer(self.message, self.strings["auth_fail"])
 
             self.state = 0
             handled = True
@@ -165,7 +165,7 @@ class SudoMessageEditor(MessageEditor):
 
         if any(lastlines[0] == i for i in self.PASS_REQ) and self.state == 0:
             logger.debug("Success to find sudo log!")
-            text = self.strings("auth_needed").format(self.message.client.heroku_me.id)
+            text = self.strings["auth_needed"].format(self.message.client.heroku_me.id)
 
             try:
                 await utils.answer(self.message, text)
@@ -178,7 +178,7 @@ class SudoMessageEditor(MessageEditor):
 
             self.authmsg = await self.message.client.send_message(
                 "me",
-                self.strings("auth_msg").format(command, user),
+                self.strings["auth_msg"].format(command, user),
             )
             logger.debug("sent message to self")
 
@@ -196,7 +196,7 @@ class SudoMessageEditor(MessageEditor):
             and self.state in {1, 3, 4}
         ):
             logger.debug("password wrong lots of times")
-            await utils.answer(self.message, self.strings("auth_locked"))
+            await utils.answer(self.message, self.strings["auth_locked"])
             await self.authmsg.delete()
             self.state = 2
             handled = True
@@ -233,7 +233,7 @@ class SudoMessageEditor(MessageEditor):
         if hash_msg(message) == hash_msg(self.authmsg):
             # The user has provided interactive authentication. Send password to stdin for sudo.
             try:
-                self.authmsg = await utils.answer(message, self.strings("auth_ongoing"))
+                self.authmsg = await utils.answer(message, self.strings["auth_ongoing"])
             except herokutl.errors.rpcerrorlist.MessageNotModifiedError:
                 # Try to clear personal info if the edit fails
                 await message.delete()
@@ -281,7 +281,7 @@ class RawMessageEditor(SudoMessageEditor):
                 )
 
         if self.rc is not None and self.show_done:
-            text += "\n" + self.strings("done")
+            text += "\n" + self.strings["done"]
 
         logger.debug(text)
 
@@ -332,16 +332,16 @@ class InlineMessageEditor:
         await self.redraw()
 
     async def redraw(self):
-        text = self.strings("running").format(utils.escape_html(self.command))
+        text = self.strings["running"].format(utils.escape_html(self.command))
 
         if self.rc is not None:
-            text += self.strings("finished").format(utils.escape_html(str(self.rc)))
+            text += self.strings["finished"].format(utils.escape_html(str(self.rc)))
 
-        text += self.strings("stdout")
+        text += self.strings["stdout"]
         text += utils.escape_html(self.stdout[max(len(self.stdout) - 2048, 0) :])
         stderr = utils.escape_html(self.stderr[max(len(self.stderr) - 1024, 0) :])
-        text += (self.strings("stderr") + stderr) if stderr else ""
-        text += self.strings("end")
+        text += (self.strings["stderr"] + stderr) if stderr else ""
+        text += self.strings["end"]
 
         if self.rc is not None:
             exec_time = time.time() - self.start_time
@@ -438,7 +438,7 @@ class TerminalMod(loader.Module):
             loader.ConfigValue(
                 "FLOOD_WAIT_PROTECT",
                 2,
-                lambda: self.strings("fw_protect"),
+                lambda: self.strings["fw_protect"],
                 validator=loader.validators.Integer(minimum=0),
             ),
         )
@@ -456,7 +456,7 @@ class TerminalMod(loader.Module):
         return [
             [
                 {
-                    "text": self.strings("btn_execute"),
+                    "text": self.strings["btn_execute"],
                     "data": f"terminal/exec/{uid}",
                 }
             ]
@@ -473,8 +473,8 @@ class TerminalMod(loader.Module):
         return [
             [
                 {
-                    "text": self.strings("btn_continue"),
-                    "input": self.strings("btn_continue"),
+                    "text": self.strings["btn_continue"],
+                    "input": self.strings["btn_continue"],
                     "handler": self.inline__continue_input,
                     "args": (session_uid,),
                 }
@@ -484,7 +484,7 @@ class TerminalMod(loader.Module):
     def _register_inline_session(self, session_uid: str, inline_message_id: str):
         self.inline._units[session_uid] = {
             "type": "form",
-            "text": self.strings("exec_running"),
+            "text": self.strings["exec_running"],
             "buttons": [],
             "caller": None,
             "chat": None,
@@ -505,7 +505,7 @@ class TerminalMod(loader.Module):
         if self._is_dangerous(user_command):
             await utils.answer(
                 message,
-                self.strings("dangerous_command").format(
+                self.strings["dangerous_command"].format(
                     utils.escape_html(user_command)
                 ),
             )
@@ -528,9 +528,9 @@ class TerminalMod(loader.Module):
             await query.answer(
                 [
                     await query.builder.article(
-                        title=self.strings("inline_hint"),
-                        description=self.strings("inline_hint_desc"),
-                        text=self.strings("inline_hint"),
+                        title=self.strings["inline_hint"],
+                        description=self.strings["inline_hint_desc"],
+                        text=self.strings["inline_hint"],
                         parse_mode="HTML",
                         thumb=self.inline._web_document(
                             BANNER_OK, width=640, height=640
@@ -547,9 +547,9 @@ class TerminalMod(loader.Module):
             await query.answer(
                 [
                     await query.builder.article(
-                        title=self.strings("inline_hint"),
+                        title=self.strings["inline_hint"],
                         description=short_cmd(raw),
-                        text=self.strings("dangerous_command").format(
+                        text=self.strings["dangerous_command"].format(
                             utils.escape_html(raw)
                         ),
                         parse_mode="HTML",
@@ -570,9 +570,9 @@ class TerminalMod(loader.Module):
         await query.answer(
             [
                 await query.builder.article(
-                    title=self.strings("inline_hint"),
+                    title=self.strings["inline_hint"],
                     description=short_cmd(raw),
-                    text=self.strings("exec_confirm").format(utils.escape_html(raw)),
+                    text=self.strings["exec_confirm"].format(utils.escape_html(raw)),
                     parse_mode="HTML",
                     thumb=self.inline._web_document(BANNER_OK, width=640, height=640),
                     buttons=self.inline.generate_markup(
@@ -599,7 +599,7 @@ class TerminalMod(loader.Module):
 
         if self._is_dangerous(cmd):
             await call.answer(
-                self.strings("dangerous_command").format(cmd),
+                self.strings["dangerous_command"].format(cmd),
                 show_alert=True,
             )
             return
@@ -614,7 +614,7 @@ class TerminalMod(loader.Module):
             inline_message_id=call.inline_message_id,
         )
 
-        await form.edit(self.strings("exec_running"))
+        await form.edit(self.strings["exec_running"])
 
         editor = InlineMessageEditor(
             form=form,
@@ -644,13 +644,13 @@ class TerminalMod(loader.Module):
 
         if self._is_dangerous(cmd):
             await editor.form.edit(
-                self.strings("dangerous_command").format(utils.escape_html(cmd)),
+                self.strings["dangerous_command"].format(utils.escape_html(cmd)),
                 reply_markup=self._build_inline_continue_markup(editor, session_uid),
             )
             return
 
         editor.reset(cmd)
-        await editor.form.edit(self.strings("exec_running"))
+        await editor.form.edit(self.strings["exec_running"])
         asyncio.ensure_future(self._run_inline(cmd, editor))
 
     async def _run_inline(self, cmd: str, editor: InlineMessageEditor):
@@ -670,7 +670,7 @@ class TerminalMod(loader.Module):
         except Exception as e:
             with contextlib.suppress(Exception):
                 await editor.form.edit(
-                    self.strings("exec_error").format(utils.escape_html(str(e)))
+                    self.strings["exec_error"].format(utils.escape_html(str(e)))
                 )
             return
 
@@ -702,7 +702,7 @@ class TerminalMod(loader.Module):
         if self._is_dangerous(cmd):
             await utils.answer(
                 message,
-                self.strings("dangerous_command").format(utils.escape_html(cmd)),
+                self.strings["dangerous_command"].format(utils.escape_html(cmd)),
             )
             return
 
@@ -722,7 +722,7 @@ class TerminalMod(loader.Module):
         except Exception as e:
             await utils.answer(
                 message,
-                self.strings("exec_error").format(utils.escape_html(str(e))),
+                self.strings["exec_error"].format(utils.escape_html(str(e))),
             )
             return
 
@@ -785,12 +785,12 @@ class TerminalMod(loader.Module):
     @loader.command()
     async def terminatecmd(self, message):
         if not message.is_reply:
-            await utils.answer(message, self.strings("what_to_kill"))
+            await utils.answer(message, self.strings["what_to_kill"])
             return
 
         reply = await message.get_reply_message()
         if not reply:
-            await utils.answer(message, self.strings("no_cmd"))
+            await utils.answer(message, self.strings["no_cmd"])
             return
 
         process = self.activecmds.get(hash_msg(reply))
@@ -801,7 +801,7 @@ class TerminalMod(loader.Module):
             process = inline_editor.process if inline_editor else None
 
         if process is None:
-            await utils.answer(message, self.strings("no_cmd"))
+            await utils.answer(message, self.strings["no_cmd"])
             return
 
         try:
@@ -813,6 +813,6 @@ class TerminalMod(loader.Module):
             os.killpg(process.pid, signal_type)
         except Exception:
             logger.exception("Killing process failed")
-            await utils.answer(message, self.strings("kill_fail"))
+            await utils.answer(message, self.strings["kill_fail"])
         else:
-            await utils.answer(message, self.strings("killed"))
+            await utils.answer(message, self.strings["killed"])

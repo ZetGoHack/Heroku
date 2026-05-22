@@ -109,9 +109,9 @@ class HerokuConfigMod(loader.Module):
             self.lookup(mod).config[option] = query
         except loader.validators.ValidationError as e:
             await call.edit(
-                self.strings("validation_error").format(e.args[0]),
+                self.strings["validation_error"].format(e.args[0]),
                 reply_markup={
-                    "text": self.strings("try_again"),
+                    "text": self.strings["try_again"],
                     "callback": self.inline__configure_option,
                     "kwargs": {"obj_type": obj_type, "mod": mod, "config_opt": option},
                 },
@@ -119,9 +119,9 @@ class HerokuConfigMod(loader.Module):
             return
 
         await call.edit(
-            self.strings(
+            self.strings[
                 "option_saved" if isinstance(obj_type, bool) else "option_saved_lib"
-            ).format(
+            ].format(
                 utils.escape_html(option),
                 utils.escape_html(mod),
                 self._get_value(mod, option),
@@ -129,14 +129,14 @@ class HerokuConfigMod(loader.Module):
             reply_markup=[
                 [
                     {
-                        "text": self.strings("back_btn"),
+                        "text": self.strings["back_btn"],
                         "callback": self.inline__configure,
                         "args": (mod,),
                         "style": "primary",
                         "kwargs": self._guess_back_to_page(mod, option, obj_type),
                     },
                     {
-                        "text": self.strings("close_btn"),
+                        "text": self.strings["close_btn"],
                         "action": "close",
                         "style": "danger",
                     },
@@ -156,9 +156,9 @@ class HerokuConfigMod(loader.Module):
         mod_instance.config[option] = mod_instance.config.getdef(option)
 
         await call.edit(
-            self.strings(
+            self.strings[
                 "option_reset" if isinstance(obj_type, bool) else "option_reset_lib"
-            ).format(
+            ].format(
                 utils.escape_html(option),
                 utils.escape_html(mod),
                 self._get_value(mod, option),
@@ -166,14 +166,14 @@ class HerokuConfigMod(loader.Module):
             reply_markup=[
                 [
                     {
-                        "text": self.strings("back_btn"),
+                        "text": self.strings["back_btn"],
                         "callback": self.inline__configure,
                         "args": (mod,),
                         "style": "primary",
                         "kwargs": self._guess_back_to_page(mod, option, obj_type),
                     },
                     {
-                        "text": self.strings("close_btn"),
+                        "text": self.strings["close_btn"],
                         "action": "close",
                         "style": "danger",
                     },
@@ -193,9 +193,9 @@ class HerokuConfigMod(loader.Module):
             self.lookup(mod).config[option] = value
         except loader.validators.ValidationError as e:
             await call.edit(
-                self.strings("validation_error").format(e.args[0]),
+                self.strings["validation_error"].format(e.args[0]),
                 reply_markup={
-                    "text": self.strings("try_again"),
+                    "text": self.strings["try_again"],
                     "callback": self.inline__configure_option,
                     "kwargs": {"obj_type": obj_type, "mod": mod, "config_opt": option},
                 },
@@ -217,11 +217,11 @@ class HerokuConfigMod(loader.Module):
         )
 
         await call.edit(
-            self.strings(
+            self.strings[
                 "configuring_option"
                 if isinstance(obj_type, bool)
                 else "configuring_option_lib"
-            ).format(
+            ].format(
                 utils.escape_html(option),
                 utils.escape_html(mod),
                 utils.escape_html(self.lookup(mod).config.getdoc(option)),
@@ -232,7 +232,7 @@ class HerokuConfigMod(loader.Module):
                     else self.hide_value(self.lookup(mod).config[option])
                 ),
                 (
-                    self.strings("typehint").format(
+                    self.strings["typehint"].format(
                         doc,
                         eng_art="n" if doc.lower().startswith(tuple("euioay")) else "",
                     )
@@ -256,7 +256,7 @@ class HerokuConfigMod(loader.Module):
                 *(
                     [
                         {
-                            "text": f"❌ {self.strings('set')} `False`",
+                            "text": f"❌ {self.strings['set']} `False`",
                             "callback": self.inline__set_bool,
                             "args": (mod, option, False),
                             "kwargs": {"obj_type": obj_type},
@@ -265,7 +265,7 @@ class HerokuConfigMod(loader.Module):
                     if self.lookup(mod).config[option]
                     else [
                         {
-                            "text": f"✅ {self.strings('set')} `True`",
+                            "text": f"✅ {self.strings['set']} `True`",
                             "callback": self.inline__set_bool,
                             "args": (mod, option, True),
                             "kwargs": {"obj_type": obj_type},
@@ -277,7 +277,7 @@ class HerokuConfigMod(loader.Module):
                 *(
                     [
                         {
-                            "text": self.strings("set_default_btn"),
+                            "text": self.strings["set_default_btn"],
                             "callback": self.inline__reset_default,
                             "args": (mod, option),
                             "kwargs": {"obj_type": obj_type},
@@ -290,14 +290,14 @@ class HerokuConfigMod(loader.Module):
             ],
             [
                 {
-                    "text": self.strings("back_btn"),
+                    "text": self.strings["back_btn"],
                     "callback": self.inline__configure,
                     "args": (mod,),
                     "style": "primary",
                     "kwargs": self._guess_back_to_page(mod, option, obj_type),
                 },
                 {
-                    "text": self.strings("close_btn"),
+                    "text": self.strings["close_btn"],
                     "action": "close",
                     "style": "danger",
                 },
@@ -326,9 +326,9 @@ class HerokuConfigMod(loader.Module):
             self.lookup(mod).config[option] = self.lookup(mod).config[option] + query
         except loader.validators.ValidationError as e:
             await call.edit(
-                self.strings("validation_error").format(e.args[0]),
+                self.strings["validation_error"].format(e.args[0]),
                 reply_markup={
-                    "text": self.strings("try_again"),
+                    "text": self.strings["try_again"],
                     "callback": self.inline__configure_option,
                     "kwargs": {"obj_type": obj_type, "mod": mod, "config_opt": option},
                 },
@@ -336,9 +336,9 @@ class HerokuConfigMod(loader.Module):
             return
 
         await call.edit(
-            self.strings(
+            self.strings[
                 "option_saved" if isinstance(obj_type, bool) else "option_saved_lib"
-            ).format(
+            ].format(
                 utils.escape_html(option),
                 utils.escape_html(mod),
                 self._get_value(mod, option),
@@ -346,14 +346,14 @@ class HerokuConfigMod(loader.Module):
             reply_markup=[
                 [
                     {
-                        "text": self.strings("back_btn"),
+                        "text": self.strings["back_btn"],
                         "callback": self.inline__configure,
                         "args": (mod,),
                         "style": "primary",
                         "kwargs": self._guess_back_to_page(mod, option, obj_type),
                     },
                     {
-                        "text": self.strings("close_btn"),
+                        "text": self.strings["close_btn"],
                         "action": "close",
                         "style": "danger",
                     },
@@ -396,9 +396,9 @@ class HerokuConfigMod(loader.Module):
                 )
         except loader.validators.ValidationError as e:
             await call.edit(
-                self.strings("validation_error").format(e.args[0]),
+                self.strings["validation_error"].format(e.args[0]),
                 reply_markup={
-                    "text": self.strings("try_again"),
+                    "text": self.strings["try_again"],
                     "callback": self.inline__configure_option,
                     "kwargs": {"obj_type": obj_type, "mod": mod, "config_opt": option},
                 },
@@ -406,9 +406,9 @@ class HerokuConfigMod(loader.Module):
             return
 
         await call.edit(
-            self.strings(
+            self.strings[
                 "option_saved" if isinstance(obj_type, bool) else "option_saved_lib"
-            ).format(
+            ].format(
                 utils.escape_html(option),
                 utils.escape_html(mod),
                 self._get_value(mod, option),
@@ -416,14 +416,14 @@ class HerokuConfigMod(loader.Module):
             reply_markup=[
                 [
                     {
-                        "text": self.strings("back_btn"),
+                        "text": self.strings["back_btn"],
                         "callback": self.inline__configure,
                         "args": (mod,),
                         "style": "primary",
                         "kwargs": self._guess_back_to_page(mod, option, obj_type),
                     },
                     {
-                        "text": self.strings("close_btn"),
+                        "text": self.strings["close_btn"],
                         "action": "close",
                         "style": "danger",
                     },
@@ -442,8 +442,8 @@ class HerokuConfigMod(loader.Module):
         return [
             [
                 {
-                    "text": self.strings("enter_value_btn"),
-                    "input": self.strings("enter_value_desc"),
+                    "text": self.strings["enter_value_btn"],
+                    "input": self.strings["enter_value_desc"],
                     "handler": self.inline__set_config,
                     "args": (mod, option, call.inline_message_id),
                     "kwargs": {"obj_type": obj_type},
@@ -453,15 +453,15 @@ class HerokuConfigMod(loader.Module):
                 *(
                     [
                         {
-                            "text": self.strings("remove_item_btn"),
-                            "input": self.strings("remove_item_desc"),
+                            "text": self.strings["remove_item_btn"],
+                            "input": self.strings["remove_item_desc"],
                             "handler": self.inline__remove_item,
                             "args": (mod, option, call.inline_message_id),
                             "kwargs": {"obj_type": obj_type},
                         },
                         {
-                            "text": self.strings("add_item_btn"),
-                            "input": self.strings("add_item_desc"),
+                            "text": self.strings["add_item_btn"],
+                            "input": self.strings["add_item_desc"],
                             "handler": self.inline__add_item,
                             "args": (mod, option, call.inline_message_id),
                             "kwargs": {"obj_type": obj_type},
@@ -475,7 +475,7 @@ class HerokuConfigMod(loader.Module):
                 *(
                     [
                         {
-                            "text": self.strings("set_default_btn"),
+                            "text": self.strings["set_default_btn"],
                             "callback": self.inline__reset_default,
                             "args": (mod, option),
                             "kwargs": {"obj_type": obj_type},
@@ -488,14 +488,14 @@ class HerokuConfigMod(loader.Module):
             ],
             [
                 {
-                    "text": self.strings("back_btn"),
+                    "text": self.strings["back_btn"],
                     "callback": self.inline__configure,
                     "args": (mod,),
                     "style": "primary",
                     "kwargs": self._guess_back_to_page(mod, option, obj_type),
                 },
                 {
-                    "text": self.strings("close_btn"),
+                    "text": self.strings["close_btn"],
                     "action": "close",
                     "style": "danger",
                 },
@@ -514,9 +514,9 @@ class HerokuConfigMod(loader.Module):
             self.lookup(mod).config[option] = value
         except loader.validators.ValidationError as e:
             await call.edit(
-                self.strings("validation_error").format(e.args[0]),
+                self.strings["validation_error"].format(e.args[0]),
                 reply_markup={
-                    "text": self.strings("try_again"),
+                    "text": self.strings["try_again"],
                     "callback": self.inline__configure_option,
                     "kwargs": {"obj_type": obj_type, "mod": mod, "config_opt": option},
                 },
@@ -524,9 +524,9 @@ class HerokuConfigMod(loader.Module):
             return
 
         await call.edit(
-            self.strings(
+            self.strings[
                 "option_saved" if isinstance(obj_type, bool) else "option_saved_lib"
-            ).format(
+            ].format(
                 utils.escape_html(option),
                 utils.escape_html(mod),
                 self._get_value(mod, option),
@@ -534,14 +534,14 @@ class HerokuConfigMod(loader.Module):
             reply_markup=[
                 [
                     {
-                        "text": self.strings("back_btn"),
+                        "text": self.strings["back_btn"],
                         "callback": self.inline__configure,
                         "args": (mod,),
                         "style": "primary",
                         "kwargs": self._guess_back_to_page(mod, option, obj_type),
                     },
                     {
-                        "text": self.strings("close_btn"),
+                        "text": self.strings["close_btn"],
                         "action": "close",
                         "style": "danger",
                     },
@@ -568,9 +568,9 @@ class HerokuConfigMod(loader.Module):
             self.lookup(mod).config.reload()
         except loader.validators.ValidationError as e:
             await call.edit(
-                self.strings("validation_error").format(e.args[0]),
+                self.strings["validation_error"].format(e.args[0]),
                 reply_markup={
-                    "text": self.strings("try_again"),
+                    "text": self.strings["try_again"],
                     "callback": self.inline__configure_option,
                     "kwargs": {"obj_type": obj_type, "mod": mod, "config_opt": option},
                 },
@@ -597,8 +597,8 @@ class HerokuConfigMod(loader.Module):
         return [
             [
                 {
-                    "text": self.strings("enter_value_btn"),
-                    "input": self.strings("enter_value_desc"),
+                    "text": self.strings["enter_value_btn"],
+                    "input": self.strings["enter_value_desc"],
                     "handler": self.inline__set_config,
                     "args": (mod, option, call.inline_message_id),
                     "kwargs": {"obj_type": obj_type},
@@ -629,7 +629,7 @@ class HerokuConfigMod(loader.Module):
                 *(
                     [
                         {
-                            "text": self.strings("set_default_btn"),
+                            "text": self.strings["set_default_btn"],
                             "callback": self.inline__reset_default,
                             "args": (mod, option),
                             "kwargs": {"obj_type": obj_type},
@@ -642,14 +642,14 @@ class HerokuConfigMod(loader.Module):
             ],
             [
                 {
-                    "text": self.strings("back_btn"),
+                    "text": self.strings["back_btn"],
                     "callback": self.inline__configure,
                     "args": (mod,),
                     "style": "primary",
                     "kwargs": self._guess_back_to_page(mod, option, obj_type),
                 },
                 {
-                    "text": self.strings("close_btn"),
+                    "text": self.strings["close_btn"],
                     "action": "close",
                     "style": "danger",
                 },
@@ -671,8 +671,8 @@ class HerokuConfigMod(loader.Module):
         return [
             [
                 {
-                    "text": self.strings("enter_value_btn"),
-                    "input": self.strings("enter_value_desc"),
+                    "text": self.strings["enter_value_btn"],
+                    "input": self.strings["enter_value_desc"],
                     "handler": self.inline__set_config,
                     "args": (mod, option, call.inline_message_id),
                     "kwargs": {"obj_type": obj_type},
@@ -703,7 +703,7 @@ class HerokuConfigMod(loader.Module):
                 *(
                     [
                         {
-                            "text": self.strings("set_default_btn"),
+                            "text": self.strings["set_default_btn"],
                             "callback": self.inline__reset_default,
                             "args": (mod, option),
                             "kwargs": {"obj_type": obj_type},
@@ -716,14 +716,14 @@ class HerokuConfigMod(loader.Module):
             ],
             [
                 {
-                    "text": self.strings("back_btn"),
+                    "text": self.strings["back_btn"],
                     "callback": self.inline__configure,
                     "args": (mod,),
                     "style": "primary",
                     "kwargs": self._guess_back_to_page(mod, option, obj_type),
                 },
                 {
-                    "text": self.strings("close_btn"),
+                    "text": self.strings["close_btn"],
                     "action": "close",
                     "style": "danger",
                 },
@@ -762,7 +762,7 @@ class HerokuConfigMod(loader.Module):
                 [
                     [
                         {
-                            "text": self.strings("hide_value"),
+                            "text": self.strings["hide_value"],
                             "callback": self.inline__configure_option,
                             "kwargs": {
                                 "obj_type": obj_type,
@@ -777,7 +777,7 @@ class HerokuConfigMod(loader.Module):
                 else [
                     [
                         {
-                            "text": self.strings("show_hidden"),
+                            "text": self.strings["show_hidden"],
                             "callback": self.inline__configure_option,
                             "kwargs": {
                                 "obj_type": obj_type,
@@ -812,7 +812,7 @@ class HerokuConfigMod(loader.Module):
             args += [""]
         else:
             args += [
-                self.strings("typehint").format(
+                self.strings["typehint"].format(
                     doc,
                     eng_art="n" if doc.lower().startswith(tuple("euioay")) else "",
                 )
@@ -820,44 +820,44 @@ class HerokuConfigMod(loader.Module):
             match validator.internal_id:
                 case "Boolean":
                     await call.edit(
-                        self.strings(
+                        self.strings[
                             "configuring_option"
                             if isinstance(obj_type, bool)
                             else "configuring_option_lib"
-                        ).format(*args),
+                        ].format(*args),
                         reply_markup=additonal_button_row
                         + self._generate_bool_markup(mod, config_opt, obj_type),
                     )
                     return
                 case "Series":
                     await call.edit(
-                        self.strings(
+                        self.strings[
                             "configuring_option"
                             if isinstance(obj_type, bool)
                             else "configuring_option_lib"
-                        ).format(*args),
+                        ].format(*args),
                         reply_markup=additonal_button_row
                         + self._generate_series_markup(call, mod, config_opt, obj_type),
                     )
                     return
                 case "Choice":
                     await call.edit(
-                        self.strings(
+                        self.strings[
                             "configuring_option"
                             if isinstance(obj_type, bool)
                             else "configuring_option_lib"
-                        ).format(*args),
+                        ].format(*args),
                         reply_markup=additonal_button_row
                         + self._generate_choice_markup(call, mod, config_opt, obj_type),
                     )
                     return
                 case "MultiChoice":
                     await call.edit(
-                        self.strings(
+                        self.strings[
                             "configuring_option"
                             if isinstance(obj_type, bool)
                             else "configuring_option_lib"
-                        ).format(*args),
+                        ].format(*args),
                         reply_markup=additonal_button_row
                         + self._generate_multi_choice_markup(
                             call, mod, config_opt, obj_type
@@ -865,11 +865,11 @@ class HerokuConfigMod(loader.Module):
                     )
                     return
 
-        text = self.strings(
+        text = self.strings[
             "configuring_option"
             if isinstance(obj_type, bool)
             else "configuring_option_lib"
-        ).format(*args)
+        ].format(*args)
 
         parsed_text, parsed_entities = html.parse(text)
         pages = list(utils.smart_split(parsed_text, parsed_entities))
@@ -895,8 +895,8 @@ class HerokuConfigMod(loader.Module):
             + [
                 [
                     {
-                        "text": self.strings("enter_value_btn"),
-                        "input": self.strings("enter_value_desc"),
+                        "text": self.strings["enter_value_btn"],
+                        "input": self.strings["enter_value_desc"],
                         "handler": self.inline__set_config,
                         "args": (mod, config_opt, call.inline_message_id),
                         "kwargs": {"obj_type": obj_type},
@@ -904,7 +904,7 @@ class HerokuConfigMod(loader.Module):
                 ],
                 [
                     {
-                        "text": self.strings("set_default_btn"),
+                        "text": self.strings["set_default_btn"],
                         "callback": self.inline__reset_default,
                         "args": (mod, config_opt),
                         "kwargs": {"obj_type": obj_type},
@@ -912,14 +912,14 @@ class HerokuConfigMod(loader.Module):
                 ],
                 [
                     {
-                        "text": self.strings("back_btn"),
+                        "text": self.strings["back_btn"],
                         "callback": self.inline__configure,
                         "args": (mod,),
                         "style": "primary",
                         "kwargs": self._guess_back_to_page(mod, config_opt, obj_type),
                     },
                     {
-                        "text": self.strings("close_btn"),
+                        "text": self.strings["close_btn"],
                         "action": "close",
                         "style": "danger",
                     },
@@ -1115,7 +1115,7 @@ class HerokuConfigMod(loader.Module):
             + [
                 [
                     {
-                        "text": self.strings("back_btn"),
+                        "text": self.strings["back_btn"],
                         "callback": self.inline__global_config,
                         "style": "primary",
                         "kwargs": {"obj_type": obj_type},
@@ -1191,16 +1191,16 @@ class HerokuConfigMod(loader.Module):
 
         await utils.answer(
             call,
-            self.strings("choose_core"),
+            self.strings["choose_core"],
             reply_markup=[
                 [
                     {
-                        "text": self.strings("builtin"),
+                        "text": self.strings["builtin"],
                         "callback": self.inline__global_config,
                         "kwargs": {"obj_type": True},
                     },
                     {
-                        "text": self.strings("external"),
+                        "text": self.strings["external"],
                         "callback": self.inline__global_config,
                     },
                 ],
@@ -1208,7 +1208,7 @@ class HerokuConfigMod(loader.Module):
                     [
                         [
                             {
-                                "text": self.strings("libraries"),
+                                "text": self.strings["libraries"],
                                 "callback": self.inline__global_config,
                                 "kwargs": {"obj_type": "library"},
                             }
@@ -1221,7 +1221,7 @@ class HerokuConfigMod(loader.Module):
                 *list(utils.chunks(folder_btns, 2)),
                 [
                     {
-                        "text": self.strings("close_btn"),
+                        "text": self.strings["close_btn"],
                         "action": "close",
                         "style": "danger",
                     }
@@ -1265,7 +1265,7 @@ class HerokuConfigMod(loader.Module):
                 text_parts.append(f"▫️ <b>{utils.escape_html(mod_name)}</b>")
 
         await call.edit(
-            self.strings("configuring_folder").format(
+            self.strings["configuring_folder"].format(
                 utils.escape_html(folder),
                 "\n".join(text_parts) if text_parts else "No options",
             ),
@@ -1273,12 +1273,12 @@ class HerokuConfigMod(loader.Module):
             + [
                 [
                     {
-                        "text": self.strings("back_btn"),
+                        "text": self.strings["back_btn"],
                         "callback": self.inline__choose_category,
                         "style": "primary",
                     },
                     {
-                        "text": self.strings("close_btn"),
+                        "text": self.strings["close_btn"],
                         "action": "close",
                         "style": "danger",
                     },
@@ -1336,12 +1336,12 @@ class HerokuConfigMod(loader.Module):
         kb += [
             [
                 {
-                    "text": self.strings("back_btn"),
+                    "text": self.strings["back_btn"],
                     "callback": self.inline__choose_category,
                     "style": "primary",
                 },
                 {
-                    "text": self.strings("close_btn"),
+                    "text": self.strings["close_btn"],
                     "action": "close",
                     "style": "danger",
                 },
@@ -1349,9 +1349,9 @@ class HerokuConfigMod(loader.Module):
         ]
 
         await call.edit(
-            self.strings(
+            self.strings[
                 "configure" if isinstance(obj_type, bool) else "configure_lib"
-            ),
+            ],
             reply_markup=kb,
         )
 
@@ -1406,12 +1406,12 @@ class HerokuConfigMod(loader.Module):
         reply = await message.get_reply_message()
 
         if not raw:
-            await utils.answer(message, self.strings("args"))
+            await utils.answer(message, self.strings["args"])
             return
 
         parts = [p.strip() for p in raw.split("&&") if p.strip()]
         if not parts:
-            await utils.answer(message, self.strings("args"))
+            await utils.answer(message, self.strings["args"])
             return
 
         first = parts[0].split(maxsplit=2)
@@ -1422,14 +1422,14 @@ class HerokuConfigMod(loader.Module):
             mod, option = first
             value = reply.raw_text
             if not value:
-                await utils.answer(message, self.strings("args"))
+                await utils.answer(message, self.strings["args"])
                 return
         else:
-            await utils.answer(message, self.strings("args"))
+            await utils.answer(message, self.strings["args"])
             return
 
         if not (instance := self.lookup(mod)):
-            await utils.answer(message, self.strings("no_mod"))
+            await utils.answer(message, self.strings["no_mod"])
             return
 
         updates = []
@@ -1442,30 +1442,30 @@ class HerokuConfigMod(loader.Module):
 
         res = apply_update(option, value)
         if res.startswith("NO_OPTION::"):
-            await utils.answer(message, self.strings("no_option"))
+            await utils.answer(message, self.strings["no_option"])
             return
         updates.append((option, self._get_value(mod, option)))
 
         for p in parts[1:]:
             seg = p.split(maxsplit=1)
             if len(seg) < 2:
-                await utils.answer(message, self.strings("args"))
+                await utils.answer(message, self.strings["args"])
                 return
             opt, val = seg
             res = apply_update(opt, val)
             if res.startswith("NO_OPTION::"):
-                await utils.answer(message, self.strings("no_option"))
+                await utils.answer(message, self.strings["no_option"])
                 return
             updates.append((opt, self._get_value(mod, opt)))
 
         lines = []
         for opt, val in updates:
             lines.append(
-                self.strings(
+                self.strings[
                     "option_saved"
                     if isinstance(instance, loader.Module)
                     else "option_saved_lib"
-                ).format(utils.escape_html(opt), utils.escape_html(mod), val)
+                ].format(utils.escape_html(opt), utils.escape_html(mod), val)
             )
 
         await utils.answer(message, "\n".join(lines))

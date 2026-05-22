@@ -80,7 +80,7 @@ class Help(loader.Module):
             loader.ConfigValue(
                 "show_preview_in_help",
                 True,
-                lambda: self.strings("show_preview_in_help"),
+                lambda: self.strings["show_preview_in_help"],
                 validator=loader.validators.Boolean(),
             ),
         )
@@ -97,7 +97,7 @@ class Help(loader.Module):
     async def helphide(self, message: Message):
         """[args] | hide your modules"""
         if not (modules := utils.get_args(message)):
-            await utils.answer(message, self.strings("no_mod"))
+            await utils.answer(message, self.strings["no_mod"])
             return
 
         currently_hidden = self.get("hide", [])
@@ -116,7 +116,7 @@ class Help(loader.Module):
 
         await utils.answer(
             message,
-            self.strings("hidden_shown").format(
+            self.strings["hidden_shown"].format(
                 len(hidden),
                 len(shown),
                 "\n".join([f"👁‍🗨 <i>{m}</i>" for m in hidden]),
@@ -209,7 +209,7 @@ class Help(loader.Module):
                         (
                             utils.escape_html(inspect.getdoc(fun))
                             if fun.__doc__
-                            else self.strings("undoc")
+                            else self.strings["undoc"]
                         ),
                     )
                 )
@@ -237,7 +237,7 @@ class Help(loader.Module):
                     (
                         utils.escape_html(inspect.getdoc(fun))
                         if fun.__doc__
-                        else self.strings("undoc")
+                        else self.strings["undoc"]
                     ),
                 )
             )
@@ -272,10 +272,10 @@ class Help(loader.Module):
                 if placeholders
                 else ""
             )
-            + (f"\n\n{self.strings('developer')}".format(dev_text) if dev_text else "")
-            + (f"\n\n{self.strings('not_exact')}" if not exact else "")
+            + (f"\n\n{self.strings['developer']}".format(dev_text) if dev_text else "")
+            + (f"\n\n{self.strings['not_exact']}" if not exact else "")
             + (
-                f"\n{self.strings('core_notice')}"
+                f"\n{self.strings['core_notice']}"
                 if module.__origin__.startswith("<core")
                 else ""
             ),
@@ -328,7 +328,7 @@ class Help(loader.Module):
 
         hidden = self.get("hide", [])
 
-        reply = self.strings("all_header").format(
+        reply = self.strings["all_header"].format(
             len(self.allmodules.modules),
             (
                 0
@@ -452,7 +452,7 @@ class Help(loader.Module):
                         (
                             ""
                             if self.lookup("Loader").fully_loaded
-                            else f"\n\n{self.strings('partial_load')}"
+                            else f"\n\n{self.strings['partial_load']}"
                         ),
                     ),
                     file=banner,
@@ -470,7 +470,7 @@ class Help(loader.Module):
                         (
                             ""
                             if self.lookup("Loader").fully_loaded
-                            else f"\n\n{self.strings('partial_load')}"
+                            else f"\n\n{self.strings['partial_load']}"
                         ),
                     ),
                     file=banner,
@@ -489,7 +489,7 @@ class Help(loader.Module):
                         (
                             ""
                             if self.lookup("Loader").fully_loaded
-                            else f"\n\n{self.strings('partial_load')}"
+                            else f"\n\n{self.strings['partial_load']}"
                         ),
                     ),
                     file=banner,
@@ -506,5 +506,5 @@ class Help(loader.Module):
 
         await utils.answer(
             message,
-            self.strings("offchats"),
+            self.strings["offchats"],
         )
