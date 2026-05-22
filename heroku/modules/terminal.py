@@ -766,23 +766,68 @@ class TerminalMod(loader.Module):
         await editor.cmd_ended(await sproc.wait())
         del self.activecmds[hash_msg(message)]
 
+    def _find_inline_editor_by_message(
+        self,
+        message: herokutl.tl.types.Message,
+    ) -> typing.Optional[InlineMessageEditor]:
+        text = getattr(message, "raw_text", None) or getattr(message, "text", "")
+        running_editors = [
+            editor
+            for editor in self._inline_sessions.values()
+            if editor.process and editor.rc is None
+        ]
+
+        if not running_editors:
+            return None
+
+        matched_editors = [
+            editor
+            for editor in running_editors
+            if editor.command and editor.command in text
+        ]
+
+        if len(matched_editors) == 1:
+            return matched_editors[0]
+
+        if len(running_editors) == 1 and getattr(message, "via_bot_id", None) in {
+            self.inline.bot_id,
+            None,
+        }:
+            return running_editors[0]
+
+        return None
+
     @loader.command()
     async def terminatecmd(self, message):
         if not message.is_reply:
             await utils.answer(message, self.strings("what_to_kill"))
             return
 
-        if hash_msg(await message.get_reply_message()) in self.activecmds:
-            try:
-                kill_pids = self.activecmds[hash_msg(await message.get_reply_message())]
-                if "-f" not in utils.get_args_raw(message):
-                    os.killpg(kill_pids.pid, signal.SIGTERM)
-                else:
-                    os.killpg(kill_pids.pid, signal.SIGKILL)
-            except Exception:
-                logger.exception("Killing process failed")
-                await utils.answer(message, self.strings("kill_fail"))
-            else:
-                await utils.answer(message, self.strings("killed"))
-        else:
+        reply = await message.get_reply_message()
+        if not reply:
             await utils.answer(message, self.strings("no_cmd"))
+            return
+
+        process = self.activecmds.get(hash_msg(reply))
+        inline_editor = None
+
+        if process is None:
+            inline_editor = self._find_inline_editor_by_message(reply)
+            process = inline_editor.process if inline_editor else None
+
+        if process is None:
+            await utils.answer(message, self.strings("no_cmd"))
+            return
+
+        try:
+            signal_type = (
+                signal.SIGKILL
+                if "-f" in utils.get_args_raw(message)
+                else signal.SIGTERM
+            )
+            os.killpg(process.pid, signal_type)
+        except Exception:
+            logger.exception("Killing process failed")
+            await utils.answer(message, self.strings("kill_fail"))
+        else:
+            await utils.answer(message, self.strings("killed"))
