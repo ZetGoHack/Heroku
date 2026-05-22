@@ -104,7 +104,9 @@ class BaseTranslator:
     def gettext(self, text: str) -> typing.Any:
         return self.getkey(text) or text
 
-    async def load_module_translations(self, pack_url: str, cache_path: Path = None) -> typing.Union[bool, dict]:
+    async def load_module_translations(
+        self, pack_url: str, cache_path: Path = None
+    ) -> typing.Union[bool, dict]:
         try:
             content = (await utils.run_sync(requests.get, pack_url)).text
             data = yaml.load(content)

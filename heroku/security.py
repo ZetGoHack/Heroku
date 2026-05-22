@@ -184,10 +184,7 @@ class SecurityManager:
         not in any security group
         """
         now = time.monotonic()
-        if (
-            not force
-            and now - self._rights_last_reload < self._rights_reload_interval
-        ):
+        if not force and now - self._rights_last_reload < self._rights_reload_interval:
             return
 
         self._rights_last_reload = now

@@ -181,6 +181,7 @@ terminal:
   exec_confirm: "<b>Systembefehl:</b> <code>{}</code>"
   exec_running: "<b>Führe aus...</b>"
   btn_execute: "Ausführen"
+  btn_continue: "Eingabe fortsetzen"
   inline_hint: "Terminal"
   inline_hint_desc: "Beginnen Sie, einen Befehl einzugeben"
 

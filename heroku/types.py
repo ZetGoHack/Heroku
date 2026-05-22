@@ -1337,9 +1337,7 @@ class ModuleConfig(dict):
     def grouped_options(
         self,
     ) -> "collections.OrderedDict[str | None, list[str]]":
-        result = (
-            collections.OrderedDict()
-        )
+        result = collections.OrderedDict()
         for option in self._config:
             cat = self._option_categories.get(option)
             result.setdefault(cat, []).append(option)

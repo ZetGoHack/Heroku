@@ -999,7 +999,8 @@ class LoaderMod(loader.Module):
         if pack_url and (
             transations := await self.allmodules.translator.load_module_translations(
                 pack_url,
-                loader.MODULES_LANGPACKS_PATH / f"{self.client.tg_id}_{instance.__class__.__name__}.yml",
+                loader.MODULES_LANGPACKS_PATH
+                / f"{self.client.tg_id}_{instance.__class__.__name__}.yml",
             )
         ):
             instance.strings.external_strings = transations
@@ -1639,8 +1640,7 @@ class LoaderMod(loader.Module):
         )
 
         if any(
-            line.replace(" ", "") == "#scope:no_ml"
-            for line in module_doc.splitlines()
+            line.replace(" ", "") == "#scope:no_ml" for line in module_doc.splitlines()
         ):
             await utils.answer(
                 message,

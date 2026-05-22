@@ -43,7 +43,9 @@ class LocalStorage:
     def _total_size(self) -> int:
         if self._tracked_total_size is None:
             self._tracked_total_size = sum(
-                entry.stat().st_size for entry in os.scandir(self._path) if entry.is_file()
+                entry.stat().st_size
+                for entry in os.scandir(self._path)
+                if entry.is_file()
             )
 
         return self._tracked_total_size

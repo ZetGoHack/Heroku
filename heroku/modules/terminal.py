@@ -300,7 +300,7 @@ class RawMessageEditor(SudoMessageEditor):
 class InlineMessageEditor:
     """Streams command output into an inline form via form.edit()"""
 
-    def __init__(self, form, command: str, strings, config):
+    def __init__(self, form, command: str, strings, config, reply_markup=None):
         self.form = form
         self.command = command
         self.stdout = ""
@@ -308,6 +308,7 @@ class InlineMessageEditor:
         self.rc = None
         self.strings = strings
         self.config = config
+        self.reply_markup = reply_markup
         self.start_time = time.time()
         self.process = None
 
@@ -338,8 +339,14 @@ class InlineMessageEditor:
             exec_time = time.time() - self.start_time
             text += self.strings["time_exec"].format(round(exec_time, 2))
 
+        reply_markup = (
+            self.reply_markup(self.command)
+            if callable(self.reply_markup)
+            else self.reply_markup
+        )
+
         with contextlib.suppress(Exception):
-            await self.form.edit(text)
+            await self.form.edit(text, reply_markup=reply_markup)
 
     async def cmd_ended(self, rc):
         self.rc = rc
@@ -430,6 +437,42 @@ class TerminalMod(loader.Module):
         self.activecmds = {}
         self._inline_pending: typing.Dict[str, str] = {}
 
+    @staticmethod
+    def _build_inline_exec_query(cmd: str = "") -> str:
+        query = f"exec {cmd}".strip()
+        query = query[:250]
+        return f"{query} "
+
+    def _build_inline_exec_markup(
+        self,
+        cmd: str,
+        uid: typing.Optional[str] = None,
+    ) -> typing.List[typing.List[typing.Dict[str, str]]]:
+        markup = []
+
+        if uid:
+            markup.append(
+                [
+                    {
+                        "text": self.strings("btn_execute"),
+                        "data": f"terminal/exec/{uid}",
+                    }
+                ]
+            )
+
+        markup.append(
+            [
+                {
+                    "text": self.strings("btn_continue"),
+                    "switch_inline_query_current_chat": self._build_inline_exec_query(
+                        cmd
+                    ),
+                }
+            ]
+        )
+
+        return markup
+
     @loader.command(alias="exec")
     async def terminalcmd(self, message):
         user_command = utils.get_args_raw(message)
@@ -452,12 +495,7 @@ class TerminalMod(loader.Module):
     @loader.inline_handler()
     async def exec_inline_handler(self, query):
         """Execute terminal command via inline"""
-        from aiogram.types import (
-            InlineQueryResultArticle,
-            InputTextMessageContent,
-            InlineKeyboardMarkup,
-            InlineKeyboardButton,
-        )
+        from aiogram.types import InlineQueryResultArticle, InputTextMessageContent
 
         raw = query.query.strip()
         if raw.lower().startswith("exec"):
@@ -516,13 +554,6 @@ class TerminalMod(loader.Module):
         uid = utils.rand(8)
         self._inline_pending[uid] = raw
 
-        markup = InlineKeyboardMarkup(inline_keyboard=[[
-            InlineKeyboardButton(
-                text=self.strings("btn_execute"),
-                callback_data=f"terminal/exec/{uid}",
-            )
-        ]])
-
         await self.inline.bot.answer_inline_query(
             inline_query_id=query.id,
             results=[
@@ -539,7 +570,9 @@ class TerminalMod(loader.Module):
                     thumbnail_url=BANNER_OK,
                     thumbnail_width=640,
                     thumbnail_height=640,
-                    reply_markup=markup,
+                    reply_markup=self.inline.generate_markup(
+                        self._build_inline_exec_markup(raw, uid)
+                    ),
                 )
             ],
             cache_time=0,
@@ -572,6 +605,7 @@ class TerminalMod(loader.Module):
             command=cmd,
             strings=self.strings,
             config=self.config,
+            reply_markup=self._build_inline_exec_markup,
         )
 
         asyncio.ensure_future(self._run_inline(cmd, editor))

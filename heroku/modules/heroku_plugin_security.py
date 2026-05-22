@@ -23,9 +23,7 @@ def allow_session_hash(db, module_hash: str) -> typing.List[str]:
     session_allow = db.get("HerokuPluginSecurity", "session_allow", [])
     if not isinstance(session_allow, list):
         session_allow = (
-            list(session_allow)
-            if isinstance(session_allow, (tuple, set))
-            else []
+            list(session_allow) if isinstance(session_allow, (tuple, set)) else []
         )
 
     if module_hash not in session_allow:

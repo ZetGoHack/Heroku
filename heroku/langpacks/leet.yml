@@ -190,6 +190,7 @@ terminal:
   exec_confirm: "<b>5y573m c0mm4nd:</b> <code>{}</code>"
   exec_running: "<b>3x3cu71ng...</b>"
   btn_execute: "3x3cu73"
+  btn_continue: "c0n71nu3 1npu7"
   inline_hint: "73rm1n4l"
   inline_hint_desc: "574r7 7yp1ng 4 c0mm4nd"
 

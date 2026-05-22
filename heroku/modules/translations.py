@@ -104,13 +104,15 @@ class Translations(loader.Module):
             for url in downloaded
         ]
 
-        reply_markup.append([
-            {
-                "text": self.strings("btn_back"),
-                "callback": self._choose_language,
-                "args": (False,),
-            }
-        ])
+        reply_markup.append(
+            [
+                {
+                    "text": self.strings("btn_back"),
+                    "callback": self._choose_language,
+                    "args": (False,),
+                }
+            ]
+        )
 
         await call.edit(
             self.strings("choose_downloaded"),

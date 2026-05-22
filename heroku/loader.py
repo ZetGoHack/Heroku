@@ -130,13 +130,14 @@ def _calc_module_hash(source: str) -> str:
 
 def _make_session_allowlist():
     data: typing.FrozenSet[str] = frozenset()
-    allowed_callers = frozenset({
-        f"{__package__}.main",
-        f"{__package__}.modules.loader",
-        f"{__package__}.modules.heroku_plugin_security",
-        __name__,
-    })
-
+    allowed_callers = frozenset(
+        {
+            f"{__package__}.main",
+            f"{__package__}.modules.loader",
+            f"{__package__}.modules.heroku_plugin_security",
+            __name__,
+        }
+    )
 
     def _caller_module() -> typing.Optional[str]:
         for frame_info in inspect.stack():
@@ -245,9 +246,10 @@ def _external_stack_info() -> (
         frame_count += 1
     return False, None, None
 
-def _resolve_mod_hash_from_context() -> typing.Tuple[
-    typing.Optional[str], typing.Optional[str]
-]:
+
+def _resolve_mod_hash_from_context() -> (
+    typing.Tuple[typing.Optional[str], typing.Optional[str]]
+):
     ctx = _external_context.get()
     origin = None
     mod_hash = None
@@ -949,9 +951,7 @@ class Modules:
 
     def _sync_session_allowlist_from_db(self):
         try:
-            session_allow = self._db.get(
-                "HerokuPluginSecurity", "session_allow", []
-            )
+            session_allow = self._db.get("HerokuPluginSecurity", "session_allow", [])
             if session_allow:
                 set_session_access_hashes(session_allow)
         except Exception as e:
@@ -1168,9 +1168,7 @@ class Modules:
         ret.__origin__ = origin
 
         ret.__source__ = (
-            source_data
-            if source_data
-            else inspect.getsource(ret.__class__)
+            source_data if source_data else inspect.getsource(ret.__class__)
         )
         ret.__module_hash__ = _calc_module_hash(ret.__source__)
         _MODULE_NAME_BY_HASH[ret.__module_hash__] = ret.__class__.__name__
@@ -1739,7 +1737,8 @@ class Modules:
             if pack_url and (
                 transations := await self.translator.load_module_translations(
                     pack_url,
-                    MODULES_LANGPACKS_PATH / f"{self.client.tg_id}_{mod.__class__.__name__}.yml",
+                    MODULES_LANGPACKS_PATH
+                    / f"{self.client.tg_id}_{mod.__class__.__name__}.yml",
                 )
             ):
                 mod.strings.external_strings = transations

@@ -224,6 +224,7 @@ terminal:
   exec_confirm: "<b>System command:</b> <code>{}</code>"
   exec_running: "<b>Executing...</b>"
   btn_execute: "Execute"
+  btn_continue: "Continue input"
   inline_hint: "Terminal"
   inline_hint_desc: "Start typing a command"
 

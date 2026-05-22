@@ -541,7 +541,8 @@ class Heroku:
 
         if secret:
             raise ValueError(
-                "--proxy-secret can only be used with --type-proxy mtproxy")
+                "--proxy-secret can only be used with --type-proxy mtproxy"
+            )
 
         logging.debug("Using %s proxy: %s:%s", proxy_type, host, port)
         self.proxy = {

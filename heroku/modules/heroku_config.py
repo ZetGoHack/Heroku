@@ -954,9 +954,7 @@ class HerokuConfigMod(loader.Module):
         if category is not None:
             params = list(grouped.get(category, []))
             option_lines = [
-                "▫️ <code>{}</code>: {}".format(
-                    utils.escape_html(p), fmt_value(p)
-                )
+                "▫️ <code>{}</code>: {}".format(utils.escape_html(p), fmt_value(p))
                 for p in params
             ]
             options_text = "\n".join(option_lines) if option_lines else "No options"
@@ -1013,9 +1011,7 @@ class HerokuConfigMod(loader.Module):
         elif folder is not None:
             params = list(module.config)
             option_lines = [
-                "▫️ <code>{}</code>: {}".format(
-                    utils.escape_html(p), fmt_value(p)
-                )
+                "▫️ <code>{}</code>: {}".format(utils.escape_html(p), fmt_value(p))
                 for p in params
             ]
             text = "\n".join(option_lines) if option_lines else "No options"

@@ -190,6 +190,7 @@ terminal:
   exec_confirm: "<b>System command >w<</b> <code>{}</code>"
   exec_running: "<b>Exekyuting... nyaa~ >w<</b>"
   btn_execute: "Exekyute pwease~ :3"
+  btn_continue: "Keep typing pwease~ :3"
   inline_hint: "Tewminaw"
   inline_hint_desc: "Stawt typing a command, senpai OwO"
 

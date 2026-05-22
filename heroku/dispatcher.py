@@ -285,28 +285,31 @@ class CommandDispatcher:
             return False
 
         if (
-            message.out 
-            and len(message.message) > len(prefix) * 2 
-            and message.message.startswith(prefix * 2) 
+            message.out
+            and len(message.message) > len(prefix) * 2
+            and message.message.startswith(prefix * 2)
             and any(s != prefix for s in message.message)
         ):
-            possible_cmd_str = message.message[len(prefix) * 2:]
-            possible_cmd = possible_cmd_str.strip().split(maxsplit=1)[0].split("@", maxsplit=1)[0]
-            
+            possible_cmd_str = message.message[len(prefix) * 2 :]
+            possible_cmd = (
+                possible_cmd_str.strip().split(maxsplit=1)[0].split("@", maxsplit=1)[0]
+            )
+
             _, func = self._modules.dispatch(possible_cmd)
-            
+
             if func:
                 if not watcher:
                     await message.edit(
                         message.message[len(prefix) :],
                         parse_mode=lambda s: (
                             s,
-                            utils.relocate_entities(message.entities, -1, message.message)
+                            utils.relocate_entities(
+                                message.entities, -1, message.message
+                            )
                             or (),
                         ),
                     )
                 return False
-
 
         match True:
             case _ if (

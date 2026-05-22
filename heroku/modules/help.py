@@ -267,7 +267,11 @@ class Help(loader.Module):
         await utils.answer(
             message,
             f"{reply}<blockquote expandable>{cmds}{inline_cmd}</blockquote>"
-            + (f"<blockquote expandable>\n{placeholders}</blockquote>" if placeholders else "")
+            + (
+                f"<blockquote expandable>\n{placeholders}</blockquote>"
+                if placeholders
+                else ""
+            )
             + (f"\n\n{self.strings('developer')}".format(dev_text) if dev_text else "")
             + (f"\n\n{self.strings('not_exact')}" if not exact else "")
             + (

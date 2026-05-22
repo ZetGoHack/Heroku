@@ -190,6 +190,7 @@ terminal:
   exec_confirm: "<b>System command:</b> <code>{}</code>"
   exec_running: "<b>Executing command with sudo privileges...</b>"
   btn_execute: "Execute (as root)"
+  btn_continue: "Continue input"
   inline_hint: "Execution"
   inline_hint_desc: "I use arch btw"
 

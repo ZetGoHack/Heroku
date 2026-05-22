@@ -75,8 +75,7 @@ class HerokuBackupMod(loader.Module):
     async def _get_reqs(self) -> bytes:
 
         proc = await asyncio.create_subprocess_exec(
-            sys.executable, "-m", "pip", "freeze",
-            stdout=asyncio.subprocess.PIPE
+            sys.executable, "-m", "pip", "freeze", stdout=asyncio.subprocess.PIPE
         )
         stdout, _ = await proc.communicate()
         return stdout
@@ -222,7 +221,7 @@ class HerokuBackupMod(loader.Module):
 
             mods.seek(0)
             mods.name = "mods.zip"
-            
+
             reqs = await self._get_reqs()
             pip_filename = f"pip-backup-{datetime.datetime.now():%d-%m-%Y-%H-%M}.txt"
 
@@ -287,7 +286,14 @@ class HerokuBackupMod(loader.Module):
 
             zipfile_bytes = io.BytesIO(file)
             with zipfile.ZipFile(zipfile_bytes) as zf:
-                pip_file = next((n for n in zf.namelist() if n.startswith("pip-backup-") and n.endswith(".txt")), None)
+                pip_file = next(
+                    (
+                        n
+                        for n in zf.namelist()
+                        if n.startswith("pip-backup-") and n.endswith(".txt")
+                    ),
+                    None,
+                )
                 if pip_file:
                     reqs = zf.read(pip_file)
                     await self._install_reqs(reqs)
@@ -447,7 +453,6 @@ class HerokuBackupMod(loader.Module):
         await utils.answer(message, self.strings("db_restored"))
         await self.invoke("restart", "-f", peer=message.peer_id)
 
-
     @loader.command()
     async def backupmods(self, message: Message):
         mods_quantity = len(self.lookup("Loader").get("loaded_modules", {}))
@@ -459,7 +464,7 @@ class HerokuBackupMod(loader.Module):
             self.lookup("Loader").get("loaded_modules", {}),
             option=orjson.OPT_INDENT_2 | orjson.OPT_NON_STR_KEYS,
         )
-        
+
         reqs = await self._get_reqs()
         pip_filename = f"pip-backup-{datetime.datetime.now():%d-%m-%Y-%H-%M}.txt"
 
@@ -525,7 +530,14 @@ class HerokuBackupMod(loader.Module):
                 file.name = "mods.zip"
 
                 with zipfile.ZipFile(file) as zf:
-                    pip_file = next((n for n in zf.namelist() if n.startswith("pip-backup-") and n.endswith(".txt")), None)
+                    pip_file = next(
+                        (
+                            n
+                            for n in zf.namelist()
+                            if n.startswith("pip-backup-") and n.endswith(".txt")
+                        ),
+                        None,
+                    )
                     if pip_file:
                         reqs = zf.read(pip_file)
                         await self._install_reqs(reqs)
@@ -543,7 +555,9 @@ class HerokuBackupMod(loader.Module):
                             self.lookup("Loader").set("loaded_modules", db_mods)
 
                     for name in zf.namelist():
-                        if name == "db_mods.json" or (name.startswith("pip-backup-") and name.endswith(".txt")):
+                        if name == "db_mods.json" or (
+                            name.startswith("pip-backup-") and name.endswith(".txt")
+                        ):
                             continue
 
                         path = loader.LOADED_MODULES_PATH / Path(name).name
@@ -589,7 +603,7 @@ class HerokuBackupMod(loader.Module):
 
         mods.seek(0)
         mods.name = "mods.zip"
-        
+
         reqs = await self._get_reqs()
         pip_filename = f"pip-backup-{datetime.datetime.now():%d-%m-%Y-%H-%M}.txt"
 
@@ -647,7 +661,14 @@ class HerokuBackupMod(loader.Module):
         try:
             zipfile_bytes = io.BytesIO(file)
             with zipfile.ZipFile(zipfile_bytes) as zf:
-                pip_file = next((n for n in zf.namelist() if n.startswith("pip-backup-") and n.endswith(".txt")), None)
+                pip_file = next(
+                    (
+                        n
+                        for n in zf.namelist()
+                        if n.startswith("pip-backup-") and n.endswith(".txt")
+                    ),
+                    None,
+                )
                 if pip_file:
                     reqs = zf.read(pip_file)
                     await self._install_reqs(reqs)

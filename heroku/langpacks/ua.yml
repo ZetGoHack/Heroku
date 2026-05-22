@@ -181,6 +181,7 @@ terminal:
   exec_confirm: "<b>Системна команда:</b> <code>{}</code>"
   exec_running: "<b>Виконую...</b>"
   btn_execute: "Виконати"
+  btn_continue: "Продовжити введення"
   inline_hint: "Terminal"
   inline_hint_desc: "Почніть вводити команду"
 

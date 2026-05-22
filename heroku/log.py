@@ -327,7 +327,9 @@ class TelegramLogsHandler(logging.Handler):
         allmods = self._mods[client_id]
         topic_id = await utils.get_topic_id(allmods.db, "Logs")
         if not topic_id:
-            logging.debug(f"No logs topic found for client {client_id}. Creating new one.")
+            logging.debug(
+                f"No logs topic found for client {client_id}. Creating new one."
+            )
             topic = await utils.asset_forum_topic(
                 allmods.client,
                 allmods.db,

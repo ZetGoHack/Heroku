@@ -49,7 +49,14 @@ class HerokuInfoMod(loader.Module):
                 doc=lambda: (
                     self.strings("_cfg_cst_msg")
                     + "\n"
-                    + ("\n" + self.strings("_cfg_cst_ph").format("\n"+utils.config_placeholders()) if utils.config_placeholders() else "")
+                    + (
+                        "\n"
+                        + self.strings("_cfg_cst_ph").format(
+                            "\n" + utils.config_placeholders()
+                        )
+                        if utils.config_placeholders()
+                        else ""
+                    )
                 ),
             ),
             loader.ConfigValue(

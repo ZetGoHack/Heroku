@@ -615,9 +615,7 @@ class HerokuSecurityMod(loader.Module):
             self._db.set(
                 main.__name__,
                 "nonickusers",
-                list(
-                    set(self._db.get(main.__name__, "nonickusers", []) + [user.id])
-                ),
+                list(set(self._db.get(main.__name__, "nonickusers", []) + [user.id])),
             )
 
             await message.edit(

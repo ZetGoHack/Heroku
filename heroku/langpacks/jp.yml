@@ -190,6 +190,7 @@ terminal:
   exec_confirm: "<b>システムコマンド:</b> <code>{}</code>"
   exec_running: "<b>実行しています...</b>"
   btn_execute: "実行する"
+  btn_continue: "入力を続ける"
   inline_hint: "ターミナル"
   inline_hint_desc: "コマンドを入力し始めてください"
 

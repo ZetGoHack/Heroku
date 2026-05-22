@@ -181,7 +181,9 @@ class Utils(InlineUnit):
 
                         case _ if "web_app" in button:
                             if isinstance(button["web_app"], str):
-                                btn_kwargs["web_app"] = WebAppInfo(url=button["web_app"])
+                                btn_kwargs["web_app"] = WebAppInfo(
+                                    url=button["web_app"]
+                                )
                             else:
                                 btn_kwargs["web_app"] = WebAppInfo(**button["web_app"])
 
@@ -234,7 +236,8 @@ class Utils(InlineUnit):
         if call._units is None:
             logger.error(
                 "call._units is None. Please report this issue to the developers. "
-                "Debug info: %s", call.model_dump_json(),
+                "Debug info: %s",
+                call.model_dump_json(),
             )
             try:
                 await call.answer(
@@ -242,7 +245,9 @@ class Utils(InlineUnit):
                     "See logs for more details."
                 )
             except Exception:
-                logger.exception("I can't even properly notify the user about the error 😭")
+                logger.exception(
+                    "I can't even properly notify the user about the error 😭"
+                )
 
             return
 
@@ -794,6 +799,8 @@ class Utils(InlineUnit):
                 or "action" in button
                 or "copy" in button
                 or "web_app" in button
+                or "switch_inline_query_current_chat" in button
+                or "switch_inline_query" in button
                 for button in row
             )
             for row in buttons
@@ -807,9 +814,10 @@ class Utils(InlineUnit):
                 "  - `data`\n"
                 "  - `action`\n"
                 "  - `copy`\n"
-                "  - `web_app`"
+                "  - `web_app`\n"
+                "  - `switch_inline_query_current_chat`\n"
+                "  - `switch_inline_query`"
             )
             return None
 
         return buttons
-

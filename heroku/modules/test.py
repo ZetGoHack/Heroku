@@ -93,7 +93,14 @@ class TestMod(loader.Module):
                 "<tg-emoji emoji-id=5920515922505765329>⚡️</tg-emoji> <b>𝙿𝚒𝚗𝚐: </b><code>{ping}</code><b> 𝚖𝚜 </b>\n<tg-emoji emoji-id=5900104897885376843>🕓</tg-emoji><b> 𝚄𝚙𝚝𝚒𝚖𝚎: </b><code>{uptime}</code>",
                 lambda: (
                     self.strings("configping")
-                    + ("\n" + self.strings("configpingph").format("\n"+utils.config_placeholders()) if utils.config_placeholders() else "")
+                    + (
+                        "\n"
+                        + self.strings("configpingph").format(
+                            "\n" + utils.config_placeholders()
+                        )
+                        if utils.config_placeholders()
+                        else ""
+                    )
                 ),
                 validator=loader.validators.String(),
             ),
@@ -230,10 +237,7 @@ class TestMod(loader.Module):
             else logging._levelToName[lvl]  # skipcq: PYL-W0212
         )
 
-        if (
-            lvl < logging.WARNING
-            and not force
-        ):
+        if lvl < logging.WARNING and not force:
             try:
                 if not self.inline.init_complete:
                     raise

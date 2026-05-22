@@ -50,34 +50,61 @@ if typing.TYPE_CHECKING:
     from ..loader import Modules
 
 
-
-def _make_handler_wrapper(handler: typing.Callable, update_type: str) -> typing.Callable:
+def _make_handler_wrapper(
+    handler: typing.Callable, update_type: str
+) -> typing.Callable:
     async def wrapper(*args, **kwargs):
         update = args[0] if args else next(iter(kwargs.values()), None)
         return await handler(update)
-    return wrapper
 
+    return wrapper
 
 
 _BOT_UPDATE_TYPE_REGISTERS = {
     "message": lambda dp, handler: dp.message.register(handler, lambda *_: True),
-    "edited_message": lambda dp, handler: dp.edited_message.register(handler, lambda *_: True),
-    "channel_post": lambda dp, handler: dp.channel_post.register(handler, lambda *_: True),
-    "edited_channel_post": lambda dp, handler: dp.edited_channel_post.register(handler, lambda *_: True),
-    "inline_query": lambda dp, handler: dp.inline_query.register(handler, lambda _: True),
-    "chosen_inline_result": lambda dp, handler: dp.chosen_inline_result.register(handler, lambda _: True),
-    "callback_query": lambda dp, handler: dp.callback_query.register(handler, lambda _: True),
-    "shipping_query": lambda dp, handler: dp.shipping_query.register(handler, lambda _: True),
-    "pre_checkout_query": lambda dp, handler: dp.pre_checkout_query.register(handler, lambda _: True),
+    "edited_message": lambda dp, handler: dp.edited_message.register(
+        handler, lambda *_: True
+    ),
+    "channel_post": lambda dp, handler: dp.channel_post.register(
+        handler, lambda *_: True
+    ),
+    "edited_channel_post": lambda dp, handler: dp.edited_channel_post.register(
+        handler, lambda *_: True
+    ),
+    "inline_query": lambda dp, handler: dp.inline_query.register(
+        handler, lambda _: True
+    ),
+    "chosen_inline_result": lambda dp, handler: dp.chosen_inline_result.register(
+        handler, lambda _: True
+    ),
+    "callback_query": lambda dp, handler: dp.callback_query.register(
+        handler, lambda _: True
+    ),
+    "shipping_query": lambda dp, handler: dp.shipping_query.register(
+        handler, lambda _: True
+    ),
+    "pre_checkout_query": lambda dp, handler: dp.pre_checkout_query.register(
+        handler, lambda _: True
+    ),
     "poll": lambda dp, handler: dp.poll.register(handler, lambda _: True),
     "poll_answer": lambda dp, handler: dp.poll_answer.register(handler, lambda _: True),
-    "my_chat_member": lambda dp, handler: dp.my_chat_member.register(handler, lambda _: True),
+    "my_chat_member": lambda dp, handler: dp.my_chat_member.register(
+        handler, lambda _: True
+    ),
     "chat_member": lambda dp, handler: dp.chat_member.register(handler, lambda _: True),
-    "chat_join_request": lambda dp, handler: dp.chat_join_request.register(handler, lambda _: True),
-    "message_reaction": lambda dp, handler: dp.message_reaction.register(handler, lambda _: True),
-    "message_reaction_count": lambda dp, handler: dp.message_reaction_count.register(handler, lambda _: True),
+    "chat_join_request": lambda dp, handler: dp.chat_join_request.register(
+        handler, lambda _: True
+    ),
+    "message_reaction": lambda dp, handler: dp.message_reaction.register(
+        handler, lambda _: True
+    ),
+    "message_reaction_count": lambda dp, handler: dp.message_reaction_count.register(
+        handler, lambda _: True
+    ),
     "chat_boost": lambda dp, handler: dp.chat_boost.register(handler, lambda _: True),
-    "removed_chat_boost": lambda dp, handler: dp.removed_chat_boost.register(handler, lambda _: True),
+    "removed_chat_boost": lambda dp, handler: dp.removed_chat_boost.register(
+        handler, lambda _: True
+    ),
 }
 
 
@@ -354,7 +381,10 @@ class InlineManager(
             )
             return
 
-        self._bot_update_handlers[handler_id] = (update_type, _make_handler_wrapper(handler, update_type))
+        self._bot_update_handlers[handler_id] = (
+            update_type,
+            _make_handler_wrapper(handler, update_type),
+        )
         logger.debug(
             "Registered bot update handler %s for update type %s",
             handler_id,

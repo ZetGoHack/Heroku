@@ -95,9 +95,13 @@ class CoreMod(loader.Module):
         branch_text = ""
         if version.branch == "master":
             branch_text = ""
-        elif version.branch == "beta" or self.tg_id in [1714120111, 1226061708, 5717135725]:
+        elif version.branch == "beta" or self.tg_id in [
+            1714120111,
+            1226061708,
+            5717135725,
+        ]:
             branch_text = self.strings["happy_beta"].format(version.branch)
-        else: 
+        else:
             branch_text = self.strings("unstable").format(version.branch)
 
         await utils.answer(
@@ -112,9 +116,7 @@ class CoreMod(loader.Module):
                 utils.get_commit_url(),
                 f"{herokutl.__version__} #{herokutl.tl.alltlobjects.LAYER}",
             )
-            + (
-                branch_text
-            ),
+            + (branch_text),
             file="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_cmd.png",
             reply_to=getattr(message, "reply_to_msg_id", None),
         )

@@ -181,6 +181,7 @@ terminal:
   exec_confirm: "<b>Системная команда, бро:</b> <code>{}</code>"
   exec_running: "<b>Выполняю... щавель в деле</b>"
   btn_execute: "Выполнить 67"
+  btn_continue: "Дописать команду"
   inline_hint: "Хакер тул"
   inline_hint_desc: "Начинай вводить, сигма-бой"
 
