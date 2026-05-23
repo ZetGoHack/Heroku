@@ -1,4 +1,4 @@
-heroku-tl-new==2.0.0
+herokutl==2.0.5
 pyaes
 aiofile==3.8.1
 aiofiles==24.1.0
