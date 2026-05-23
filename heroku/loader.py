@@ -215,6 +215,51 @@ def _find_forbidden_sys_getframe_usage(code: str) -> typing.Optional[str]:
 
     sys_aliases = {"sys"}
 
+    def _static_string(node: ast.AST) -> typing.Optional[str]:
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return node.value
+
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+            left = _static_string(node.left)
+            right = _static_string(node.right)
+            if left is not None and right is not None:
+                return left + right
+
+        if isinstance(node, ast.JoinedStr):
+            parts: typing.List[str] = []
+            for value in node.values:
+                if not isinstance(value, ast.Constant) or not isinstance(
+                    value.value, str
+                ):
+                    return None
+                parts.append(value.value)
+            return "".join(parts)
+
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "join"
+            and not node.keywords
+            and len(node.args) == 1
+        ):
+            separator = _static_string(node.func.value)
+            if separator is None or not isinstance(node.args[0], (ast.List, ast.Tuple)):
+                return None
+
+            pieces: typing.List[str] = []
+            for elt in node.args[0].elts:
+                piece = _static_string(elt)
+                if piece is None:
+                    return None
+                pieces.append(piece)
+
+            return separator.join(pieces)
+
+        return None
+
+    def _is_static_getframe_name(node: ast.AST) -> bool:
+        return _static_string(node) == "_getframe"
+
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -233,12 +278,79 @@ def _find_forbidden_sys_getframe_usage(code: str) -> typing.Optional[str]:
                 return "sys._getframe"
 
         func = node.func if isinstance(node, ast.Call) else None
+
+        if isinstance(node, ast.Call):
+            if (
+                (
+                    isinstance(func, ast.Name)
+                    and func.id in {"getattr", "attrgetter"}
+                    or isinstance(func, ast.Attribute)
+                    and func.attr in {"getattr", "attrgetter"}
+                )
+                and len(node.args) >= 2
+                and _is_static_getframe_name(node.args[1])
+            ):
+                return "sys._getframe"
+
+            if (
+                (
+                    isinstance(func, ast.Name)
+                    and func.id == "attrgetter"
+                    or isinstance(func, ast.Attribute)
+                    and func.attr == "attrgetter"
+                )
+                and node.args
+                and any(_is_static_getframe_name(arg) for arg in node.args)
+            ):
+                return "sys._getframe"
+
+            if (
+                isinstance(func, ast.Attribute)
+                and func.attr in {"__getattribute__", "__getattr__"}
+                and node.args
+            ):
+                attr_arg = (
+                    node.args[1]
+                    if func.attr == "__getattribute__" and len(node.args) >= 2
+                    else node.args[0]
+                )
+                if _is_static_getframe_name(attr_arg):
+                    return "sys._getframe"
+
+            if (
+                isinstance(func, ast.Attribute)
+                and func.attr == "get"
+                and node.args
+                and _is_static_getframe_name(node.args[0])
+                and (
+                    isinstance(func.value, ast.Attribute)
+                    and func.value.attr == "__dict__"
+                    or isinstance(func.value, ast.Call)
+                    and isinstance(func.value.func, ast.Name)
+                    and func.value.func.id == "vars"
+                )
+            ):
+                return "sys._getframe"
+
         if isinstance(func, ast.Attribute) and func.attr == "_getframe":
             if not isinstance(func.value, ast.Name) or func.value.id in sys_aliases:
                 return "sys._getframe"
 
         if isinstance(func, ast.Name) and func.id == "_getframe":
             return "sys._getframe"
+
+        if isinstance(node, ast.Subscript) and _is_static_getframe_name(node.slice):
+            value = node.value
+            if isinstance(value, ast.Attribute) and value.attr == "__dict__":
+                return "sys._getframe"
+
+            if (
+                isinstance(value, ast.Call)
+                and isinstance(value.func, ast.Name)
+                and value.func.id == "vars"
+                and value.args
+            ):
+                return "sys._getframe"
 
     return None
 
