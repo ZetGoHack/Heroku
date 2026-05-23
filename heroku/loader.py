@@ -13,6 +13,7 @@
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
 import asyncio
+import ast
 import builtins
 import contextlib
 import contextvars
@@ -204,6 +205,42 @@ def _is_external_origin(origin: str) -> bool:
     if origin.startswith(_EXTERNAL_ORIGIN_PREFIXES):
         return True
     return "loaded_modules" in origin
+
+
+def _find_forbidden_sys_getframe_usage(code: str) -> typing.Optional[str]:
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return None
+
+    sys_aliases = {"sys"}
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "sys":
+                    sys_aliases.add(alias.asname or alias.name)
+            continue
+
+        if isinstance(node, ast.ImportFrom) and node.module == "sys":
+            for alias in node.names:
+                if alias.name == "_getframe":
+                    return "sys._getframe"
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute) and node.attr == "_getframe":
+            if not isinstance(node.value, ast.Name) or node.value.id in sys_aliases:
+                return "sys._getframe"
+
+        func = node.func if isinstance(node, ast.Call) else None
+        if isinstance(func, ast.Attribute) and func.attr == "_getframe":
+            if not isinstance(func.value, ast.Name) or func.value.id in sys_aliases:
+                return "sys._getframe"
+
+        if isinstance(func, ast.Name) and func.id == "_getframe":
+            return "sys._getframe"
+
+    return None
 
 
 def _is_external_frame(frame) -> bool:
@@ -1080,6 +1117,15 @@ class Modules:
             if hasattr(spec.loader, "data") and spec.loader.data
             else None
         )
+
+        if _is_external_origin(origin) and source_data:
+            forbidden_api = _find_forbidden_sys_getframe_usage(source_data)
+            if forbidden_api:
+                raise LoadError(
+                    "Frame introspection is forbidden for external modules: "
+                    f"{forbidden_api}"
+                )
+
         pre_hash = _calc_module_hash(source_data) if source_data else None
 
         if pre_hash:

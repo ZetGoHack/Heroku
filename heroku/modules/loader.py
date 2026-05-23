@@ -60,11 +60,54 @@ MODULE_LOADING_FAILED = 0
 MODULE_LOADING_SUCCESS = 1
 
 
+def _find_forbidden_sys_getframe_usage(code: str) -> typing.Optional[str]:
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return None
+
+    sys_aliases = {"sys"}
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "sys":
+                    sys_aliases.add(alias.asname or alias.name)
+            continue
+
+        if isinstance(node, ast.ImportFrom) and node.module == "sys":
+            for alias in node.names:
+                if alias.name == "_getframe":
+                    return "sys._getframe"
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute) and node.attr == "_getframe":
+            if not isinstance(node.value, ast.Name) or node.value.id in sys_aliases:
+                return "sys._getframe"
+
+        func = node.func if isinstance(node, ast.Call) else None
+        if isinstance(func, ast.Attribute) and func.attr == "_getframe":
+            if not isinstance(func.value, ast.Name) or func.value.id in sys_aliases:
+                return "sys._getframe"
+
+        if isinstance(func, ast.Name) and func.id == "_getframe":
+            return "sys._getframe"
+
+    return None
+
+
 @loader.tds
 class LoaderMod(loader.Module):
     """Loads modules"""
 
-    strings = {"name": "Loader"}
+    strings = {
+        "name": "Loader",
+        "forbidden_api": (
+            "<tg-emoji emoji-id=5454225457916420314>😖</tg-emoji> "
+            "<b>Frame introspection is forbidden for external modules: "
+            "{}</b>"
+        ),
+    }
 
     def __init__(self):
         self.fully_loaded = False
@@ -608,6 +651,17 @@ class LoaderMod(loader.Module):
         did_requires: bool = False,
         did_packages: bool = False,
     ):
+        forbidden_api = _find_forbidden_sys_getframe_usage(doc)
+        if forbidden_api:
+            forbidden_api_msg = self.strings["forbidden_api"].format(
+                utils.escape_html(forbidden_api)
+            )
+            if isinstance(message, InlineCall):
+                await message.edit(forbidden_api_msg)
+            elif message is not None:
+                await utils.answer(message, forbidden_api_msg)
+            return
+
         if any(
             line.replace(" ", "") == "#scope:ffmpeg" for line in doc.splitlines()
         ) and os.system("ffmpeg -version 1>/dev/null 2>/dev/null"):

@@ -575,6 +575,7 @@ loader:
   no_file: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Файл не знайдено</b>"
   provide_module: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Вкажи модуль для завантаження</b>"
   bad_unicode: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Неправильне кодування модуля</b>"
+  forbidden_api: "<tg-emoji emoji-id=5454225457916420314>😖</tg-emoji> <b>Інтроспекція фреймів заборонена для зовнішніх модулів: {}</b>"
   load_failed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Завантаження не увінчалося успіхом. Дивись логи.</b>"
   loaded: "<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>Модуль</b> <code>{}</code>{} <b>завантажено {}</b>{}{}{}{}{}{}{}{}"
   no_class: "<b>Мені самому придумати що вивантажити?</b>"
