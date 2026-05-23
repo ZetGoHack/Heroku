@@ -60,7 +60,7 @@ MODULE_LOADING_FAILED = 0
 MODULE_LOADING_SUCCESS = 1
 
 
-def _find_forbidden_sys_getframe_usage(code: str) -> typing.Optional[str]:
+def _find_forbidden_external_api_usage(code: str) -> typing.Optional[str]:
     try:
         tree = ast.parse(code)
     except SyntaxError:
@@ -110,22 +110,39 @@ def _find_forbidden_sys_getframe_usage(code: str) -> typing.Optional[str]:
 
         return None
 
-    def _is_static_getframe_name(node: ast.AST) -> bool:
-        return _static_string(node) == "_getframe"
+    def _static_forbidden_name(node: ast.AST) -> typing.Optional[str]:
+        name = _static_string(node)
+        if name is None:
+            return None
+
+        return {
+            "_getframe": "sys._getframe",
+            "allmodules": "allmodules",
+        }.get(name)
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
                 if alias.name == "sys":
                     sys_aliases.add(alias.asname or alias.name)
+                if alias.name == "allmodules":
+                    return "allmodules"
             continue
 
-        if isinstance(node, ast.ImportFrom) and node.module == "sys":
+        if isinstance(node, ast.ImportFrom) and node.module:
             for alias in node.names:
-                if alias.name == "_getframe":
+                if node.module == "sys" and alias.name == "_getframe":
                     return "sys._getframe"
+                if alias.name == "allmodules":
+                    return "allmodules"
 
     for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and node.id == "allmodules":
+            return "allmodules"
+
+        if isinstance(node, ast.Attribute) and node.attr == "allmodules":
+            return "allmodules"
+
         if isinstance(node, ast.Attribute) and node.attr == "_getframe":
             if not isinstance(node.value, ast.Name) or node.value.id in sys_aliases:
                 return "sys._getframe"
@@ -134,47 +151,43 @@ def _find_forbidden_sys_getframe_usage(code: str) -> typing.Optional[str]:
 
         if isinstance(node, ast.Call):
             if (
-                (
-                    isinstance(func, ast.Name)
-                    and func.id in {"getattr", "attrgetter"}
-                    or isinstance(func, ast.Attribute)
-                    and func.attr in {"getattr", "attrgetter"}
-                )
-                and len(node.args) >= 2
-                and _is_static_getframe_name(node.args[1])
-            ):
-                return "sys._getframe"
+                isinstance(func, ast.Name)
+                and func.id == "getattr"
+                or isinstance(func, ast.Attribute)
+                and func.attr == "getattr"
+            ) and len(node.args) >= 2:
+                forbidden_name = _static_forbidden_name(node.args[1])
+                if forbidden_name:
+                    return forbidden_name
 
             if (
-                (
-                    isinstance(func, ast.Name)
-                    and func.id == "attrgetter"
-                    or isinstance(func, ast.Attribute)
-                    and func.attr == "attrgetter"
-                )
-                and node.args
-                and any(_is_static_getframe_name(arg) for arg in node.args)
-            ):
-                return "sys._getframe"
+                isinstance(func, ast.Name)
+                and func.id == "attrgetter"
+                or isinstance(func, ast.Attribute)
+                and func.attr == "attrgetter"
+            ) and node.args:
+                for arg in node.args:
+                    forbidden_name = _static_forbidden_name(arg)
+                    if forbidden_name:
+                        return forbidden_name
 
             if (
                 isinstance(func, ast.Attribute)
                 and func.attr in {"__getattribute__", "__getattr__"}
                 and node.args
             ):
-                attr_arg = (
-                    node.args[1]
-                    if func.attr == "__getattribute__" and len(node.args) >= 2
-                    else node.args[0]
+                attr_args = (
+                    node.args[:2] if func.attr == "__getattribute__" else node.args[:1]
                 )
-                if _is_static_getframe_name(attr_arg):
-                    return "sys._getframe"
+                for attr_arg in attr_args:
+                    forbidden_name = _static_forbidden_name(attr_arg)
+                    if forbidden_name:
+                        return forbidden_name
 
             if (
                 isinstance(func, ast.Attribute)
                 and func.attr == "get"
                 and node.args
-                and _is_static_getframe_name(node.args[0])
                 and (
                     isinstance(func.value, ast.Attribute)
                     and func.value.attr == "__dict__"
@@ -183,7 +196,9 @@ def _find_forbidden_sys_getframe_usage(code: str) -> typing.Optional[str]:
                     and func.value.func.id == "vars"
                 )
             ):
-                return "sys._getframe"
+                forbidden_name = _static_forbidden_name(node.args[0])
+                if forbidden_name:
+                    return forbidden_name
 
         if isinstance(func, ast.Attribute) and func.attr == "_getframe":
             if not isinstance(func.value, ast.Name) or func.value.id in sys_aliases:
@@ -192,10 +207,14 @@ def _find_forbidden_sys_getframe_usage(code: str) -> typing.Optional[str]:
         if isinstance(func, ast.Name) and func.id == "_getframe":
             return "sys._getframe"
 
-        if isinstance(node, ast.Subscript) and _is_static_getframe_name(node.slice):
+        if isinstance(node, ast.Subscript):
+            forbidden_name = _static_forbidden_name(node.slice)
+            if not forbidden_name:
+                continue
+
             value = node.value
             if isinstance(value, ast.Attribute) and value.attr == "__dict__":
-                return "sys._getframe"
+                return forbidden_name
 
             if (
                 isinstance(value, ast.Call)
@@ -203,7 +222,7 @@ def _find_forbidden_sys_getframe_usage(code: str) -> typing.Optional[str]:
                 and value.func.id == "vars"
                 and value.args
             ):
-                return "sys._getframe"
+                return forbidden_name
 
     return None
 
@@ -758,7 +777,7 @@ class LoaderMod(loader.Module):
         did_requires: bool = False,
         did_packages: bool = False,
     ):
-        forbidden_api = _find_forbidden_sys_getframe_usage(doc)
+        forbidden_api = _find_forbidden_external_api_usage(doc)
         if forbidden_api:
             forbidden_api_msg = self.strings["forbidden_api"].format(
                 utils.escape_html(forbidden_api)
