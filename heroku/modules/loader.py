@@ -60,6 +60,10 @@ MODULE_LOADING_FAILED = 0
 MODULE_LOADING_SUCCESS = 1
 
 
+class ModuleInstallError(RuntimeError):
+    """Raised when an external module install fails after download."""
+
+
 def _find_forbidden_external_api_usage(code: str) -> typing.Optional[str]:
     try:
         tree = ast.parse(code)
@@ -583,6 +587,9 @@ class LoaderMod(loader.Module):
                 url = await self._find_link(module_name)
 
                 if not url:
+                    logger.warning(
+                        "Module %s was not found in configured repos", module_name
+                    )
                     if message is not None:
                         await utils.answer(message, self.strings["no_module"])
 
@@ -596,22 +603,33 @@ class LoaderMod(loader.Module):
 
             try:
                 r = await self._storage.fetch(url, auth=self.config["basic_auth"])
-            except requests.exceptions.HTTPError:
+            except requests.exceptions.HTTPError as e:
+                logger.warning(
+                    "Failed to download module %s from %s: %s",
+                    module_name,
+                    url,
+                    e,
+                )
                 if message is not None:
                     await utils.answer(message, self.strings["no_module"])
 
                 return MODULE_LOADING_FAILED
 
-            await self.load_module(
+            installed = await self.load_module(
                 r,
                 message,
                 module_name,
                 url,
                 blob_link=blob_link,
+                _raise_install_errors=True,
             )
+
+            if not installed:
+                raise ModuleInstallError(f"Module {module_name} was not installed")
+
             return MODULE_LOADING_SUCCESS
         except Exception:
-            logger.exception("Failed to load %s", module_name)
+            logger.exception("Failed to install external module %s", module_name)
             return MODULE_LOADING_FAILED
 
     async def _inline__load(
@@ -677,7 +695,7 @@ class LoaderMod(loader.Module):
         )
         need_user_flag = loader.USER_INSTALL and not is_venv
 
-        pip = await asyncio.create_subprocess_exec(
+        cmd = [
             sys.executable,
             "-m",
             "pip",
@@ -686,13 +704,29 @@ class LoaderMod(loader.Module):
             "-q",
             "--disable-pip-version-check",
             "--no-warn-script-location",
-            *["--user"] if need_user_flag else [],
+            *(["--user"] if need_user_flag else []),
             *requirements,
-        )
+        ]
 
-        rc = await pip.wait()
+        try:
+            pip = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
 
-        if rc != 0:
+            out, err = await pip.communicate()
+        except Exception:
+            logger.exception("Pip requirements install failed to start: %s", cmd)
+            return False
+
+        if pip.returncode != 0:
+            logger.error(
+                "Pip requirements install failed (%s) with exit code %s: %s",
+                " ".join(cmd),
+                pip.returncode,
+                (err or out).decode(errors="ignore").strip() or "<no output>",
+            )
             return False
 
         return True
@@ -723,7 +757,10 @@ class LoaderMod(loader.Module):
                 pm = "brew"
 
             if not pm:
-                logger.debug("No supported package manager found")
+                logger.error(
+                    "Can't install system packages %s: no supported package manager found",
+                    packages,
+                )
                 return False
 
             cmd = []
@@ -753,9 +790,10 @@ class LoaderMod(loader.Module):
             out, err = await proc.communicate()
 
             if proc.returncode != 0:
-                logger.debug(
-                    "Package install failed (%s): %s",
+                logger.error(
+                    "System package install failed (%s) with exit code %s: %s",
                     " ".join(cmd),
+                    proc.returncode,
                     err.decode(errors="ignore") if err else out.decode(errors="ignore"),
                 )
                 return False
@@ -776,7 +814,17 @@ class LoaderMod(loader.Module):
         blob_link: bool = False,
         did_requires: bool = False,
         did_packages: bool = False,
-    ):
+        _raise_install_errors: bool = False,
+    ) -> bool:
+        module_label = name or origin
+
+        def fail_install(message: str, *args: object) -> None:
+            rendered = message % args if args else message
+            if _raise_install_errors:
+                raise ModuleInstallError(rendered)
+
+            logger.error(message, *args)
+
         forbidden_api = _find_forbidden_external_api_usage(doc)
         if forbidden_api:
             forbidden_api_msg = self.strings["forbidden_api"].format(
@@ -786,27 +834,46 @@ class LoaderMod(loader.Module):
                 await message.edit(forbidden_api_msg)
             elif message is not None:
                 await utils.answer(message, forbidden_api_msg)
-            return
+            fail_install(
+                "Module %s uses forbidden method: %s",
+                module_label,
+                forbidden_api,
+            )
+            return False
 
         if any(
             line.replace(" ", "") == "#scope:ffmpeg" for line in doc.splitlines()
         ) and os.system("ffmpeg -version 1>/dev/null 2>/dev/null"):
+            logger.error(
+                "Module %s requires ffmpeg, but ffmpeg is not installed",
+                module_label,
+            )
             if isinstance(message, Message):
                 await utils.answer(message, self.strings["ffmpeg_required"])
-            return
+            return False
 
         if (
             any(line.replace(" ", "") == "#scope:inline" for line in doc.splitlines())
             and not self.inline.init_complete
         ):
+            logger.error(
+                "Module %s requires inline mode, but inline initialization failed",
+                module_label,
+            )
             if isinstance(message, Message):
                 await utils.answer(message, self.strings["inline_init_failed"])
-            return
+            return False
 
         if re.search(r"# ?scope: ?heroku_min", doc):
             ver = re.search(r"# ?scope: ?heroku_min ((?:\d+\.){2}\d+)", doc).group(1)
             ver_ = tuple(map(int, ver.split(".")))
             if main.__version__ < ver_:
+                logger.error(
+                    "Module %s requires Heroku %s, current version is %s",
+                    module_label,
+                    ver,
+                    ".".join(map(str, main.__version__)),
+                )
                 if isinstance(message, Message):
                     if getattr(message, "file", None):
                         m = utils.get_chat_id(message)
@@ -828,7 +895,7 @@ class LoaderMod(loader.Module):
                             },
                         ],
                     )
-                return
+                return False
 
         developer = re.search(r"# ?meta developer: ?(.+)", doc)
         developer = developer.group(1) if developer else False
@@ -849,7 +916,17 @@ class LoaderMod(loader.Module):
                 pass
 
             if requirements:
-                await self.install_requirements(requirements)
+                result = await self.install_requirements(requirements)
+                if not result:
+                    logger.error(
+                        "Module %s requirements from #scope:requires failed to install: %s",
+                        module_label,
+                        requirements,
+                    )
+                    if message is not None:
+                        await utils.answer(message, self.strings["requirements_failed"])
+
+                    return False
 
                 importlib.invalidate_caches()
 
@@ -877,9 +954,14 @@ class LoaderMod(loader.Module):
                 result = await self.install_packages(packages)
 
                 if not result:
+                    logger.error(
+                        "Module %s system packages from #scope:packages failed to install: %s",
+                        module_label,
+                        packages,
+                    )
                     if message is not None:
                         await utils.answer(message, self.strings["requirements_failed"])
-                    return
+                    return False
 
                 importlib.invalidate_caches()
 
@@ -976,6 +1058,11 @@ class LoaderMod(loader.Module):
                 logger.debug("Installing requirements: %s", requirements)
 
                 if did_requirements:
+                    logger.error(
+                        "Module %s still requires missing dependency %s after installation",
+                        module_label,
+                        e.name,
+                    )
                     if message is not None:
                         await self.inline.form(
                             message=message,
@@ -985,7 +1072,7 @@ class LoaderMod(loader.Module):
                             ],
                         )
 
-                    return
+                    return False
 
                 if message is not None:
                     await utils.answer(
@@ -1000,10 +1087,15 @@ class LoaderMod(loader.Module):
 
                 result = await self.install_requirements(requirements)
                 if not result:
+                    logger.error(
+                        "Module %s dependency installation failed: %s",
+                        module_label,
+                        requirements,
+                    )
                     if message is not None:
                         await utils.answer(message, self.strings["requirements_failed"])
 
-                    return
+                    return False
 
                 importlib.invalidate_caches()
 
@@ -1012,9 +1104,16 @@ class LoaderMod(loader.Module):
 
                 return await self.load_module(**kwargs)  # Try again
             except CoreOverwriteError as e:
+                logger.error(
+                    "Module %s tried to overwrite core %s %s",
+                    module_label,
+                    e.type,
+                    e.target,
+                )
                 await core_overwrite(e)
-                return
+                return False
             except (loader.LoadError, ScamDetectionError) as e:
+                logger.error("Module %s failed security checks: %s", module_label, e)
                 with contextlib.suppress(Exception):
                     await self.allmodules.unload_module(instance.__class__.__name__)
 
@@ -1040,14 +1139,14 @@ class LoaderMod(loader.Module):
                                 )
                             ),
                         )
-                return
+                return False
         except Exception as e:
             logger.exception("Loading external module failed due to %s", e)
 
             if message is not None:
                 await utils.answer(message, self.strings["load_failed"])
 
-            return
+            return False
 
         if hasattr(instance, "__version__") and isinstance(instance.__version__, tuple):
             version = (
@@ -1093,9 +1192,20 @@ class LoaderMod(loader.Module):
                 )
                 task.cancel()
             except CoreOverwriteError as e:
+                logger.error(
+                    "Module %s tried to overwrite core %s %s during ready stage",
+                    module_label,
+                    e.type,
+                    e.target,
+                )
                 await core_overwrite(e)
-                return
+                return False
             except (loader.LoadError, ScamDetectionError) as e:
+                logger.error(
+                    "Module %s failed during ready security checks: %s",
+                    module_label,
+                    e,
+                )
                 with contextlib.suppress(Exception):
                     await self.allmodules.unload_module(instance.__class__.__name__)
 
@@ -1121,9 +1231,13 @@ class LoaderMod(loader.Module):
                                 )
                             ),
                         )
-                return
+                return False
             except loader.SelfUnload as e:
-                logger.debug("Unloading %s, because it raised `SelfUnload`", instance)
+                logger.warning(
+                    "Module %s unloaded itself during installation: %s",
+                    module_label,
+                    e,
+                )
                 with contextlib.suppress(Exception):
                     await self.allmodules.unload_module(instance.__class__.__name__)
 
@@ -1138,9 +1252,13 @@ class LoaderMod(loader.Module):
                             f" <b>{utils.escape_html(str(e))}</b>"
                         ),
                     )
-                return
+                return False
             except loader.SelfSuspend as e:
-                logger.debug("Suspending %s, because it raised `SelfSuspend`", instance)
+                logger.warning(
+                    "Module %s suspended itself during installation: %s",
+                    module_label,
+                    e,
+                )
                 if message:
                     await utils.answer(
                         message,
@@ -1149,14 +1267,14 @@ class LoaderMod(loader.Module):
                             f" {utils.escape_html(str(e))}</b>"
                         ),
                     )
-                return
+                return False
         except Exception as e:
             logger.exception("Module threw because of %s", e)
 
             if message is not None:
                 await utils.answer(message, self.strings["load_failed"])
 
-            return
+            return False
 
         instance.heroku_meta_pic = next(
             (
@@ -1215,7 +1333,7 @@ class LoaderMod(loader.Module):
             developer_entity = None
 
         if message is None:
-            return
+            return True
 
         modhelp = []
         mod_doc = ""
@@ -1336,7 +1454,7 @@ class LoaderMod(loader.Module):
                 reply_markup=subscribe_markup,
                 **banner_kwargs,
             )
-            return
+            return True
 
         for _name, fun in sorted(
             instance.commands.items(),
@@ -1380,6 +1498,8 @@ class LoaderMod(loader.Module):
             )
         except MediaCaptionTooLongError:
             await message.reply(loaded_msg(False))
+
+        return True
 
     async def _inline__subscribe(
         self,
