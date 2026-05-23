@@ -102,11 +102,6 @@ class LoaderMod(loader.Module):
 
     strings = {
         "name": "Loader",
-        "forbidden_api": (
-            "<tg-emoji emoji-id=5454225457916420314>😖</tg-emoji> "
-            "<b>Frame introspection is forbidden for external modules: "
-            "{}</b>"
-        ),
     }
 
     def __init__(self):
