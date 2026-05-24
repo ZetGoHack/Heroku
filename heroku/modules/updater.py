@@ -14,6 +14,7 @@
 import ast
 import asyncio
 import contextlib
+import json
 import logging
 import os
 import subprocess
@@ -29,7 +30,13 @@ from herokutl.tl.functions.messages import (
     GetDialogFiltersRequest,
     UpdateDialogFilterRequest,
 )
-from herokutl.tl.types import DialogFilter, Message, TextWithEntities
+from herokutl.tl.types import (
+    DialogFilter,
+    InputBotInlineMessageID,
+    InputBotInlineMessageID64,
+    Message,
+    TextWithEntities,
+)
 
 from .. import loader, main, utils, version
 from .._internal import restart
@@ -300,12 +307,74 @@ class UpdaterMod(loader.Module):
     async def inline_restart(self, call: InlineCall, secure_boot: bool = False):
         await self.restart_common(call, secure_boot=secure_boot)
 
+    @staticmethod
+    def _serialize_inline_message_id(
+        inline_message_id: typing.Union[
+            str,
+            InputBotInlineMessageID,
+            InputBotInlineMessageID64,
+        ],
+    ) -> str:
+        if isinstance(
+            inline_message_id,
+            (InputBotInlineMessageID, InputBotInlineMessageID64),
+        ):
+            return typing.cast(str, inline_message_id.to_json())
+
+        return inline_message_id
+
+    @staticmethod
+    def _deserialize_inline_message_id(
+        inline_message_id: str,
+    ) -> typing.Union[str, InputBotInlineMessageID, InputBotInlineMessageID64]:
+        try:
+            data = json.loads(inline_message_id)
+        except (TypeError, ValueError):
+            return inline_message_id
+
+        if not isinstance(data, dict):
+            return inline_message_id
+
+        if data.get("_") == "InputBotInlineMessageID":
+            return InputBotInlineMessageID(
+                dc_id=data["dc_id"],
+                id=data["id"],
+                access_hash=data["access_hash"],
+            )
+
+        if data.get("_") == "InputBotInlineMessageID64":
+            return InputBotInlineMessageID64(
+                dc_id=data["dc_id"],
+                owner_id=data["owner_id"],
+                id=data["id"],
+                access_hash=data["access_hash"],
+            )
+
+        return inline_message_id
+
+    @staticmethod
+    def _parse_legacy_update_message_ref(
+        message_ref: typing.Any,
+    ) -> typing.Optional[typing.Tuple[int, int]]:
+        if not isinstance(message_ref, str):
+            return None
+
+        parts = message_ref.split(":")
+        if len(parts) != 2:
+            return None
+
+        try:
+            return int(parts[0]), int(parts[1])
+        except ValueError:
+            return None
+
     async def process_restart_message(self, msg_obj: typing.Union[InlineCall, Message]):
+        inline_message_id = getattr(msg_obj, "inline_message_id", None)
         self.set(
             "selfupdatemsg",
             (
-                msg_obj.inline_message_id
-                if hasattr(msg_obj, "inline_message_id")
+                self._serialize_inline_message_id(inline_message_id)
+                if inline_message_id is not None
                 else f"{utils.get_chat_id(msg_obj)}:{msg_obj.id}"
             ),
         )
@@ -683,14 +752,13 @@ class UpdaterMod(loader.Module):
         msg = self.strings["success"].format(utils.ascii_face(), took)
         ms = self.get("selfupdatemsg")
 
-        if ":" in str(ms):
-            chat_id, message_id = ms.split(":")
-            chat_id, message_id = int(chat_id), int(message_id)
+        if legacy_message_ref := self._parse_legacy_update_message_ref(ms):
+            chat_id, message_id = legacy_message_ref
             await self._client.edit_message(chat_id, message_id, msg)
             return
 
         await self.inline.bot.edit_message_text(
-            inline_message_id=ms,
+            inline_message_id=self._deserialize_inline_message_id(str(ms)),
             text=self.inline.sanitise_text(msg),
         )
 
@@ -726,16 +794,15 @@ class UpdaterMod(loader.Module):
 
         self.set("selfupdatemsg", None)
 
-        if ":" in str(ms):
-            chat_id, message_id = ms.split(":")
-            chat_id, message_id = int(chat_id), int(message_id)
+        if legacy_message_ref := self._parse_legacy_update_message_ref(ms):
+            chat_id, message_id = legacy_message_ref
             await self._client.edit_message(chat_id, message_id, msg)
             await asyncio.sleep(60)
             await self._client.delete_messages(chat_id, message_id)
             return
 
         await self.inline.bot.edit_message_text(
-            inline_message_id=ms,
+            inline_message_id=self._deserialize_inline_message_id(str(ms)),
             text=self.inline.sanitise_text(msg),
         )
 

@@ -129,6 +129,36 @@ class TelethonBot:
     async def delete_message(self, chat_id, message_id):
         return await self.client.delete_messages(chat_id, message_id)
 
+    async def edit_message_text(
+        self,
+        *,
+        text: str,
+        inline_message_id: typing.Any = None,
+        chat_id: typing.Any = None,
+        message_id: typing.Any = None,
+        reply_markup: typing.Any = None,
+        disable_web_page_preview: bool = True,
+        **kwargs: typing.Any,
+    ) -> typing.Any:
+        if inline_message_id:
+            return await self.client.edit_message(
+                inline_message_id,
+                None,
+                text,
+                parse_mode="HTML",
+                link_preview=not disable_web_page_preview,
+                buttons=reply_markup,
+            )
+
+        return await self.client.edit_message(
+            chat_id,
+            message_id,
+            text,
+            parse_mode="HTML",
+            link_preview=not disable_web_page_preview,
+            buttons=reply_markup,
+        )
+
 
 def web_document(
     url: typing.Optional[str],
