@@ -592,7 +592,6 @@ loader:
   no_file: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Fiwe nyot found</b>"
   provide_module: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Pwovide a moduwe to woad</b>"
   bad_unicode: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Invawid Unyicode fowmatting in moduwe</b>"
-  forbidden_api: "<tg-emoji emoji-id=5454225457916420314>😖</tg-emoji> <b>Fwame intwospection is fowbidden fow extewnaw moduwes: {}</b>"
   load_failed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Woading faiwed. See wogs fow detaiws >.<</b>"
   loaded: "<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>Moduwe</b> <code>{}</code>{} <b>woaded {}</b>{}{}{}{}{}{}"
   no_class: "<b>What cwass nyeeds to be unwoaded?</b>"

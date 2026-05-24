@@ -593,7 +593,6 @@ loader:
   no_file: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>FileNotFoundError</b>"
   provide_module: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Argument 'module' required</b>"
   bad_unicode: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>UnicodeDecodeError</b>"
-  forbidden_api: "<tg-emoji emoji-id=5454225457916420314>😖</tg-emoji> <b>Frame introspection blocked for external modules: {}</b>"
   load_failed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>ImportError. Check logs</b>"
   loaded: "<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>Module</b> <code>{}</code>{} <b>imported {}</b>{}{}{}{}{}{}{}{}"
   no_class: "<b>Class name required for unload</b>"

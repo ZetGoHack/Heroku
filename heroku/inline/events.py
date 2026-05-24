@@ -17,7 +17,7 @@ from asyncio import Event
 
 from herokutl.tl.types import UpdateBotInlineSend
 
-from .. import loader, utils, security
+from .. import utils, security
 from .types import BotInlineCall, InlineCall, InlineQuery, InlineUnit
 
 if typing.TYPE_CHECKING:
@@ -49,10 +49,7 @@ class Events(InlineUnit):
                 continue
 
             try:
-                await loader._call_with_external_context(
-                    mod.bot_watcher,
-                    wrapped_message,
-                )
+                await mod.bot_watcher(wrapped_message)
             except Exception:
                 logger.exception("Error on running bot watcher!")
 
@@ -86,10 +83,7 @@ class Events(InlineUnit):
         ):
             try:
                 if not (
-                    result := await loader._call_with_external_context(
-                        self._allmodules.inline_handlers[cmd],
-                        wrapped_query,
-                    )
+                    result := await self._allmodules.inline_handlers[cmd](wrapped_query)
                 ):
                     return
             except Exception:
@@ -224,8 +218,7 @@ class Events(InlineUnit):
         for func in self._allmodules.callback_handlers.values():
             if await self.check_inline_security(func=func, user=user_id):
                 try:
-                    await loader._call_with_external_context(
-                        func,
+                    await func(
                         (InlineCall if call.via_inline else BotInlineCall)(
                             call, self, None
                         ),

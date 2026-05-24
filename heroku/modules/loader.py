@@ -64,173 +64,6 @@ class ModuleInstallError(RuntimeError):
     """Raised when an external module install fails after download."""
 
 
-def _find_forbidden_external_api_usage(code: str) -> typing.Optional[str]:
-    try:
-        tree = ast.parse(code)
-    except SyntaxError:
-        return None
-
-    sys_aliases = {"sys"}
-
-    def _static_string(node: ast.AST) -> typing.Optional[str]:
-        if isinstance(node, ast.Constant) and isinstance(node.value, str):
-            return node.value
-
-        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
-            left = _static_string(node.left)
-            right = _static_string(node.right)
-            if left is not None and right is not None:
-                return left + right
-
-        if isinstance(node, ast.JoinedStr):
-            parts: typing.List[str] = []
-            for value in node.values:
-                if not isinstance(value, ast.Constant) or not isinstance(
-                    value.value, str
-                ):
-                    return None
-                parts.append(value.value)
-            return "".join(parts)
-
-        if (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Attribute)
-            and node.func.attr == "join"
-            and not node.keywords
-            and len(node.args) == 1
-        ):
-            separator = _static_string(node.func.value)
-            if separator is None or not isinstance(node.args[0], (ast.List, ast.Tuple)):
-                return None
-
-            pieces: typing.List[str] = []
-            for elt in node.args[0].elts:
-                piece = _static_string(elt)
-                if piece is None:
-                    return None
-                pieces.append(piece)
-
-            return separator.join(pieces)
-
-        return None
-
-    def _static_forbidden_name(node: ast.AST) -> typing.Optional[str]:
-        name = _static_string(node)
-        if name is None:
-            return None
-
-        return {
-            "_getframe": "sys._getframe",
-            "allmodules": "allmodules",
-        }.get(name)
-
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            for alias in node.names:
-                if alias.name == "sys":
-                    sys_aliases.add(alias.asname or alias.name)
-                if alias.name == "allmodules":
-                    return "allmodules"
-            continue
-
-        if isinstance(node, ast.ImportFrom) and node.module:
-            for alias in node.names:
-                if node.module == "sys" and alias.name == "_getframe":
-                    return "sys._getframe"
-                if alias.name == "allmodules":
-                    return "allmodules"
-
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Name) and node.id == "allmodules":
-            return "allmodules"
-
-        if isinstance(node, ast.Attribute) and node.attr == "allmodules":
-            return "allmodules"
-
-        if isinstance(node, ast.Attribute) and node.attr == "_getframe":
-            if not isinstance(node.value, ast.Name) or node.value.id in sys_aliases:
-                return "sys._getframe"
-
-        func = node.func if isinstance(node, ast.Call) else None
-
-        if isinstance(node, ast.Call):
-            if (
-                isinstance(func, ast.Name)
-                and func.id == "getattr"
-                or isinstance(func, ast.Attribute)
-                and func.attr == "getattr"
-            ) and len(node.args) >= 2:
-                forbidden_name = _static_forbidden_name(node.args[1])
-                if forbidden_name:
-                    return forbidden_name
-
-            if (
-                isinstance(func, ast.Name)
-                and func.id == "attrgetter"
-                or isinstance(func, ast.Attribute)
-                and func.attr == "attrgetter"
-            ) and node.args:
-                for arg in node.args:
-                    forbidden_name = _static_forbidden_name(arg)
-                    if forbidden_name:
-                        return forbidden_name
-
-            if (
-                isinstance(func, ast.Attribute)
-                and func.attr in {"__getattribute__", "__getattr__"}
-                and node.args
-            ):
-                attr_args = (
-                    node.args[:2] if func.attr == "__getattribute__" else node.args[:1]
-                )
-                for attr_arg in attr_args:
-                    forbidden_name = _static_forbidden_name(attr_arg)
-                    if forbidden_name:
-                        return forbidden_name
-
-            if (
-                isinstance(func, ast.Attribute)
-                and func.attr == "get"
-                and node.args
-                and (
-                    isinstance(func.value, ast.Attribute)
-                    and func.value.attr == "__dict__"
-                    or isinstance(func.value, ast.Call)
-                    and isinstance(func.value.func, ast.Name)
-                    and func.value.func.id == "vars"
-                )
-            ):
-                forbidden_name = _static_forbidden_name(node.args[0])
-                if forbidden_name:
-                    return forbidden_name
-
-        if isinstance(func, ast.Attribute) and func.attr == "_getframe":
-            if not isinstance(func.value, ast.Name) or func.value.id in sys_aliases:
-                return "sys._getframe"
-
-        if isinstance(func, ast.Name) and func.id == "_getframe":
-            return "sys._getframe"
-
-        if isinstance(node, ast.Subscript):
-            forbidden_name = _static_forbidden_name(node.slice)
-            if not forbidden_name:
-                continue
-
-            value = node.value
-            if isinstance(value, ast.Attribute) and value.attr == "__dict__":
-                return forbidden_name
-
-            if (
-                isinstance(value, ast.Call)
-                and isinstance(value.func, ast.Name)
-                and value.func.id == "vars"
-                and value.args
-            ):
-                return forbidden_name
-
-    return None
-
-
 @loader.tds
 class LoaderMod(loader.Module):
     """Loads modules"""
@@ -825,22 +658,6 @@ class LoaderMod(loader.Module):
 
             logger.error(message, *args)
 
-        forbidden_api = _find_forbidden_external_api_usage(doc)
-        if forbidden_api:
-            forbidden_api_msg = self.strings["forbidden_api"].format(
-                utils.escape_html(forbidden_api)
-            )
-            if isinstance(message, InlineCall):
-                await message.edit(forbidden_api_msg)
-            elif message is not None:
-                await utils.answer(message, forbidden_api_msg)
-            fail_install(
-                "Module %s uses forbidden method: %s",
-                module_label,
-                forbidden_api,
-            )
-            return False
-
         if any(
             line.replace(" ", "") == "#scope:ffmpeg" for line in doc.splitlines()
         ) and os.system("ffmpeg -version 1>/dev/null 2>/dev/null"):
@@ -1044,9 +861,7 @@ class LoaderMod(loader.Module):
                     "Module loading failed, attemping dependency installation (%s)",
                     e.name,
                 )
-                requirements = [
-                    loader.IMPORT_PIP_ALIASES.get(e.name.lower(), e.name)
-                ]
+                requirements = [loader.IMPORT_PIP_ALIASES.get(e.name.lower(), e.name)]
 
                 if not requirements:
                     raise Exception("Nothing to install") from e

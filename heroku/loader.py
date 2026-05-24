@@ -13,12 +13,10 @@
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
 import asyncio
-import ast
 import builtins
 import contextlib
 import contextvars
 import copy
-import hashlib
 import importlib
 import importlib.machinery
 import importlib.util
@@ -52,10 +50,6 @@ from .types import (
     LoadError,
     Module,
     ModuleConfig,
-    SafeAllModulesProxy,
-    SafeClientProxy,
-    SafeDatabaseProxy,
-    SafeInlineProxy,
     SelfSuspend,
     SelfUnload,
     StopLoop,
@@ -87,7 +81,6 @@ __all__ = [
     "get_commands",
     "get_inline_handlers",
     "get_callback_handlers",
-    "get_module_hash",
     "validators",
     "Database",
     "InlineManager",
@@ -109,90 +102,12 @@ __all__ = [
     "unrestricted",
     "inline_everyone",
     "loop",
-    "set_session_access_hashes",
     "need_update",
 ]
 
 logger = logging.getLogger(__name__)
 
 _EXTERNAL_ORIGIN_PREFIXES = ("<external", "<file", "<string")
-_external_context = contextvars.ContextVar(
-    "heroku_external_module_origin", default=None
-)
-_SESSION_AUDIT_INSTALLED = False
-_EXTERNAL_GUARDS_INSTALLED = False
-_MODULE_NAME_BY_HASH: typing.Dict[str, str] = {}
-_MODULE_HASH_BY_MODNAME: typing.Dict[str, str] = {}
-
-
-def _calc_module_hash(source: str) -> str:
-    return hashlib.sha256(source.encode("utf-8", errors="ignore")).hexdigest()
-
-
-def _make_session_allowlist():
-    data: typing.FrozenSet[str] = frozenset()
-    allowed_callers = frozenset(
-        {
-            f"{__package__}.main",
-            f"{__package__}.modules.loader",
-            f"{__package__}.modules.heroku_plugin_security",
-            __name__,
-        }
-    )
-
-    def _caller_module() -> typing.Optional[str]:
-        for frame_info in inspect.stack():
-            mod = frame_info.frame.f_globals.get("__name__", None)
-            if not mod or mod == __name__:
-                continue
-            return mod
-        return None
-
-    def is_allowed(value: typing.Optional[str]) -> bool:
-        if not value:
-            return False
-        return value in data
-
-    def set_hashes(hashes: typing.Iterable[str]):
-        nonlocal data
-        caller = _caller_module()
-        if caller not in allowed_callers:
-            logger.warning(
-                "Blocked set_session_access_hashes from %s (allowed: %s)",
-                caller or "<unknown>",
-                ", ".join(sorted(allowed_callers)),
-            )
-            raise PermissionError("set_session_access_hashes is restricted")
-        data = frozenset(hashes)
-
-    return is_allowed, set_hashes
-
-
-_is_session_hash_allowed, _set_session_access_hashes = _make_session_allowlist()
-
-
-def set_session_access_hashes(hashes: typing.Iterable[str]):
-    _set_session_access_hashes(hashes)
-
-
-def get_module_hash(module: "Module") -> typing.Optional[str]:
-    mod_hash = getattr(module, "__module_hash__", None)
-    if mod_hash:
-        return mod_hash
-    source = getattr(module, "__source__", None)
-    if source:
-        return _calc_module_hash(source)
-    return None
-
-
-def _format_audit_args(args: typing.Any, limit: int = 400) -> str:
-    try:
-        rendered = repr(args)
-    except Exception:
-        return "<unreprable>"
-    if len(rendered) <= limit:
-        return rendered
-    return rendered[: limit - 3] + "..."
 
 
 def _is_external_origin(origin: str) -> bool:
@@ -205,439 +120,6 @@ def _is_external_origin(origin: str) -> bool:
     if origin.startswith(_EXTERNAL_ORIGIN_PREFIXES):
         return True
     return "loaded_modules" in origin
-
-
-def _find_forbidden_external_api_usage(code: str) -> typing.Optional[str]:
-    try:
-        tree = ast.parse(code)
-    except SyntaxError:
-        return None
-
-    sys_aliases = {"sys"}
-
-    def _static_string(node: ast.AST) -> typing.Optional[str]:
-        if isinstance(node, ast.Constant) and isinstance(node.value, str):
-            return node.value
-
-        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
-            left = _static_string(node.left)
-            right = _static_string(node.right)
-            if left is not None and right is not None:
-                return left + right
-
-        if isinstance(node, ast.JoinedStr):
-            parts: typing.List[str] = []
-            for value in node.values:
-                if not isinstance(value, ast.Constant) or not isinstance(
-                    value.value, str
-                ):
-                    return None
-                parts.append(value.value)
-            return "".join(parts)
-
-        if (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Attribute)
-            and node.func.attr == "join"
-            and not node.keywords
-            and len(node.args) == 1
-        ):
-            separator = _static_string(node.func.value)
-            if separator is None or not isinstance(node.args[0], (ast.List, ast.Tuple)):
-                return None
-
-            pieces: typing.List[str] = []
-            for elt in node.args[0].elts:
-                piece = _static_string(elt)
-                if piece is None:
-                    return None
-                pieces.append(piece)
-
-            return separator.join(pieces)
-
-        return None
-
-    def _static_forbidden_name(node: ast.AST) -> typing.Optional[str]:
-        name = _static_string(node)
-        if name is None:
-            return None
-
-        return {
-            "_getframe": "sys._getframe",
-            "allmodules": "allmodules",
-        }.get(name)
-
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            for alias in node.names:
-                if alias.name == "sys":
-                    sys_aliases.add(alias.asname or alias.name)
-                if alias.name == "allmodules":
-                    return "allmodules"
-            continue
-
-        if isinstance(node, ast.ImportFrom) and node.module:
-            for alias in node.names:
-                if node.module == "sys" and alias.name == "_getframe":
-                    return "sys._getframe"
-                if alias.name == "allmodules":
-                    return "allmodules"
-
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Name) and node.id == "allmodules":
-            return "allmodules"
-
-        if isinstance(node, ast.Attribute) and node.attr == "allmodules":
-            return "allmodules"
-
-        if isinstance(node, ast.Attribute) and node.attr == "_getframe":
-            if not isinstance(node.value, ast.Name) or node.value.id in sys_aliases:
-                return "sys._getframe"
-
-        func = node.func if isinstance(node, ast.Call) else None
-
-        if isinstance(node, ast.Call):
-            if (
-                isinstance(func, ast.Name)
-                and func.id == "getattr"
-                or isinstance(func, ast.Attribute)
-                and func.attr == "getattr"
-            ) and len(node.args) >= 2:
-                forbidden_name = _static_forbidden_name(node.args[1])
-                if forbidden_name:
-                    return forbidden_name
-
-            if (
-                isinstance(func, ast.Name)
-                and func.id == "attrgetter"
-                or isinstance(func, ast.Attribute)
-                and func.attr == "attrgetter"
-            ) and node.args:
-                for arg in node.args:
-                    forbidden_name = _static_forbidden_name(arg)
-                    if forbidden_name:
-                        return forbidden_name
-
-            if (
-                isinstance(func, ast.Attribute)
-                and func.attr in {"__getattribute__", "__getattr__"}
-                and node.args
-            ):
-                attr_args = (
-                    node.args[:2] if func.attr == "__getattribute__" else node.args[:1]
-                )
-                for attr_arg in attr_args:
-                    forbidden_name = _static_forbidden_name(attr_arg)
-                    if forbidden_name:
-                        return forbidden_name
-
-            if (
-                isinstance(func, ast.Attribute)
-                and func.attr == "get"
-                and node.args
-                and (
-                    isinstance(func.value, ast.Attribute)
-                    and func.value.attr == "__dict__"
-                    or isinstance(func.value, ast.Call)
-                    and isinstance(func.value.func, ast.Name)
-                    and func.value.func.id == "vars"
-                )
-            ):
-                forbidden_name = _static_forbidden_name(node.args[0])
-                if forbidden_name:
-                    return forbidden_name
-
-        if isinstance(func, ast.Attribute) and func.attr == "_getframe":
-            if not isinstance(func.value, ast.Name) or func.value.id in sys_aliases:
-                return "sys._getframe"
-
-        if isinstance(func, ast.Name) and func.id == "_getframe":
-            return "sys._getframe"
-
-        if isinstance(node, ast.Subscript):
-            forbidden_name = _static_forbidden_name(node.slice)
-            if not forbidden_name:
-                continue
-
-            value = node.value
-            if isinstance(value, ast.Attribute) and value.attr == "__dict__":
-                return forbidden_name
-
-            if (
-                isinstance(value, ast.Call)
-                and isinstance(value.func, ast.Name)
-                and value.func.id == "vars"
-                and value.args
-            ):
-                return forbidden_name
-
-    return None
-
-
-def _is_external_frame(frame) -> bool:
-    if frame is None:
-        return False
-    spec = frame.f_globals.get("__spec__", None)
-    if spec and getattr(spec, "origin", None):
-        origin = spec.origin
-        if origin and isinstance(origin, str):
-            return _is_external_origin(origin)
-    filename = frame.f_globals.get("__file__", "")
-    if not filename:
-        return False
-    if isinstance(filename, str):
-        return _is_external_origin(filename) or "loaded_modules" in filename
-    return False
-
-
-def _external_stack_info() -> (
-    typing.Tuple[bool, typing.Optional[str], typing.Optional[str]]
-):
-    frame = sys._getframe()
-    if frame:
-        frame = frame.f_back
-    max_frames = 50
-    frame_count = 0
-    while frame and frame_count < max_frames:
-        if _is_external_frame(frame):
-            spec = frame.f_globals.get("__spec__", None)
-            origin = getattr(spec, "origin", None) if spec else None
-            if not origin:
-                origin = frame.f_globals.get("__file__", "")
-
-            if origin and not isinstance(origin, str):
-                origin = str(origin)
-
-            mod_name = frame.f_globals.get("__name__", None)
-            return True, origin or None, mod_name
-        frame = frame.f_back
-        frame_count += 1
-    return False, None, None
-
-
-def _resolve_mod_hash_from_context() -> (
-    typing.Tuple[typing.Optional[str], typing.Optional[str]]
-):
-    ctx = _external_context.get()
-    origin = None
-    mod_hash = None
-
-    if isinstance(ctx, tuple) and len(ctx) == 2:
-        origin, mod_hash = ctx
-    elif isinstance(ctx, str):
-        origin = ctx
-
-    return origin, mod_hash
-
-
-def _resolve_mod_hash_from_stack(
-    stack_mod_name: typing.Optional[str],
-) -> typing.Optional[str]:
-    if not stack_mod_name:
-        return None
-
-    direct = _MODULE_HASH_BY_MODNAME.get(stack_mod_name)
-    if direct:
-        return direct
-
-    for h, name in _MODULE_NAME_BY_HASH.items():
-        if name == stack_mod_name or (
-            stack_mod_name and stack_mod_name.endswith(f".{name}")
-        ):
-            return h
-
-    return None
-
-
-def _session_audit_hook(event, args):
-    if not args:
-        return
-    if event.startswith("import") or event.startswith("importlib."):
-        return
-
-    def _is_session_path(value) -> bool:
-        try:
-            path = os.fspath(value)
-        except Exception:
-            return False
-        if isinstance(path, bytes):
-            try:
-                path = path.decode(errors="ignore")
-            except Exception:
-                return False
-        return isinstance(path, str) and (
-            path.endswith(".session") or path.endswith(".session-journal")
-        )
-
-    def _has_session_path(values) -> bool:
-        for value in values:
-            if isinstance(value, (list, tuple, set)):
-                if _has_session_path(value):
-                    return True
-                continue
-            if _is_session_path(value):
-                return True
-        return False
-
-    def _has_session_hint(values) -> bool:
-        for value in values:
-            if isinstance(value, (list, tuple, set)):
-                if _has_session_hint(value):
-                    return True
-                continue
-            if isinstance(value, str) and any(
-                value.endswith(ext) for ext in (".session", ".session-journal")
-            ):
-                return True
-        return False
-
-    if not _has_session_path(args):
-        if event.startswith("subprocess.") and _has_session_hint(args):
-            pass
-        else:
-            return
-
-    origin, mod_hash = _resolve_mod_hash_from_context()
-
-    if _is_session_hash_allowed(mod_hash):
-        return
-
-    has_external_stack, stack_origin, stack_mod_name = _external_stack_info()
-
-    if not _external_context.get() and not has_external_stack:
-        return
-
-    if not mod_hash:
-        mod_hash = _resolve_mod_hash_from_stack(stack_mod_name)
-
-    if _is_session_hash_allowed(mod_hash):
-        return
-
-    mod_name = _MODULE_NAME_BY_HASH.get(mod_hash, None) if mod_hash else None
-    if not origin:
-        origin = stack_origin
-    if not mod_name:
-        mod_name = stack_mod_name
-
-    logger.warning(
-        "Blocked .session file access from external module: name=%s origin=%s event=%s args=%s",
-        mod_name or "<unknown>",
-        origin or "<unknown>",
-        event,
-        _format_audit_args(args),
-    )
-    raise PermissionError(
-        "Access to .session files is blocked for external modules: "
-        f"name={mod_name or '<unknown>'} origin={origin or '<unknown>'} event={event} args={_format_audit_args(args)}"
-    )
-
-
-async def _call_with_external_context(func: callable, *args, **kwargs):
-    origin = getattr(getattr(func, "__self__", None), "__origin__", "")
-    token = None
-    if origin and _is_external_origin(origin):
-        mod = getattr(func, "__self__", None)
-        mod_hash = getattr(mod, "__module_hash__", None)
-        if not mod_hash and hasattr(mod, "__source__"):
-            mod_hash = _calc_module_hash(mod.__source__)
-        token = _external_context.set((origin, mod_hash))
-    try:
-        return await func(*args, **kwargs)
-    finally:
-        if token is not None:
-            _external_context.reset(token)
-
-
-def _install_session_audit_hook():
-    global _SESSION_AUDIT_INSTALLED
-    if _SESSION_AUDIT_INSTALLED:
-        return
-    sys.addaudithook(_session_audit_hook)
-    _SESSION_AUDIT_INSTALLED = True
-
-
-def _is_external_context_active() -> bool:
-    if _external_context.get():
-        return True
-    has_external_stack, _, _ = _external_stack_info()
-    return has_external_stack
-
-
-def _deny_external(reason: str):
-    if _is_external_context_active():
-        logger.warning("Blocked external module call: %s", reason)
-        raise PermissionError(f"External module access is blocked: {reason}")
-
-
-def _wrap_external(func, reason: str):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        _deny_external(reason)
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
-def _noop_external(reason: str, return_value=None):
-    def wrapper(*args, **kwargs):
-        if _is_external_context_active():
-            logger.warning(
-                "Skipped external module call: %s args=%s",
-                reason,
-                _format_audit_args(args),
-            )
-            return return_value
-        return None
-
-    return wrapper
-
-
-class _NoopPopen:
-    def __init__(self):
-        self.returncode = 126
-        self.stdout = b""
-        self.stderr = b""
-
-    def communicate(self, *args, **kwargs):
-        return (self.stdout, self.stderr)
-
-    def wait(self, *args, **kwargs):
-        return self.returncode
-
-    def poll(self):
-        return self.returncode
-
-
-def _install_external_guards():
-    global _EXTERNAL_GUARDS_INSTALLED
-    if _EXTERNAL_GUARDS_INSTALLED:
-        return
-
-    import gc
-
-    gc.get_objects = _wrap_external(gc.get_objects, "gc.get_objects")
-    if hasattr(gc, "get_referrers"):
-        gc.get_referrers = _wrap_external(gc.get_referrers, "gc.get_referrers")
-    if hasattr(gc, "get_referents"):
-        gc.get_referents = _wrap_external(gc.get_referents, "gc.get_referents")
-
-    try:
-        import ctypes
-
-        ctypes.CDLL = _wrap_external(ctypes.CDLL, "ctypes.CDLL")
-        ctypes.PyDLL = _wrap_external(ctypes.PyDLL, "ctypes.PyDLL")
-        if hasattr(ctypes, "cdll") and hasattr(ctypes.cdll, "LoadLibrary"):
-            ctypes.cdll.LoadLibrary = _wrap_external(
-                ctypes.cdll.LoadLibrary, "ctypes.cdll.LoadLibrary"
-            )
-        if hasattr(ctypes, "windll") and hasattr(ctypes.windll, "LoadLibrary"):
-            ctypes.windll.LoadLibrary = _wrap_external(
-                ctypes.windll.LoadLibrary, "ctypes.windll.LoadLibrary"
-            )
-    except Exception:
-        pass
-
-    _EXTERNAL_GUARDS_INSTALLED = True
 
 
 owner = security.owner
@@ -1100,8 +582,6 @@ class Modules:
         allclients: list,
         translator: Translator,
     ):
-        _install_session_audit_hook()
-        _install_external_guards()
         self._initial_registration = True
         self.commands = {}
         self.inline_handlers = {}
@@ -1119,18 +599,9 @@ class Modules:
         self.db = db
         self.translator = translator
         self.secure_boot = False
-        self._sync_session_allowlist_from_db()
         asyncio.ensure_future(self._junk_collector())
         self.inline = InlineManager(self.client, self._db, self)
         self.client.heroku_inline = self.inline
-
-    def _sync_session_allowlist_from_db(self):
-        try:
-            session_allow = self._db.get("HerokuPluginSecurity", "session_allow", [])
-            if session_allow:
-                set_session_access_hashes(session_allow)
-        except Exception as e:
-            logger.debug("Failed to sync session allowlist from db: %s", e)
 
     async def _junk_collector(self):
         """
@@ -1256,32 +727,11 @@ class Modules:
             else None
         )
 
-        if _is_external_origin(origin) and source_data:
-            forbidden_api = _find_forbidden_external_api_usage(source_data)
-            if forbidden_api:
-                raise LoadError(
-                    "Frame introspection is forbidden for external modules: "
-                    f"{forbidden_api}"
-                )
-
-        pre_hash = _calc_module_hash(source_data) if source_data else None
-
-        if pre_hash:
-            _MODULE_HASH_BY_MODNAME[module_name] = pre_hash
-
         async def _exec_module():
             attempted = False
             while True:
                 try:
-                    token = None
-                    if _is_external_origin(origin):
-                        ctx_hash = pre_hash
-                        token = _external_context.set((origin, ctx_hash))
-                    try:
-                        spec.loader.exec_module(module)
-                    finally:
-                        if token is not None:
-                            _external_context.reset(token)
+                    spec.loader.exec_module(module)
                     break
                 except ImportError as e:
                     if not spec.loader.data or attempted:
@@ -1308,9 +758,7 @@ class Modules:
                     exc_name = (getattr(e, "name", None) or "").lower()
 
                     requirements.extend(
-                        [
-                            IMPORT_PIP_ALIASES.get(exc_name, exc_name or e.name or "")
-                        ]
+                        [IMPORT_PIP_ALIASES.get(exc_name, exc_name or e.name or "")]
                     )
 
                     result = await self.lookup("LoaderMod").install_requirements(
@@ -1350,9 +798,6 @@ class Modules:
         ret.__source__ = (
             source_data if source_data else inspect.getsource(ret.__class__)
         )
-        ret.__module_hash__ = _calc_module_hash(ret.__source__)
-        _MODULE_NAME_BY_HASH[ret.__module_hash__] = ret.__class__.__name__
-        _MODULE_HASH_BY_MODNAME[module_name] = ret.__module_hash__
 
         await self.complete_registration(ret)
 
@@ -1598,65 +1043,8 @@ class Modules:
         with contextlib.suppress(AttributeError):
             _heroku_client_id_logging_tag = copy.copy(self.client.tg_id)  # noqa: F841
 
-        internalized = []
-        try:
-            internalized = self._db.get("HerokuPluginSecurity", "internalized", [])
-        except Exception:
-            internalized = []
-        name_l = instance.__class__.__name__.lower()
-        module_hash = get_module_hash(instance)
-        is_internalized = isinstance(internalized, (list, tuple, set)) and (
-            any(
-                isinstance(item, str) and item.lower() == name_l
-                for item in internalized
-            )
-            or (
-                module_hash
-                and any(
-                    isinstance(item, str) and item == module_hash
-                    for item in internalized
-                )
-            )
-        )
-        if is_internalized:
-            instance.__force_internal__ = True
-
-            if module_hash:
-                try:
-                    from .modules.heroku_plugin_security import allow_session_hash
-
-                    allow_session_hash(self._db, module_hash)
-                except Exception as e:
-                    logger.debug(
-                        "Failed to add module hash to session allowlist: %s", e
-                    )
-
         instance.allmodules = self
         instance.internal_init()
-        if is_internalized and hasattr(instance, "__force_internal__"):
-            delattr(instance, "__force_internal__")
-        origin = getattr(instance, "__origin__", "")
-        if (
-            _is_external_origin(origin)
-            and not is_internalized
-            and not isinstance(getattr(instance, "_client", None), SafeClientProxy)
-        ):
-            safe_client = SafeClientProxy(self.client, origin)
-            safe_allclients = [SafeClientProxy(c, origin) for c in self.allclients]
-            safe_db = SafeDatabaseProxy(self._db, origin)
-            safe_inline = SafeInlineProxy(self.inline, origin)
-            instance.allmodules = SafeAllModulesProxy(
-                self,
-                safe_client,
-                safe_allclients,
-                safe_db,
-                safe_inline,
-            )
-            instance.client = safe_client
-            instance._client = safe_client
-            instance.allclients = safe_allclients
-            instance.db = safe_db
-            instance._db = safe_db
 
         for module in self.modules:
             if module.__class__.__name__ == instance.__class__.__name__:
@@ -1835,73 +1223,45 @@ class Modules:
     ):
         with contextlib.suppress(AttributeError):
             _heroku_client_id_logging_tag = copy.copy(self.client.tg_id)  # noqa: F841
-        origin = getattr(mod, "__origin__", "")
-        safe_client = (
-            mod.client
-            if _is_external_origin(origin)
-            and isinstance(getattr(mod, "client", None), SafeClientProxy)
-            else (
-                SafeClientProxy(self.client, origin)
-                if _is_external_origin(origin)
-                else self.client
-            )
-        )
-        safe_db = (
-            mod.db
-            if _is_external_origin(origin)
-            and isinstance(getattr(mod, "db", None), SafeDatabaseProxy)
-            else self._db
-        )
 
-        token = None
-        if _is_external_origin(origin):
-            mod_hash = getattr(mod, "__module_hash__", None)
-            if not mod_hash and hasattr(mod, "__source__"):
-                mod_hash = _calc_module_hash(mod.__source__)
-            token = _external_context.set((origin, mod_hash))
+        if from_dlmod:
+            try:
+                if len(inspect.signature(mod.on_dlmod).parameters) == 2:
+                    await mod.on_dlmod(self.client, self._db)
+                else:
+                    await mod.on_dlmod()
+            except Exception:
+                logger.info("Can't process `on_dlmod` hook", exc_info=True)
 
         try:
-            if from_dlmod:
-                try:
-                    if len(inspect.signature(mod.on_dlmod).parameters) == 2:
-                        await mod.on_dlmod(safe_client, safe_db)
-                    else:
-                        await mod.on_dlmod()
-                except Exception:
-                    logger.info("Can't process `on_dlmod` hook", exc_info=True)
+            if len(inspect.signature(mod.client_ready).parameters) == 2:
+                await mod.client_ready(self.client, self._db)
+            else:
+                await mod.client_ready()
+        except SelfUnload as e:
+            if no_self_unload:
+                raise e
 
-            try:
-                if len(inspect.signature(mod.client_ready).parameters) == 2:
-                    await mod.client_ready(safe_client, safe_db)
-                else:
-                    await mod.client_ready()
-            except SelfUnload as e:
-                if no_self_unload:
-                    raise e
+            logger.debug("Unloading %s, because it raised SelfUnload", mod)
+            self.modules.remove(mod)
+            return
+        except SelfSuspend as e:
+            if no_self_unload:
+                raise e
 
-                logger.debug("Unloading %s, because it raised SelfUnload", mod)
-                self.modules.remove(mod)
-                return
-            except SelfSuspend as e:
-                if no_self_unload:
-                    raise e
-
-                logger.debug("Suspending %s, because it raised SelfSuspend", mod)
-                return
-            except Exception as e:
-                logger.exception(
-                    (
-                        "Failed to send mod init complete signal for %s due to %s,"
-                        " attempting unload"
-                    ),
-                    mod,
-                    e,
-                )
-                self.modules.remove(mod)
-                raise
-        finally:
-            if token is not None:
-                _external_context.reset(token)
+            logger.debug("Suspending %s, because it raised SelfSuspend", mod)
+            return
+        except Exception as e:
+            logger.exception(
+                (
+                    "Failed to send mod init complete signal for %s due to %s,"
+                    " attempting unload"
+                ),
+                mod,
+                e,
+            )
+            self.modules.remove(mod)
+            raise
 
         # Check for pack_url and load translations
         if hasattr(mod, "__source__"):
