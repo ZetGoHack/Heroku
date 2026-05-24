@@ -270,14 +270,14 @@ class Presets(loader.Module):
                 )
             )
             try:
-                await self.lookup("loader").download_and_install(module, None)
+                await self.lookup("LoaderMod").download_and_install(module, None)
             except Exception:
                 logger.exception("Failed to install module %s", module)
 
             await asyncio.sleep(1)
 
-        if self.lookup("loader").fully_loaded:
-            self.lookup("loader").update_modules_in_db()
+        if self.lookup("LoaderMod").fully_loaded:
+            self.lookup("LoaderMod").update_modules_in_db()
 
         await m.edit(self.strings["installed"].format(preset))
         if origin:
@@ -286,7 +286,7 @@ class Presets(loader.Module):
     def _is_installed(self, link: str) -> bool:
         return any(
             link.strip().lower() == installed.strip().lower()
-            for installed in self.lookup("loader").get("loaded_modules", {}).values()
+            for installed in self.lookup("LoaderMod").get("loaded_modules", {}).values()
         )
 
     async def _preset(self, call: InlineCall, preset: str):
@@ -361,12 +361,12 @@ class Presets(loader.Module):
         """Custom preset loader. Reply to a file or send a file with the command."""
         msg = message if message.file else (await message.get_reply_message())
         if not msg or not msg.file:
-            await message.edit(self.lookup("loader").strings["no_file"])
+            await message.edit(self.lookup("LoaderMod").strings["no_file"])
             return
         try:
             data = orjson.loads(await msg.download_media(bytes))
         except Exception:
-            await message.edit(self.lookup("loader").strings["load_failed"])
+            await message.edit(self.lookup("LoaderMod").strings["load_failed"])
             logger.exception("Failed to load preset from file")
             return
 
@@ -376,7 +376,7 @@ class Presets(loader.Module):
             or "modules" not in data
             or not isinstance(data["modules"], list)
         ):
-            await message.edit(self.lookup("loader").strings["load_failed"])
+            await message.edit(self.lookup("LoaderMod").strings["load_failed"])
             logger.error("Invalid preset format")
             return
 
@@ -525,19 +525,19 @@ class Presets(loader.Module):
         """Load aliases from file. Send a file with the command or reply to a file."""
         msg = message if message.file else (await message.get_reply_message())
         if not msg or not msg.file:
-            await message.edit(self.lookup("loader").strings["no_file"])
+            await message.edit(self.lookup("LoaderMod").strings["no_file"])
             return
         try:
             data = orjson.loads(await msg.download_media(bytes))
         except Exception:
-            await message.edit(self.lookup("loader").strings["load_failed"])
+            await message.edit(self.lookup("LoaderMod").strings["load_failed"])
             logger.exception("Failed to load aliases from file")
             return
         if not isinstance(data, list) or not all(
             isinstance(item, dict) and "alias" in item and "command" in item
             for item in data
         ):
-            await message.edit(self.lookup("loader").strings["load_failed"])
+            await message.edit(self.lookup("LoaderMod").strings["load_failed"])
             logger.error("Invalid aliases format")
             return
 

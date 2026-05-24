@@ -683,6 +683,13 @@ VALID_APT_PACKAGES = re.compile(
     re.MULTILINE,
 )
 
+IMPORT_PIP_ALIASES = {
+    "sklearn": "scikit-learn",
+    "pil": "Pillow",
+    "herokutl": "Heroku-TL-New",
+    "markdown_it": "markdown-it-py",
+}
+
 USER_INSTALL = "PIP_TARGET" not in os.environ and "VIRTUAL_ENV" not in os.environ
 
 native_import = builtins.__import__
@@ -1302,15 +1309,11 @@ class Modules:
 
                     requirements.extend(
                         [
-                            {
-                                "sklearn": "scikit-learn",
-                                "pil": "Pillow",
-                                "herokutl": "Heroku-TL-New",
-                            }.get(exc_name, exc_name or e.name or "")
+                            IMPORT_PIP_ALIASES.get(exc_name, exc_name or e.name or "")
                         ]
                     )
 
-                    result = await self.lookup("loader").install_requirements(
+                    result = await self.lookup("LoaderMod").install_requirements(
                         requirements
                     )
 

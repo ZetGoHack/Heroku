@@ -213,7 +213,7 @@ class HerokuBackupMod(loader.Module):
                 zipf.writestr(
                     "db_mods.json",
                     orjson.dumps(
-                        self.lookup("Loader").get("loaded_modules", {}),
+                        self.lookup("LoaderMod").get("loaded_modules", {}),
                         option=orjson.OPT_INDENT_2 | orjson.OPT_NON_STR_KEYS,
                     ),
                 )
@@ -315,7 +315,7 @@ class HerokuBackupMod(loader.Module):
                         with modzip.open("db_mods.json", "r") as modules:
                             db_mods = orjson.loads(modules.read().decode())
                             if isinstance(db_mods, dict):
-                                self.lookup("Loader").set("loaded_modules", db_mods)
+                                self.lookup("LoaderMod").set("loaded_modules", db_mods)
 
                         for name in modzip.namelist():
                             if name == "db_mods.json":
@@ -458,13 +458,13 @@ class HerokuBackupMod(loader.Module):
 
     @loader.command()
     async def backupmods(self, message: Message):
-        mods_quantity = len(self.lookup("Loader").get("loaded_modules", {}))
+        mods_quantity = len(self.lookup("LoaderMod").get("loaded_modules", {}))
 
         result = io.BytesIO()
         result.name = "mods.zip"
 
         db_mods = orjson.dumps(
-            self.lookup("Loader").get("loaded_modules", {}),
+            self.lookup("LoaderMod").get("loaded_modules", {}),
             option=orjson.OPT_INDENT_2 | orjson.OPT_NON_STR_KEYS,
         )
 
@@ -555,7 +555,7 @@ class HerokuBackupMod(loader.Module):
                             )
                             for key, value in db_mods.items()
                         ):
-                            self.lookup("Loader").set("loaded_modules", db_mods)
+                            self.lookup("LoaderMod").set("loaded_modules", db_mods)
 
                     for name in zf.namelist():
                         if name == "db_mods.json" or (
@@ -577,7 +577,7 @@ class HerokuBackupMod(loader.Module):
             ):
                 raise RuntimeError("Invalid backup")
 
-            self.lookup("Loader").set("loaded_modules", decoded_text)
+            self.lookup("LoaderMod").set("loaded_modules", decoded_text)
 
         await utils.answer(message, self.strings["mods_restored"])
         await self.invoke("restart", "-f", peer=message.peer_id)
@@ -599,7 +599,7 @@ class HerokuBackupMod(loader.Module):
             zipf.writestr(
                 "db_mods.json",
                 orjson.dumps(
-                    self.lookup("Loader").get("loaded_modules", {}),
+                    self.lookup("LoaderMod").get("loaded_modules", {}),
                     option=orjson.OPT_INDENT_2 | orjson.OPT_NON_STR_KEYS,
                 ),
             )
@@ -694,7 +694,7 @@ class HerokuBackupMod(loader.Module):
                         with modzip.open("db_mods.json", "r") as modules:
                             db_mods = orjson.loads(modules.read().decode())
                             if isinstance(db_mods, dict):
-                                self.lookup("Loader").set("loaded_modules", db_mods)
+                                self.lookup("LoaderMod").set("loaded_modules", db_mods)
 
                         for name in modzip.namelist():
                             if name == "db_mods.json":

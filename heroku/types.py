@@ -914,7 +914,7 @@ class Module:
                 [
                     {
                         "text": "💫 Approve",
-                        "callback": self.lookup("loader").approve_internal,
+                        "callback": self.lookup("LoaderMod").approve_internal,
                         "args": (channel, event),
                     },
                     {
@@ -1093,7 +1093,7 @@ class Module:
             and utils.check_url(url)
         ):
             with contextlib.suppress(Exception):
-                await self.lookup("loader")._send_stats(url)
+                await self.lookup("LoaderMod")._send_stats(url)
 
         lib_obj.source_url = url.strip("/")
         lib_obj.allmodules = self.allmodules

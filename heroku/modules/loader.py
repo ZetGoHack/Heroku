@@ -1045,11 +1045,7 @@ class LoaderMod(loader.Module):
                     e.name,
                 )
                 requirements = [
-                    {
-                        "sklearn": "scikit-learn",
-                        "pil": "Pillow",
-                        "herokutl": "Heroku-TL-New",
-                    }.get(e.name.lower(), e.name)
+                    loader.IMPORT_PIP_ALIASES.get(e.name.lower(), e.name)
                 ]
 
                 if not requirements:

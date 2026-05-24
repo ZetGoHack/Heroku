@@ -461,7 +461,7 @@ class Evaluator(loader.Module):
                 f'{btoken.split(":")[0]}:{"*" * 26}',
             )
 
-        if htoken := self.lookup("loader").get("token", False):
+        if htoken := self.lookup("LoaderMod").get("token", False):
             ret = ret.replace(htoken, f'eugeo_{"*" * 26}')
 
         ret = ret.replace(

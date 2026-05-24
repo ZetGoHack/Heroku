@@ -451,7 +451,7 @@ class Help(loader.Module):
                         "".join(core_),
                         (
                             ""
-                            if self.lookup("Loader").fully_loaded
+                            if self.lookup("LoaderMod").fully_loaded
                             else f"\n\n{self.strings['partial_load']}"
                         ),
                     ),
@@ -469,7 +469,7 @@ class Help(loader.Module):
                         "".join(plain_ + (no_commands_ if force else [])),
                         (
                             ""
-                            if self.lookup("Loader").fully_loaded
+                            if self.lookup("LoaderMod").fully_loaded
                             else f"\n\n{self.strings['partial_load']}"
                         ),
                     ),
@@ -488,7 +488,7 @@ class Help(loader.Module):
                         "".join(plain_ + (no_commands_ if force else [])),
                         (
                             ""
-                            if self.lookup("Loader").fully_loaded
+                            if self.lookup("LoaderMod").fully_loaded
                             else f"\n\n{self.strings['partial_load']}"
                         ),
                     ),
