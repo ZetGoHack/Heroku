@@ -12,7 +12,6 @@
 
 import contextlib
 import herokutl
-from herokutl.extensions.html import CUSTOM_EMOJIS
 from herokutl.tl.types import Message, User
 
 from .. import loader, main, utils, version
@@ -109,7 +108,7 @@ class CoreMod(loader.Module):
             self.strings["heroku"].format(
                 (
                     utils.get_platform_emoji()
-                    if self._client.heroku_me.premium and CUSTOM_EMOJIS
+                    if self._client.heroku_me.premium
                     else "🪐 <b>Heroku userbot</b>"
                 ),
                 *version.__version__,

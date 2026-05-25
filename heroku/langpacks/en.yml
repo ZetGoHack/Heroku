@@ -152,8 +152,6 @@ heroku_settings:
   btn_restart: "🔄 Restart"
   btn_update: "🧭 Update"
   close_menu: "😌 Close menu"
-  custom_emojis: "✅ Custom emojis"
-  no_custom_emojis: "🚫 Custom emojis"
   suggest_subscribe: "✅ Suggest subscribe to channel"
   do_not_suggest_subscribe: "🚫 Suggest subscribe to channel"
   private_not_allowed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>This command must be executed in chat</b>"

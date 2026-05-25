@@ -1199,6 +1199,4 @@ class Heroku:
                 pass
 
 
-herokutl.extensions.html.CUSTOM_EMOJIS = not get_config_key("disable_custom_emojis")
-
 heroku = Heroku()

@@ -118,8 +118,6 @@ heroku_settings:
   btn_restart: "🔄 Westawt"
   btn_update: "🧭 Update"
   close_menu: "😌 Cwose menyu"
-  custom_emojis: "✅ Custom emojis"
-  no_custom_emojis: "🚫 Custom emojis"
   suggest_subscribe: "✅ Suggest subscwibe to channyew"
   do_not_suggest_subscribe: "🚫 Suggest subscwibe to channyew"
   private_not_allowed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Dis command must be executed in chat</b>"

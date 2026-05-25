@@ -23,7 +23,6 @@ from urllib.parse import urlparse
 
 import grapheme
 from herokutl.errors.rpcerrorlist import ChatSendInlineForbiddenError
-from herokutl.extensions.html import CUSTOM_EMOJIS
 from herokutl.tl.types import InputGeoPoint, Message
 
 from .. import main, utils
@@ -123,6 +122,7 @@ class Form(InlineUnit):
             return False
 
         text = self.sanitise_text(text)
+        needs_premium_emoji_pre_edit = self._needs_premium_emoji_pre_edit(text)
 
         if not isinstance(silent, bool):
             logger.error(
@@ -270,7 +270,7 @@ class Form(InlineUnit):
                 )(
                     (
                         utils.get_platform_emoji()
-                        if self._client.heroku_me.premium and CUSTOM_EMOJIS
+                        if self._client.heroku_me.premium
                         else "🪐"
                     )
                     + self.translator.getkey("inline.opening_form"),
@@ -309,6 +309,7 @@ class Form(InlineUnit):
             "type": "form",
             "text": text,
             "buttons": reply_markup,
+            "premium_emoji_pre_edit": needs_premium_emoji_pre_edit,
             "caller": message,
             "chat": None,
             "message_id": None,
@@ -387,8 +388,17 @@ class Form(InlineUnit):
             inline_manager=self, unit_id=unit_id, inline_message_id=inline_message_id
         )
 
-        if not isinstance(base_reply_markup, Placeholder):
-            await msg.edit(text, reply_markup=base_reply_markup)
+        if needs_premium_emoji_pre_edit or not isinstance(
+            base_reply_markup, Placeholder
+        ):
+            await msg.edit(
+                text,
+                reply_markup=(
+                    base_reply_markup
+                    if not isinstance(base_reply_markup, Placeholder)
+                    else reply_markup
+                ),
+            )
 
         return msg
 
@@ -441,6 +451,7 @@ class Form(InlineUnit):
             return
 
         form = self._units[inline_query.query]
+        form_text = "🪐" if form.get("premium_emoji_pre_edit") else form.get("text")
         try:
             match True:
                 case _ if "photo" in form:
@@ -449,7 +460,7 @@ class Form(InlineUnit):
                             await inline_query.builder.photo(
                                 form["photo"],
                                 id=utils.rand(20),
-                                text=form.get("text"),
+                                text=form_text,
                                 parse_mode="HTML",
                                 buttons=self.generate_markup(
                                     form["uid"],
@@ -466,7 +477,7 @@ class Form(InlineUnit):
                                 title="Heroku",
                                 type="gif",
                                 id=utils.rand(20),
-                                text=form.get("text"),
+                                text=form_text,
                                 parse_mode="HTML",
                                 buttons=self.generate_markup(
                                     form["uid"],
@@ -484,7 +495,7 @@ class Form(InlineUnit):
                                 description="Heroku",
                                 type="video",
                                 id=utils.rand(20),
-                                text=form.get("text"),
+                                text=form_text,
                                 parse_mode="HTML",
                                 mime_type="video/mp4",
                                 buttons=self.generate_markup(
@@ -502,7 +513,7 @@ class Form(InlineUnit):
                                 title="Heroku",
                                 description="Heroku",
                                 id=utils.rand(20),
-                                text=form.get("text"),
+                                text=form_text,
                                 parse_mode="HTML",
                                 mime_type=form["mime_type"],
                                 buttons=self.generate_markup(
@@ -538,7 +549,7 @@ class Form(InlineUnit):
                                 title=form["audio"].get("title", "Heroku"),
                                 type="audio",
                                 id=utils.rand(20),
-                                text=form.get("text"),
+                                text=form_text,
                                 parse_mode="HTML",
                                 buttons=self.generate_markup(
                                     form["uid"],
@@ -552,7 +563,7 @@ class Form(InlineUnit):
                         [
                             await inline_query.builder.article(
                                 title="Heroku",
-                                text=form["text"],
+                                text=form_text,
                                 parse_mode="HTML",
                                 link_preview=False,
                                 buttons=self.generate_markup(inline_query.query),

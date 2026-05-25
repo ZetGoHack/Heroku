@@ -25,7 +25,6 @@ import typing
 import aiohttp
 import git
 from git import GitCommandError, Repo
-from herokutl.extensions.html import CUSTOM_EMOJIS
 from herokutl.tl.functions.messages import (
     GetDialogFiltersRequest,
     UpdateDialogFilterRequest,
@@ -863,16 +862,8 @@ class UpdaterMod(loader.Module):
             await self.ubstop_func(message)
             return
 
-        form = await self.inline.form(
+        await self.inline.form(
             message=message,
-            text="🪐",
-            silent=True,
-        )
-
-        if not form:
-            return
-
-        await form.edit(
             text=self.strings["stop_ub_confirm"].format(
                 utils.get_platform_emoji()
                 if self.client.heroku_me.premium
@@ -888,4 +879,5 @@ class UpdaterMod(loader.Module):
                 ],
                 [{"text": "❌", "action": "close", "style": "primary"}],
             ],
+            silent=True,
         )

@@ -118,8 +118,6 @@ heroku_settings:
   btn_restart: "🔄 R3574r7"
   btn_update: "🧭 Upd473"
   close_menu: "😌 Cl053 m3nu"
-  custom_emojis: "✅ Cu570m 3m0j15"
-  no_custom_emojis: "🚫 Cu570m 3m0j15"
   suggest_subscribe: "✅ Sugg357 5ub5cr1b3 2 ch4nn3l"
   do_not_suggest_subscribe: "🚫 Sugg357 5ub5cr1b3 2 ch4nn3l"
   private_not_allowed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>7h15 cmd mu57 b3 3x3cu73d 1n ch47</b>"

@@ -118,8 +118,6 @@ heroku_settings:
   btn_restart: "🔄 sudo reboot"
   btn_update: "🧭 git pull"
   close_menu: "😌 exit"
-  custom_emojis: "✅ Assets (Mounted)"
-  no_custom_emojis: "🚫 Assets (Unmounted)"
   suggest_subscribe: "✅ Auto-Follow (Symlink)"
   do_not_suggest_subscribe: "🚫 Auto-Follow (Unlinked)"
   private_not_allowed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>RuntimeError: Chat scope only</b>"

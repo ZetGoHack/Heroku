@@ -111,8 +111,6 @@ heroku_settings:
   btn_restart: "🔄 Ребут"
   btn_update: "🧭 Обнова"
   close_menu: "😌 Закрыть (ну нафиг)"
-  custom_emojis: "✅ Кастомные эмодзи (для мажоров)"
-  no_custom_emojis: "🚫 Без кастомных (для нищих)"
   suggest_subscribe: "✅ Предлагать сабку на канал"
   do_not_suggest_subscribe: "🚫 Не пиарить каналы"
   private_not_allowed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>В чате пиши, а не тут</b>"

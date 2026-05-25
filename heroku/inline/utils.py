@@ -40,9 +40,21 @@ if typing.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 VALID_BUTTON_STYLES = {"danger", "primary", "success"}
+TG_EMOJI_RE = re.compile(
+    r"<tg-emoji\b[^>]*\bemoji-id\s*=\s*['\"]?\d+['\"]?[^>]*>(.*?)</tg-emoji>",
+    flags=re.IGNORECASE | re.DOTALL,
+)
 
 
 class Utils(InlineUnit):
+    def _has_premium_emoji(self, text: typing.Any) -> bool:
+        return isinstance(text, str) and bool(TG_EMOJI_RE.search(text))
+
+    def _needs_premium_emoji_pre_edit(self, text: typing.Any) -> bool:
+        return self._has_premium_emoji(text) and bool(
+            getattr(getattr(self._client, "heroku_me", None), "premium", False)
+        )
+
     def _get_button_style(self, button: dict) -> typing.Optional[str]:
         """Extract and validate button style from button dict"""
         style = button.get("style")

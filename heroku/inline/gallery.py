@@ -23,7 +23,6 @@ from urllib.parse import urlparse
 
 from herokutl.errors.rpcerrorlist import FloodWaitError, MediaPrevInvalidError
 from herokutl.errors.rpcerrorlist import ChatSendInlineForbiddenError
-from herokutl.extensions.html import CUSTOM_EMOJIS
 from herokutl.tl.types import Message
 
 from .. import main, utils
@@ -258,7 +257,7 @@ class Gallery(InlineUnit):
                 )(
                     (
                         utils.get_platform_emoji()
-                        if self._client.heroku_me.premium and CUSTOM_EMOJIS
+                        if self._client.heroku_me.premium
                         else "🪐"
                     )
                     + self.translator.getkey("inline.opening_gallery"),

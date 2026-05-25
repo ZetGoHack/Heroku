@@ -118,8 +118,6 @@ heroku_settings:
   btn_restart: "🔄 再起動"
   btn_update: "🧭 アップデート"
   close_menu: "😌 メニューを閉じる"
-  custom_emojis: "✅ カスタム絵文字"
-  no_custom_emojis: "🚫 カスタム絵文字"
   suggest_subscribe: "✅ チャンネル登録を提案する"
   do_not_suggest_subscribe: "🚫 チャンネル登録を提案する"
   private_not_allowed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>このコマンドはチャットで実行する必要があります</b>"

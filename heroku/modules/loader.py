@@ -1357,37 +1357,31 @@ class LoaderMod(loader.Module):
             if not self.lookup(modules[0]):
                 suggestions = self._get_unload_suggestions(modules[0])
                 if suggestions:
-                    form = await self.inline.form(
-                        "<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji>",
-                        message,
+                    await self.inline.form(
+                        self.strings["unload_suggestions"].format(
+                            utils.escape_html(modules[0])
+                        ),
+                        message=message,
+                        reply_markup=[
+                            [
+                                {
+                                    "text": label,
+                                    "callback": self._inline__unload_suggested,
+                                    "args": (classname, force),
+                                }
+                            ]
+                            for classname, label in suggestions
+                        ]
+                        + [
+                            [
+                                {
+                                    "text": self.strings["cancel"].replace("🚫", "❌"),
+                                    "action": "close",
+                                }
+                            ]
+                        ],
                         silent=True,
                     )
-                    if form:
-                        await form.edit(
-                            self.strings["unload_suggestions"].format(
-                                utils.escape_html(modules[0])
-                            ),
-                            reply_markup=[
-                                [
-                                    {
-                                        "text": label,
-                                        "callback": self._inline__unload_suggested,
-                                        "args": (classname, force),
-                                    }
-                                ]
-                                for classname, label in suggestions
-                            ]
-                            + [
-                                [
-                                    {
-                                        "text": self.strings["cancel"].replace(
-                                            "🚫", "❌"
-                                        ),
-                                        "action": "close",
-                                    }
-                                ]
-                            ],
-                        )
                     return
 
             msg = await self.unload_module(modules[0], force=force)

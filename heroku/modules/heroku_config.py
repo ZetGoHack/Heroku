@@ -21,6 +21,7 @@ from herokutl.extensions import html
 
 from .. import loader, translations, utils
 from ..inline.types import InlineCall
+from ..types import HerokuReplyMarkup
 
 # Everywhere in this module, we use the following naming convention:
 # `obj_type` of non-core module = False
@@ -30,6 +31,32 @@ from ..inline.types import InlineCall
 
 ROW_SIZE = 3
 NUM_ROWS = 5
+
+
+class _InlineFormDraft:
+    inline_message_id = None
+
+    def __init__(self):
+        self.text: typing.Optional[str] = None
+        self.reply_markup: typing.Optional[HerokuReplyMarkup] = None
+        self.kwargs: typing.Dict[str, typing.Any] = {}
+
+    async def edit(
+        self,
+        text: typing.Optional[str] = None,
+        reply_markup: typing.Optional[HerokuReplyMarkup] = None,
+        *args: typing.Any,
+        **kwargs: typing.Any,
+    ) -> None:
+        if text is None:
+            text = kwargs.pop("text", None)
+
+        if reply_markup is None and args:
+            reply_markup = args[0]
+
+        self.text = text
+        self.reply_markup = reply_markup
+        self.kwargs = kwargs
 
 
 @loader.tds
@@ -102,7 +129,7 @@ class HerokuConfigMod(loader.Module):
         query: str,
         mod: str,
         option: str,
-        inline_message_id: str,
+        inline_message_id: typing.Optional[str] = None,
         obj_type: typing.Union[bool, str] = False,
     ):
         try:
@@ -142,7 +169,7 @@ class HerokuConfigMod(loader.Module):
                     },
                 ]
             ],
-            inline_message_id=inline_message_id,
+            inline_message_id=inline_message_id or call.inline_message_id,
         )
 
     async def inline__reset_default(
@@ -312,7 +339,7 @@ class HerokuConfigMod(loader.Module):
         query: str,
         mod: str,
         option: str,
-        inline_message_id: str,
+        inline_message_id: typing.Optional[str] = None,
         obj_type: typing.Union[bool, str] = False,
     ):
         try:
@@ -361,7 +388,7 @@ class HerokuConfigMod(loader.Module):
                     },
                 ]
             ],
-            inline_message_id=inline_message_id,
+            inline_message_id=inline_message_id or call.inline_message_id,
         )
 
     async def inline__remove_item(
@@ -370,7 +397,7 @@ class HerokuConfigMod(loader.Module):
         query: str,
         mod: str,
         option: str,
-        inline_message_id: str,
+        inline_message_id: typing.Optional[str] = None,
         obj_type: typing.Union[bool, str] = False,
     ):
         try:
@@ -431,7 +458,7 @@ class HerokuConfigMod(loader.Module):
                     },
                 ]
             ],
-            inline_message_id=inline_message_id,
+            inline_message_id=inline_message_id or call.inline_message_id,
         )
 
     def _generate_series_markup(
@@ -1241,6 +1268,30 @@ class HerokuConfigMod(loader.Module):
             ],
         )
 
+    async def _send_initial_config_form(
+        self,
+        message: Message,
+        handler: typing.Callable[..., typing.Awaitable[typing.Any]],
+        *args: typing.Any,
+        **kwargs: typing.Any,
+    ) -> None:
+        draft = _InlineFormDraft()
+        await handler(draft, *args, **kwargs)
+
+        if draft.text is None:
+            return
+
+        form_kwargs = dict(draft.kwargs)
+        form_kwargs.pop("inline_message_id", None)
+
+        await self.inline.form(
+            draft.text,
+            message=message,
+            reply_markup=draft.reply_markup,
+            silent=True,
+            **form_kwargs,
+        )
+
     async def inline__global_folder(
         self,
         call: InlineCall,
@@ -1376,16 +1427,18 @@ class HerokuConfigMod(loader.Module):
             and self.lookup(args_s[0])
             and hasattr(self.lookup(args_s[0]), "config")
         ):
-            form = await self.inline.form(
-                self.config["cfg_emoji"], message, silent=True
-            )
             mod = self.lookup(args_s[0])
             if isinstance(mod, loader.Library):
                 type_ = "library"
             else:
                 type_ = mod.__origin__.startswith("<core")
 
-            await self.inline__configure(form, args_s[0], obj_type=type_)
+            await self._send_initial_config_form(
+                message,
+                self.inline__configure,
+                args_s[0],
+                obj_type=type_,
+            )
             return
 
         if (
@@ -1393,9 +1446,6 @@ class HerokuConfigMod(loader.Module):
             and self.lookup(args_s[0])
             and hasattr(self.lookup(args_s[0]), "config")
         ):
-            form = await self.inline.form(
-                self.config["cfg_emoji"], message, silent=True
-            )
             mod = self.lookup(args_s[0])
             if isinstance(mod, loader.Library):
                 type_ = "library"
@@ -1403,8 +1453,12 @@ class HerokuConfigMod(loader.Module):
                 type_ = mod.__origin__.startswith("<core")
 
             if args_s[1] in mod.config.keys():
-                await self.inline__configure_option(
-                    form, mod=args_s[0], config_opt=args_s[1], obj_type=type_
+                await self._send_initial_config_form(
+                    message,
+                    self.inline__configure_option,
+                    mod=args_s[0],
+                    config_opt=args_s[1],
+                    obj_type=type_,
                 )
             else:
                 await self.inline__choose_category(message)
