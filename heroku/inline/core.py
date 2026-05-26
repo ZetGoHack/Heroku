@@ -32,7 +32,22 @@ from herokutl.tl.functions.messages import (
     GetDialogFiltersRequest,
     UpdateDialogFilterRequest,
 )
-from herokutl.tl.types import DialogFilter, InputPeerUser, Message
+from herokutl.tl.types import (
+    DialogFilter,
+    InputPeerUser,
+    Message,
+    UpdateBotChatBoost,
+    UpdateBotChatInviteRequester,
+    UpdateBotInlineSend,
+    UpdateBotMessageReaction,
+    UpdateBotMessageReactions,
+    UpdateBotPrecheckoutQuery,
+    UpdateBotShippingQuery,
+    UpdateChannelParticipant,
+    UpdateChatParticipant,
+    UpdateMessagePoll,
+    UpdateMessagePollVote,
+)
 from herokutl.utils import get_display_name
 
 from .. import utils
@@ -55,24 +70,31 @@ if typing.TYPE_CHECKING:
     from ..loader import Modules
 
 
-def _make_handler_wrapper(
-    handler: typing.Callable, update_type: str
-) -> typing.Callable:
-    async def wrapper(*args, **kwargs):
-        update = args[0] if args else next(iter(kwargs.values()), None)
-        return await handler(update)
+_BOT_UPDATE_EVENTS: typing.Dict[str, typing.Callable[[], object]] = {
 
-    return wrapper
+# Default updates 
 
+    "message": lambda: events.NewMessage(),
+    "edited_message": lambda: events.MessageEdited(),
+    "channel_post": lambda: events.NewMessage(),
+    "edited_channel_post": lambda: events.MessageEdited(),
+    "inline_query": lambda: events.InlineQuery(),
+    "callback_query": lambda: events.CallbackQuery(),
 
-_BOT_UPDATE_EVENTS = {
-    "message": events.NewMessage,
-    "edited_message": events.MessageEdited,
-    "channel_post": events.NewMessage,
-    "edited_channel_post": events.MessageEdited,
-    "inline_query": events.InlineQuery,
-    "callback_query": events.CallbackQuery,
-    "chosen_inline_result": events.Raw,
+# Raw-based
+
+    "chosen_inline_result": lambda: events.Raw(types=UpdateBotInlineSend),
+    "shipping_query": lambda: events.Raw(types=UpdateBotShippingQuery),
+    "pre_checkout_query": lambda: events.Raw(types=UpdateBotPrecheckoutQuery),
+    "poll": lambda: events.Raw(types=UpdateMessagePoll),
+    "poll_answer": lambda: events.Raw(types=UpdateMessagePollVote),
+    "my_chat_member": lambda: events.Raw(types=(UpdateChatParticipant, UpdateChannelParticipant)),
+    "chat_member": lambda: events.Raw(types=(UpdateChatParticipant, UpdateChannelParticipant)),
+    "chat_join_request": lambda: events.Raw(types=UpdateBotChatInviteRequester),
+    "message_reaction": lambda: events.Raw(types=UpdateBotMessageReaction),
+    "message_reaction_count": lambda: events.Raw(types=UpdateBotMessageReactions),
+    "chat_boost": lambda: events.Raw(types=UpdateBotChatBoost),
+    "removed_chat_boost": lambda: events.Raw(types=UpdateBotChatBoost),
 }
 
 
@@ -161,7 +183,7 @@ class InlineManager(
     def _register_builtin_handlers(self):
         self._register_bot_handler(self._inline_handler, events.InlineQuery())
         self._register_bot_handler(self._callback_query_handler, events.CallbackQuery())
-        self._register_bot_handler(self._chosen_inline_handler, events.Raw())
+        self._register_bot_handler(self._chosen_inline_handler, events.Raw(types=UpdateBotInlineSend))
         self._register_bot_handler(self._message_handler, events.NewMessage())
 
         for handler_id, (update_type, handler) in self._bot_update_handlers.items():
@@ -295,11 +317,11 @@ class InlineManager(
         update_type: str,
         handler: typing.Callable,
     ):
-        event_cls = _BOT_UPDATE_EVENTS.get(update_type)
-        if not event_cls or not self._bot_client:
+        builder_factory = _BOT_UPDATE_EVENTS.get(update_type)
+        if not builder_factory or not self._bot_client:
             return
 
-        event_builder = event_cls()
+        event_builder = builder_factory()
         self._register_bot_handler(handler, event_builder, handler_id=handler_id)
 
     def register_bot_update_handler(
@@ -322,10 +344,7 @@ class InlineManager(
             )
             return
 
-        self._bot_update_handlers[handler_id] = (
-            update_type,
-            _make_handler_wrapper(handler, update_type),
-        )
+        self._bot_update_handlers[handler_id] = (update_type, handler)
         logger.debug(
             "Registered bot update handler %s for update type %s",
             handler_id,
@@ -344,10 +363,24 @@ class InlineManager(
             return
 
         del self._bot_update_handlers[handler_id]
-        if handler_id in self._bot_handler_refs and self._bot_client:
-            handler, event_builder = self._bot_handler_refs.pop(handler_id)
-            self._bot_client.remove_event_handler(handler, event_builder)
+        self._bot_handler_refs.pop(handler_id, None)
         logger.debug("Unregistered bot update handler %s", handler_id)
+
+        if not self._bot_client:
+            return
+
+        for handler, event_builder in list(self._bot_handler_refs.values()):
+            self._bot_client.remove_event_handler(handler, event_builder)
+        self._bot_handler_refs.clear()
+
+        for hid, (update_type, handler) in self._bot_update_handlers.items():
+            builder_factory = _BOT_UPDATE_EVENTS.get(update_type)
+            if not builder_factory:
+                continue
+            event_builder = builder_factory()
+            self._bot_client.add_event_handler(handler, event_builder)
+            self._bot_handler_refs[hid] = (handler, event_builder)
+        logger.debug("Rebuilt custom handlers after unregistering %s", handler_id)
 
     async def _invoke_unit(self, unit_id: str, message: Message) -> Message:
         event = asyncio.Event()

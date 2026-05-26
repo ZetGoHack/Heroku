@@ -2,7 +2,13 @@ import io
 import typing
 
 from herokutl import Button
+from herokutl import utils as tl_utils
 from herokutl.tl import types
+from herokutl.tl.functions.messages import (
+    EditInlineBotMessageRequest,
+    SetInlineBotResultsRequest,
+)
+from herokutl.tl.types import DocumentAttributeAudio
 
 
 class TelethonBot:
@@ -30,7 +36,10 @@ class TelethonBot:
             return media
 
         if hasattr(file, "seek"):
-            file.seek(0)
+            try:
+                file.seek(0)
+            except Exception:
+                pass
 
         return file
 
@@ -51,6 +60,88 @@ class TelethonBot:
                 pass
 
         return message
+
+    def _build_reply_markup(self, reply_markup):
+        if reply_markup is None:
+            return None
+        if isinstance(
+            reply_markup,
+            (
+                types.ReplyInlineMarkup,
+                types.ReplyKeyboardMarkup,
+                types.ReplyKeyboardHide,
+                types.ReplyKeyboardForceReply,
+            ),
+        ):
+            return reply_markup
+        return self.client.build_reply_markup(reply_markup)
+
+    @staticmethod
+    def _peer_owner_id(peer) -> int:
+        if isinstance(peer, types.PeerUser):
+            return peer.user_id
+        if isinstance(peer, types.PeerChannel):
+            return peer.channel_id
+        if isinstance(peer, types.PeerChat):
+            return peer.chat_id
+        raise TypeError(f"Unsupported inline peer type: {type(peer)!r}")
+
+    @classmethod
+    def _coerce_inline_message_id(cls, inline_message_id):
+        if inline_message_id is None:
+            return None
+
+        if isinstance(
+            inline_message_id,
+            (types.InputBotInlineMessageID, types.InputBotInlineMessageID64),
+        ):
+            return inline_message_id
+
+        if not isinstance(inline_message_id, str):
+            raise TypeError(
+                "inline_message_id must be str or InputBotInlineMessageID/64, "
+                f"got {type(inline_message_id)!r}"
+            )
+
+        message_id, peer, dc_id, access_hash = tl_utils.resolve_inline_message_id(
+            inline_message_id
+        )
+
+        if peer is None:
+            raise ValueError(f"Invalid inline_message_id: {inline_message_id!r}")
+
+        return types.InputBotInlineMessageID64(
+            dc_id=dc_id,
+            owner_id=cls._peer_owner_id(peer),
+            id=message_id,
+            access_hash=access_hash,
+        )
+
+    @staticmethod
+    def _coerce_input_media(media):
+        if media is None:
+            return None
+
+        if isinstance(
+            media,
+            (
+                types.InputMediaDocument,
+                types.InputMediaPhoto,
+                types.InputMediaUploadedDocument,
+                types.InputMediaUploadedPhoto,
+                types.InputMediaWebPage,
+                types.InputMediaEmpty,
+            ),
+        ):
+            return media
+
+        try:
+            return tl_utils.get_input_media(media)
+        except TypeError as e:
+            raise TypeError(
+                "For inline media edits pass a TL InputMedia object "
+                "(InputMediaDocument, InputMediaPhoto, etc.), not raw bytes/path."
+            ) from e
 
     async def get_me(self):
         return await self.client.get_me()
@@ -126,8 +217,96 @@ class TelethonBot:
             )
         )
 
+    async def send_audio(
+        self,
+        chat_id,
+        audio,
+        *,
+        title: typing.Optional[str] = None,
+        performer: typing.Optional[str] = None,
+        duration: typing.Optional[int] = None,
+        thumbnail=None,
+        reply_markup=None,
+        message_thread_id: typing.Optional[int] = None,
+        **kwargs,
+    ):
+        attributes = [
+            DocumentAttributeAudio(
+                duration=duration or 0,
+                title=title,
+                performer=performer,
+            )
+        ]
+        return self._with_message_id_alias(
+            await self.client.send_file(
+                chat_id,
+                self._normalise_file(audio),
+                attributes=attributes,
+                thumb=self._normalise_file(thumbnail) if thumbnail is not None else None,
+                buttons=reply_markup,
+                silent=kwargs.get("disable_notification"),
+                **self._thread_kwargs(message_thread_id),
+            )
+        )
+
     async def delete_message(self, chat_id, message_id):
         return await self.client.delete_messages(chat_id, message_id)
+
+    async def answer_inline_query(
+        self,
+        inline_query_id: int,
+        results: list,
+        *,
+        cache_time: int = 0,
+        is_personal: bool = False,
+        next_offset: typing.Optional[str] = None,
+        **kwargs,
+    ):
+        prepared = []
+        for item in results:
+            if hasattr(item, "__await__"):
+                item = await item
+            prepared.append(item)
+
+        return await self.client(
+            SetInlineBotResultsRequest(
+                query_id=inline_query_id,
+                results=prepared,
+                cache_time=cache_time,
+                private=is_personal,
+                next_offset=next_offset or "",
+                gallery=kwargs.get("gallery", False),
+            )
+        )
+
+    async def edit_message_media(
+        self,
+        *,
+        inline_message_id: typing.Any = None,
+        chat_id: typing.Any = None,
+        message_id: typing.Any = None,
+        media=None,
+        reply_markup: typing.Any = None,
+        **kwargs,
+    ):
+        if inline_message_id is not None:
+            inline_id = self._coerce_inline_message_id(inline_message_id)
+            input_media = self._coerce_input_media(media)
+            markup = self._build_reply_markup(reply_markup)
+            return await self.client(
+                EditInlineBotMessageRequest(
+                    id=inline_id,
+                    media=input_media,
+                    reply_markup=markup,
+                )
+            )
+
+        return await self.client.edit_message(
+            chat_id,
+            message_id,
+            file=media,
+            buttons=reply_markup,
+        )
 
     async def edit_message_text(
         self,
@@ -140,14 +319,16 @@ class TelethonBot:
         disable_web_page_preview: bool = True,
         **kwargs: typing.Any,
     ) -> typing.Any:
-        if inline_message_id:
+        markup = self._build_reply_markup(reply_markup)
+
+        if inline_message_id is not None:
+            inline_id = self._coerce_inline_message_id(inline_message_id)
             return await self.client.edit_message(
-                inline_message_id,
-                None,
+                inline_id,
                 text,
                 parse_mode="HTML",
                 link_preview=not disable_web_page_preview,
-                buttons=reply_markup,
+                buttons=markup,
             )
 
         return await self.client.edit_message(
@@ -156,7 +337,32 @@ class TelethonBot:
             text,
             parse_mode="HTML",
             link_preview=not disable_web_page_preview,
-            buttons=reply_markup,
+            buttons=markup,
+        )
+
+    async def edit_message_reply_markup(
+        self,
+        *,
+        inline_message_id: typing.Any = None,
+        chat_id: typing.Any = None,
+        message_id: typing.Any = None,
+        reply_markup: typing.Any = None,
+    ):
+        markup = self._build_reply_markup(reply_markup)
+
+        if inline_message_id is not None:
+            inline_id = self._coerce_inline_message_id(inline_message_id)
+            return await self.client(
+                EditInlineBotMessageRequest(
+                    id=inline_id,
+                    reply_markup=markup,
+                )
+            )
+
+        return await self.client.edit_message(
+            chat_id,
+            message_id,
+            buttons=markup,
         )
 
 
