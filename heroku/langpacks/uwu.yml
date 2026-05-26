@@ -683,7 +683,7 @@ translations:
   btn_cancel: "Cancew :c"
   btn_delete: "Dewete"
   btn_back: "Baaack"
-  no_downloaded: "<b>Wist is empty... >///<</b>"
+  no_downloaded: "<b>Wist is empty...</b>"
   choose_downloaded: "<b>Downwoaded wanguages~</b>"
   confirm_lang: "<b>Instaww dis wanguage, senpai? :3</b>"
   action_cancelled: "<b>Action cancewwed... uwu</b>"
