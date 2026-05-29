@@ -368,7 +368,6 @@ class TerminalMod(loader.Module):
 
     strings = {
         "name": "Terminal",
-        "command_protect": "Block clearly destructive terminal commands before execution",
     }
 
     COMMAND_PROTECT = "command_protect"
