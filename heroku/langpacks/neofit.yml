@@ -164,6 +164,7 @@ heroku_settings:
 terminal:
   name: "Terminal"
   fw_protect: "Setting I/O timeout"
+  command_protect: "Block destructive terminal commands before execution"
   what_to_kill: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Reply to PID to send SIGTERM</b>"
   kill_fail: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>EPERM (Operation not permitted)</b>"
   killed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Process SIGKILL</b>"

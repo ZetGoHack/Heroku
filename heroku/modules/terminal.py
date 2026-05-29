@@ -15,6 +15,7 @@ import contextlib
 import logging
 import os
 import re
+import shlex
 import time
 import typing
 import signal
@@ -365,21 +366,37 @@ class InlineMessageEditor:
 class TerminalMod(loader.Module):
     """Runs commands"""
 
-    strings = {"name": "Terminal"}
+    strings = {
+        "name": "Terminal",
+        "command_protect": "Block clearly destructive terminal commands before execution",
+    }
 
+    COMMAND_PROTECT = "command_protect"
+    DANGEROUS_RM_TARGETS = {
+        "/",
+        "/bin",
+        "/boot",
+        "/dev",
+        "/etc",
+        "/lib",
+        "/lib64",
+        "/opt",
+        "/proc",
+        "/root",
+        "/sbin",
+        "/sys",
+        "/usr",
+        "/var",
+    }
+    DANGEROUS_RM_FILES = {
+        "/etc/passwd",
+        "/etc/shadow",
+    }
     DANGEROUS_COMMANDS = [
-        r"rm\s+.*\s+\/\s*\*?",
-        r"rm\s+.*\s+\/etc\/",
-        r"rm\s+.*\s+\/dev\/",
-        r"rm\s+.*\s+\/boot\/",
-        r"rm\s+.*\s+\/root\/",
-        r"rm\s+.*\s+\/sys\/",
-        r"rm\s+.*\s+\/proc\/",
         r"dd\s+.*if=.*of=/dev/",
         r"mkfs\.",
         r"fdisk\s+\/dev/",
         r"\\x72\\x6d\\x20\\x2d\\x72\\x66\\x20\\x2f",
-        r"which\s+rm",
         r"chmod\s+.*000\s+.*\/",
         r":\(\)\s*\{\s*:\|:&\s*\}\s*;\s*:",
         r"cat\s+.*\/dev\/urandom\s+>\s+\/dev\/[hsv]d[a-z]",
@@ -404,30 +421,73 @@ class TerminalMod(loader.Module):
         r"openssl\s+s_client.*\|\s*(sh|bash)",
         r"socat\s+.*exec:",
         r"chmod\s+[0-9]*[s][0-9]*\s+",
-        r"chown\s+root\s+",
-        r"sudo\s+su\b",
-        r"sudo\s+-s\b",
-        r"passwd\s+root",
-        r"userdel\s+",
-        r"usermod\s+.*-G\s+.*sudo",
-        r"visudo",
-        r"systemctl\s+disable\s+",
-        r"systemctl\s+stop\s+",
-        r"init\s+0",
-        r"init\s+6",
-        r"shutdown",
-        r"reboot",
-        r"halt",
-        r"poweroff",
-        r"killall\s+-9",
         r"kill\s+-9\s+1\b",
         r"truncate\s+-s\s+0\s+/etc/",
         r"shred\s+",
         r"wipe\s+",
     ]
 
+    @staticmethod
+    def _split_command(cmd: str) -> typing.List[str]:
+        try:
+            lexer = shlex.shlex(cmd, posix=True, punctuation_chars=True)
+            lexer.whitespace_split = True
+            return list(lexer)
+        except ValueError:
+            return []
+
+    @classmethod
+    def _is_dangerous_rm_target(cls, target: str) -> bool:
+        if not target or target.startswith("-"):
+            return False
+
+        target = target.rstrip()
+        normalized = os.path.normpath(target)
+
+        if normalized in cls.DANGEROUS_RM_TARGETS | cls.DANGEROUS_RM_FILES:
+            return True
+
+        if normalized == "/":
+            return target in {"/*", "/**"}
+
+        for dangerous_target in cls.DANGEROUS_RM_TARGETS - {"/"}:
+            if normalized in {f"{dangerous_target}/*", f"{dangerous_target}/**"}:
+                return True
+
+        return False
+
+    @classmethod
+    def _has_dangerous_rm(cls, cmd: str) -> bool:
+        tokens = cls._split_command(cmd)
+        if not tokens:
+            return False
+
+        separators = {";", "&&", "||", "|", "&"}
+        rm_names = {"rm", "/bin/rm", "/usr/bin/rm"}
+
+        for index, token in enumerate(tokens):
+            if token not in rm_names:
+                continue
+
+            for target in tokens[index + 1 :]:
+                if target in separators:
+                    break
+
+                if target == "--":
+                    continue
+
+                if cls._is_dangerous_rm_target(target):
+                    return True
+
+        return False
+
     def _is_dangerous(self, cmd: str) -> bool:
-        """Return True if the command matches any banned pattern."""
+        if not self.config[self.COMMAND_PROTECT]:
+            return False
+
+        if self._has_dangerous_rm(cmd):
+            return True
+
         for pattern in self.DANGEROUS_COMMANDS:
             if re.search(pattern, cmd, re.IGNORECASE):
                 return True
@@ -440,6 +500,12 @@ class TerminalMod(loader.Module):
                 2,
                 lambda: self.strings["fw_protect"],
                 validator=loader.validators.Integer(minimum=0),
+            ),
+            loader.ConfigValue(
+                self.COMMAND_PROTECT,
+                True,
+                lambda: self.strings["command_protect"],
+                validator=loader.validators.Boolean(),
             ),
         )
         self.activecmds = {}

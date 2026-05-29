@@ -164,6 +164,7 @@ heroku_settings:
 terminal:
   name: "Tewminyaw"
   fw_protect: "How wong to wait in seconds between edits in commands"
+  command_protect: "Bwock cweawwy destwuctive tewminaw commands befowe execution"
   what_to_kill: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Wepwy to a tewminyaw command to tewminyate it</b>"
   kill_fail: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Couwd nyot kiww pwocess >_<</b>"
   killed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Kiwwed x_x</b>"

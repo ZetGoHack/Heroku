@@ -164,6 +164,7 @@ heroku_settings:
 terminal:
   name: "T3rm1n4l"
   fw_protect: "H0w l0ng 2 w417 1n s3c5 b37w33n 3d175 1n cmd5"
+  command_protect: "8l0ck cl34rly d357ruc71v3 73rm1n4l cmd5 b3f0r3 3x3cu710n"
   what_to_kill: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>R3ply 2 4 73rm1n4l cmd 2 73rm1n473 17</b>"
   kill_fail: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>C0uld n07 k1ll pr0c355</b>"
   killed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>K1ll3d</b>"

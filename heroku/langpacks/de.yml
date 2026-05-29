@@ -156,6 +156,7 @@ heroku_settings:
   name: HerokuSettings
 terminal:
   fw_protect: "Verzögerung zwischen Bearbeitungen"
+  command_protect: "Eindeutig destruktive Terminalbefehle vor der Ausführung blockieren"
   what_to_kill: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Antworten Sie auf den auszuführenden Befehl, um ihn zu beenden</b>"
   kill_fail: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Kann den Prozess nicht beenden</b>"
   killed: "<b>Beendet</b>"

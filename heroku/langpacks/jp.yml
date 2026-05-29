@@ -164,6 +164,7 @@ heroku_settings:
 terminal:
   name: "Terminal"
   fw_protect: "コマンドの編集間に待機する秒数"
+  command_protect: "実行前に明らかに破壊的なターミナルコマンドをブロックします"
   what_to_kill: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>終了する端末コマンドに返信してください</b>"
   kill_fail: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>プロセスをキルできませんでした</b>"
   killed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>キルしました</b>"

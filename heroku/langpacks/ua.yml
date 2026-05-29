@@ -156,6 +156,7 @@ heroku_settings:
   name: HerokuSettings
 terminal:
   fw_protect: "Затримка між редагуваннями"
+  command_protect: "Блокувати явно руйнівні команди термінала перед виконанням"
   what_to_kill: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Дай відповідь на команду, що виконується для її завершення</b>"
   kill_fail: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Не можу вбити процес</b>"
   killed: "<b>Убит</b>"
