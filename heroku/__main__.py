@@ -122,6 +122,7 @@ def deps():
 if (
     getpass.getuser() == "root"
     and "--root" not in " ".join(sys.argv)
+    and not {"-h", "--help"} & set(sys.argv)
     and all(trigger not in os.environ for trigger in {"DOCKER", "NO_SUDO"})
 ):
     print("\U0001f6ab" * 15)
