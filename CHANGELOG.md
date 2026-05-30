@@ -25,6 +25,29 @@
 - add dependencies restore from pip-backup files
 - skip failed backup dependencies during restore
 - fix pip-backup handling inside mods.zip
+- migrate inline bot from aiogram to HerokuTL
+- add support for receiving Bot API update types in the inline bot
+- add inline terminal input continuation
+- add terminate support for inline terminal sessions
+- add configurable terminal protection boolean
+- fix query_gallery calls when the bot is not mounted
+- remove the web stack, web resources and related Docker/runtime pieces
+- add Rust and Go eval commands
+- add multi addalias and multi alias delete support
+- add -c / --clear for delalias
+- add -f flag for logs
+- add --type-proxy startup option
+- add packurl translation fallback cache
+- add missing language packs
+- add fuzzy suggestions for unload typos
+- improve unknown string handling
+- add loader.download_and_install logging
+- replace direct database access with _get_raw
+- catch AuthKeyUnregisteredError on startup
+- remove custom_emojis handling from inline/config paths
+- simplify config option formatting and category parameter display
+- remove HerokuPluginSecurity
+- fix requirements installation on startup
 
 ## 🪐 Heroku 2.0.0
 - rework utils
