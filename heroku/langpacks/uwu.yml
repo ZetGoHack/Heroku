@@ -606,7 +606,7 @@ loader:
   all_modules_deleted: "<tg-emoji emoji-id=5784993237412351403>✅</tg-emoji> <b>Aww moduwes deweted</b>"
   undoc: "<tg-emoji emoji-id=5427052514094619126>🤷‍♀️</tg-emoji> Nyo docs"
   ihandler: "\n<tg-emoji emoji-id=5372981976804366741>🤖</tg-emoji> <code>{}</code> {}"
-  inline_init_failed: "<tg-emoji emoji-id=5454225457916420314>😖</tg-emoji> <b>Dis moduwe wequiwes Hewoku inwine featuwe and initiawization of InwineManyagew faiwed</b>\n<i>Pwease, wemove onye of youw owd bots fwom @BotFadew and westawt usewbot to woad dis moduwe</i>"
+  inline_init_failed: "<tg-emoji emoji-id=5454225457916420314>😖</tg-emoji> <b>Dis moduwe wequiwes Hewoku inwine featuwe and initiawization of InwineManyagew faiwed</b>\n<i>Pwease, wemove onye of youw owd bots fwom @BotFather and westawt usewbot to woad dis moduwe</i>"
   version_incompatible: "<tg-emoji emoji-id=5454225457916420314>😖</tg-emoji> <b>Dis moduwe wequiwes Hewoku {}+\nPwease, update with</b> <code>.update</code>"
   ffmpeg_required: "<tg-emoji emoji-id=5454225457916420314>😖</tg-emoji> <b>Dis moduwe wequiwes FFMPEG, which is nyot instawwed</b>"
   developer: "\n\n<tg-emoji emoji-id=5287454910059654880>🫶</tg-emoji> <b>Devewopew:</b> {}"
@@ -784,7 +784,7 @@ $inline:
   command: "🪐 Command «{}»"
   button403: "You awe nyot awwowed to pwess dis button! >w<"
   keep_id: "⚠️ Do nyot wemove ID! {}"
-  no_query_results: "<tg-emoji emoji-id=5440660757194744323>‼️</tg-emoji> <b>Faiwed to cweate fowm UwU</b>\n\nPossibwe ways to fix the ewwow:\n\n1. Westawt Hewoku: <code>{prefix}westart</code>\n\n2. Enabwe inwine mode fow the bot: go to @BotFathew, send /mybots, cwick Bot Settings -> Inwine Mode -> On\n\n3. Cweate a new bot: send the command <code>{prefix}ch_hewoku_bot</code> <@botname>"
+  no_query_results: "<tg-emoji emoji-id=5440660757194744323>‼️</tg-emoji> <b>Faiwed to cweate fowm UwU</b>\n\nPossibwe ways to fix the ewwow:\n\n1. Westawt Hewoku: <code>{prefix}westart</code>\n\n2. Enabwe inwine mode fow the bot: go to @BotFather, send /mybots, cwick Bot Settings -> Inwine Mode -> On\n\n3. Cweate a new bot: send the command <code>{prefix}ch_hewoku_bot</code> <@botname>"
 heroku_plugin_security:
   name: HikkaPluginSecurity
   _cls_doc: Manage extewnaw moduwe secuwity ovewwides
