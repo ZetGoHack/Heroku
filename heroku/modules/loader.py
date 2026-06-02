@@ -105,7 +105,7 @@ class LoaderMod(loader.Module):
             ),
             loader.ConfigValue(
                 "command_emoji",
-                "<tg-emoji emoji-id=5197195523794157505>▫️</tg-emoji>",
+                "️",
                 lambda: "Emoji for command",
             ),
             loader.ConfigValue(
@@ -936,7 +936,7 @@ class LoaderMod(loader.Module):
                         await utils.answer(
                             message,
                             (
-                                "<tg-emoji emoji-id=5454225457916420314>😖</tg-emoji>"
+                                "😖"
                                 f" <b>{utils.escape_html(str(e))}</b>"
                             ),
                         )
@@ -1028,7 +1028,7 @@ class LoaderMod(loader.Module):
                         await utils.answer(
                             message,
                             (
-                                "<tg-emoji emoji-id=5454225457916420314>😖</tg-emoji>"
+                                "😖"
                                 f" <b>{utils.escape_html(str(e))}</b>"
                             ),
                         )
@@ -1059,7 +1059,7 @@ class LoaderMod(loader.Module):
                     await utils.answer(
                         message,
                         (
-                            "<tg-emoji emoji-id=5454225457916420314>😖</tg-emoji>"
+                            "😖"
                             f" <b>{utils.escape_html(str(e))}</b>"
                         ),
                     )
@@ -1151,7 +1151,7 @@ class LoaderMod(loader.Module):
 
         if instance.__doc__:
             mod_doc += (
-                "<i>\n<tg-emoji emoji-id=5879813604068298387>ℹ️</tg-emoji>"
+                "<i>\n️"
                 f" {utils.escape_html(inspect.getdoc(instance))}</i>\n\n"
             )
 
@@ -1163,7 +1163,7 @@ class LoaderMod(loader.Module):
             value = getattr(instance, key)
             if isinstance(value, loader.Library):
                 depends_from.append(
-                    "<tg-emoji emoji-id=5197195523794157505>▫️</tg-emoji>"
+                    "️"
                     " <code>{}</code> <b>{}</b> <code>{}</code>".format(
                         value.__class__.__name__,
                         self.strings["by"],
@@ -1487,7 +1487,7 @@ class LoaderMod(loader.Module):
 
         msg = (
             self.strings["unloaded"].format(
-                "<tg-emoji emoji-id=5784993237412351403>✅</tg-emoji>",
+                "✅",
                 ", ".join(
                     [(mod[:-3] if mod.endswith("Mod") else mod) for mod in worked]
                 ),

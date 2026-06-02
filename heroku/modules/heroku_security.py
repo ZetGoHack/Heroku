@@ -326,7 +326,7 @@ class HerokuSecurityMod(loader.Module):
                 (
                     self.strings["permissions_list"].format(
                         "\n".join(
-                            "<tg-emoji emoji-id=4974307891025543730>▫️</tg-emoji>"
+                            "️"
                             " <b>{}</b> <code>{}</code> <b>{}</b>".format(
                                 self.strings[rule["rule_type"]],
                                 rule["rule"],
@@ -1294,7 +1294,7 @@ class HerokuSecurityMod(loader.Module):
                 self.strings["rules"].format(
                     "\n".join(
                         [
-                            "<tg-emoji emoji-id=6037355667365300960>👥</tg-emoji> <b><a"
+                            "👥 <b><a"
                             " href='{}'>{}</a> {} {} {}</b> <code>{}</code>".format(
                                 rule["entity_url"],
                                 utils.escape_html(rule["entity_name"]),
@@ -1306,7 +1306,7 @@ class HerokuSecurityMod(loader.Module):
                             for rule in self._client.dispatcher.security.tsec_chat
                         ]
                         + [
-                            "<tg-emoji emoji-id=6037122016849432064>👤</tg-emoji> <b><a"
+                            "👤 <b><a"
                             " href='{}'>{}</a> {} {} {}</b> <code>{}</code>".format(
                                 rule["entity_url"],
                                 utils.escape_html(rule["entity_name"]),
@@ -1320,7 +1320,7 @@ class HerokuSecurityMod(loader.Module):
                         + [
                             "\n".join(
                                 [
-                                    "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji>"
+                                    "🔒"
                                     " <code>{}</code> <b>{} {} {}</b> <code>{}</code>".format(
                                         utils.escape_html(group.name),
                                         self._convert_time(

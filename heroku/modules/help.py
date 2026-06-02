@@ -35,27 +35,27 @@ class Help(loader.Module):
         self.config = loader.ModuleConfig(
             loader.ConfigValue(
                 "core_emoji",
-                "<tg-emoji emoji-id=4974681956907221809>▪️</tg-emoji>",
+                "️",
                 lambda: "Core module bullet",
             ),
             loader.ConfigValue(
                 "plain_emoji",
-                "<tg-emoji emoji-id=4974508259839836856>▪️</tg-emoji>",
+                "️",
                 lambda: "Plain module bullet",
             ),
             loader.ConfigValue(
                 "empty_emoji",
-                "<tg-emoji emoji-id=5100652175172830068>🟠</tg-emoji>",
+                "🟠",
                 lambda: "Empty modules bullet",
             ),
             loader.ConfigValue(
                 "desc_icon",
-                "<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji>",
+                "🪐",
                 lambda: "Desc emoji",
             ),
             loader.ConfigValue(
                 "command_emoji",
-                "<tg-emoji emoji-id=5197195523794157505>▫️</tg-emoji>",
+                "️",
                 lambda: "Emoji for command",
             ),
             loader.ConfigValue(
@@ -179,13 +179,13 @@ class Help(loader.Module):
         )
 
         reply = "{} <b>{}</b>:".format(
-            "<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji>", _name, ""
+            "🪐", _name, ""
         )
         inline_cmd = ""
         cmds = ""
         if module.__doc__:
             reply += (
-                "\n<i><tg-emoji emoji-id=5879813604068298387>ℹ️</tg-emoji> "
+                "\n<i>️ "
                 + utils.escape_html(inspect.getdoc(module))
                 + "\n</i>"
             )
@@ -202,7 +202,7 @@ class Help(loader.Module):
         if hasattr(module, "inline_handlers"):
             for name, fun in module.inline_handlers.items():
                 inline_cmd += (
-                    "\n<tg-emoji emoji-id=5372981976804366741>🤖</tg-emoji>"
+                    "\n🤖"
                     " <code>{}</code> {}".format(
                         f"@{self.inline.bot_username} {name}",
                         (

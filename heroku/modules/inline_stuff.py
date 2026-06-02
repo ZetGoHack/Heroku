@@ -120,7 +120,7 @@ class InlineStuff(loader.Module):
                     "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/start_cmd.png",
                     caption=self.strings["this_is_heroku"].format(
                         (
-                            "<tg-emoji emoji-id=5463379725441341739>🪐</tg-emoji>"
+                            "🪐"
                             if self._client.heroku_me.premium
                             else "🪐"
                         ),

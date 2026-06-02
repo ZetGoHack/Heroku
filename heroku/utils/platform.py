@@ -123,10 +123,10 @@ def get_platform_emoji() -> str:
 
     BASE = "".join(
         (
-            "<tg-emoji emoji-id={}>🪐</tg-emoji>",
-            "<tg-emoji emoji-id=5352934134618549768>🪐</tg-emoji>",
-            "<tg-emoji emoji-id=5352663371290271790>🪐</tg-emoji>",
-            "<tg-emoji emoji-id=5350822883314655367>🪐</tg-emoji>",
+            "🪐",
+            "🪐",
+            "🪐",
+            "🪐",
         )
     )
 

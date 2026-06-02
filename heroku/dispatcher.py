@@ -474,7 +474,7 @@ class CommandDispatcher:
                 )
             else:
                 txt = (
-                    "<tg-emoji emoji-id=5877477244938489129>🚫</tg-emoji> <b>Call"
+                    "🚫 <b>Call"
                     f" </b><code>{utils.escape_html(message.message)}</code><b> failed"
                     " due to RPC (Telegram) error:</b>"
                     f" <code>{utils.escape_html(str(exc))}</code>"
@@ -490,14 +490,14 @@ class CommandDispatcher:
         else:
             if not self._db.get(main.__name__, "inlinelogs", True):
                 txt = (
-                    "<tg-emoji emoji-id=5877477244938489129>🚫</tg-emoji><b> Call</b>"
+                    "🚫<b> Call</b>"
                     f" <code>{utils.escape_html(message.message)}</code><b>"
                     " failed!</b>"
                 )
             else:
                 exc = "\n".join(traceback.format_exc().splitlines()[1:])
                 txt = (
-                    "<tg-emoji emoji-id=5877477244938489129>🚫</tg-emoji><b> Call</b>"
+                    "🚫<b> Call</b>"
                     f" <code>{utils.escape_html(message.message)}</code><b>"
                     " failed!</b>\n\n<b>🧾 Logs:</b>\n<pre><code"
                     f' class="language-logs">{utils.escape_html(exc)}</code></pre>'
