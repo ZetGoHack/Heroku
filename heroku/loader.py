@@ -6,7 +6,7 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-# ©️ Codrago, 2024-2025
+# ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
 # 🌐 https://github.com/coddrago/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
@@ -15,6 +15,7 @@
 import asyncio
 import builtins
 import contextlib
+import contextvars
 import copy
 import importlib
 import importlib.machinery
@@ -32,12 +33,13 @@ from uuid import uuid4
 
 from herokutl.tl.tlobject import TLObject
 
-from . import security, utils, validators
+from . import main, security, utils, validators
 from .database import Database
 from .inline.core import InlineManager
 from .translations import Strings, Translator
 from .types import (
     Command,
+    ConfigCategory,
     ConfigValue,
     CoreOverwriteError,
     CoreUnloadError,
@@ -56,6 +58,9 @@ from .types import (
     get_commands,
     get_inline_handlers,
 )
+
+if typing.TYPE_CHECKING:
+    from .tl_cache import CustomTelegramClient
 
 __all__ = [
     "Modules",
@@ -97,9 +102,25 @@ __all__ = [
     "unrestricted",
     "inline_everyone",
     "loop",
+    "need_update",
 ]
 
 logger = logging.getLogger(__name__)
+
+_EXTERNAL_ORIGIN_PREFIXES = ("<external", "<file", "<string")
+
+
+def _is_external_origin(origin: str) -> bool:
+    if not origin:
+        return False
+    if not isinstance(origin, str):
+        return False
+    if origin.startswith("<core"):
+        return False
+    if origin.startswith(_EXTERNAL_ORIGIN_PREFIXES):
+        return True
+    return "loaded_modules" in origin
+
 
 owner = security.owner
 
@@ -137,22 +158,46 @@ VALID_PIP_PACKAGES = re.compile(
     re.MULTILINE,
 )
 
+VALID_APT_PACKAGES = re.compile(
+    r"^\s*# ?packages:(?: ?)((?:{url} )*(?:{url}))\s*$".format(
+        url=r"[-[\]_.~:/?#@!$&'()*+,;%<=>a-zA-Z0-9]+"
+    ),
+    re.MULTILINE,
+)
+
+IMPORT_PIP_ALIASES = {
+    "sklearn": "scikit-learn",
+    "pil": "Pillow",
+    "herokutl": "Heroku-TL-New",
+    "markdown_it": "markdown-it-py",
+}
+
 USER_INSTALL = "PIP_TARGET" not in os.environ and "VIRTUAL_ENV" not in os.environ
 
 native_import = builtins.__import__
+_IMPORT_DEPTH = contextvars.ContextVar("_IMPORT_DEPTH", default=0)
+_MAX_IMPORT_DEPTH = 80
 
 
 def patched_import(name: str, *args, **kwargs):
-    if name.startswith("telethon"):
-        return native_import("herokutl" + name[8:], *args, **kwargs)
-    elif name.startswith("hikkatl"):
-        return native_import("herokutl" + name[7:], *args, **kwargs)
-    elif name.startswith("hikkalls"):
+    depth = _IMPORT_DEPTH.get()
+    if depth > _MAX_IMPORT_DEPTH:
         return native_import(name, *args, **kwargs)
-    elif name.startswith("hikka"):
-        return native_import("heroku" + name[5:], *args, **kwargs)
+    token = _IMPORT_DEPTH.set(depth + 1)
+    try:
+        match name:
+            case s if s.startswith("telethon"):
+                return native_import("herokutl" + name[8:], *args, **kwargs)
+            case s if s.startswith("hikkatl"):
+                return native_import("herokutl" + name[7:], *args, **kwargs)
+            case s if s.startswith("hikkalls"):
+                return native_import(name, *args, **kwargs)
+            case s if s.startswith("hikka"):
+                return native_import("heroku" + name[5:], *args, **kwargs)
 
-    return native_import(name, *args, **kwargs)
+        return native_import(name, *args, **kwargs)
+    finally:
+        _IMPORT_DEPTH.reset(token)
 
 
 builtins.__import__ = patched_import
@@ -282,8 +327,28 @@ BASE_DIR = (
 )
 
 LOADED_MODULES_DIR = os.path.join(BASE_DIR, "loaded_modules")
+MODULES_LANGPACKS_DIR = os.path.join(LOADED_MODULES_DIR, "langpacks")
 LOADED_MODULES_PATH = Path(LOADED_MODULES_DIR)
+MODULES_LANGPACKS_PATH = Path(MODULES_LANGPACKS_DIR)
 LOADED_MODULES_PATH.mkdir(parents=True, exist_ok=True)
+MODULES_LANGPACKS_PATH.mkdir(parents=True, exist_ok=True)
+
+
+def _iter_module_files(
+    directory: typing.Union[str, Path],
+    *,
+    suffix: str = ".py",
+    include: typing.Optional[typing.Callable[[str], bool]] = None,
+) -> typing.List[str]:
+    with os.scandir(directory) as entries:
+        return [
+            entry.path
+            for entry in entries
+            if entry.is_file()
+            and entry.name.endswith(suffix)
+            and not entry.name.startswith("_")
+            and (include(entry.name) if include else True)
+        ]
 
 
 def translatable_docstring(cls):
@@ -492,6 +557,21 @@ def raw_handler(*updates: TLObject):
     return inner
 
 
+def need_update(*update_types: str):
+    """
+    Decorator that marks a method as a handler for Telegram Bot API update types
+    The method will be registered in the inline bot's dispatcher when the module loads, and unregistered when the module unloads.
+    """
+
+    def inner(func: Command) -> Command:
+        func.is_bot_update_handler = True
+        func.bot_update_types = list(update_types)
+        func.id = uuid4().hex
+        return func
+
+    return inner
+
+
 class Modules:
     """Stores all registered modules"""
 
@@ -507,7 +587,7 @@ class Modules:
         self.inline_handlers = {}
         self.callback_handlers = {}
         self.aliases = {}
-        self.modules = []  # skipcq: PTC-W0052
+        self.modules: typing.List[typing.Optional["Module"]] = []  # skipcq: PTC-W0052
         self.libraries = []
         self.watchers = []
         self._log_handlers = []
@@ -567,13 +647,7 @@ class Modules:
         external_mods = []
 
         if not mods:
-            mods = [
-                os.path.join(utils.get_base_dir(), MODULES_NAME, mod)
-                for mod in filter(
-                    lambda x: (x.endswith(".py") and not x.startswith("_")),
-                    os.listdir(os.path.join(utils.get_base_dir(), MODULES_NAME)),
-                )
-            ]
+            mods = _iter_module_files(os.path.join(utils.get_base_dir(), MODULES_NAME))
 
             self.secure_boot = self._db.get(__name__, "secure_boot", False)
 
@@ -581,13 +655,10 @@ class Modules:
                 []
                 if self.secure_boot
                 else [
-                    (LOADED_MODULES_PATH / mod).resolve()
-                    for mod in filter(
-                        lambda x: (
-                            x.endswith(f"{self.client.tg_id}.py")
-                            and not x.startswith("_")
-                        ),
-                        os.listdir(LOADED_MODULES_DIR),
+                    Path(mod).resolve()
+                    for mod in _iter_module_files(
+                        LOADED_MODULES_DIR,
+                        include=lambda name: name.endswith(f"{self.client.tg_id}.py"),
                     )
                 ]
             )
@@ -622,11 +693,15 @@ class Modules:
 
                 spec = importlib.machinery.ModuleSpec(
                     module_name,
-                    StringLoader(Path(mod).read_text(encoding='utf-8'), user_friendly_origin),
+                    StringLoader(
+                        Path(mod).read_text(encoding="utf-8"), user_friendly_origin
+                    ),
                     origin=user_friendly_origin,
                 )
 
                 loaded += [await self.register_module(spec, module_name, origin)]
+
+                logger.debug("Successfully loaded %s from filesystem", module_name)
             except Exception as e:
                 logger.exception("Failed to load module %s due to %s:", mod, e)
 
@@ -645,7 +720,59 @@ class Modules:
 
         module = importlib.util.module_from_spec(spec)
         sys.modules[module_name] = module
-        spec.loader.exec_module(module)
+
+        source_data = (
+            spec.loader.data.decode()
+            if hasattr(spec.loader, "data") and spec.loader.data
+            else None
+        )
+
+        async def _exec_module():
+            attempted = False
+            while True:
+                try:
+                    spec.loader.exec_module(module)
+                    break
+                except ImportError as e:
+                    if not spec.loader.data or attempted:
+                        raise
+
+                    data = spec.loader.data
+                    if isinstance(data, bytes):
+                        data = data.decode("utf-8", errors="ignore")
+
+                    match = VALID_PIP_PACKAGES.search(data)
+                    if not match:
+                        raise
+
+                    requirements = list(
+                        filter(
+                            lambda x: not x.startswith(("-", "_", ".")),
+                            map(
+                                str.strip,
+                                match.group(1).split(),
+                            ),
+                        )
+                    )
+
+                    exc_name = (getattr(e, "name", None) or "").lower()
+
+                    requirements.extend(
+                        [IMPORT_PIP_ALIASES.get(exc_name, exc_name or e.name or "")]
+                    )
+
+                    result = await self.lookup("LoaderMod").install_requirements(
+                        requirements
+                    )
+
+                    importlib.invalidate_caches()
+
+                    if not result:
+                        raise
+
+                    attempted = True
+
+        await _exec_module()
 
         ret = None
 
@@ -666,8 +793,13 @@ class Modules:
             if not isinstance(ret, Module):
                 raise TypeError(f"Instance is not a Module, it is {type(ret)}")
 
-        await self.complete_registration(ret)
         ret.__origin__ = origin
+
+        ret.__source__ = (
+            source_data if source_data else inspect.getsource(ret.__class__)
+        )
+
+        await self.complete_registration(ret)
 
         cls_name = ret.__class__.__name__
 
@@ -678,7 +810,7 @@ class Modules:
             )
 
             if origin == "<string>":
-                Path(path).write_text(spec.loader.data.decode())
+                Path(path).write_text(spec.loader.data.decode(), encoding="utf-8")
 
                 logger.debug("Saved class %s to path %s", cls_name, path)
 
@@ -700,6 +832,41 @@ class Modules:
                     name,
                     instance.__class__.__name__,
                     handler.id,
+                )
+
+    def register_bot_update_handlers(self, instance: Module):
+        """Register bot update handlers for a module"""
+        for name, handler in utils.iter_attrs(instance):
+            if not getattr(handler, "is_bot_update_handler", False):
+                continue
+
+            for update_type in getattr(handler, "bot_update_types", []):
+                self.inline.register_bot_update_handler(
+                    f"{handler.id}_{update_type}",
+                    update_type,
+                    handler,
+                )
+                logger.debug(
+                    "Registered bot update handler %s (%s) for module %s, update type %s",
+                    name,
+                    handler.id,
+                    instance.__class__.__name__,
+                    update_type,
+                )
+
+    def unregister_bot_update_handlers(self, instance: Module, purpose: str):
+        """Unregister bot update handlers for a module"""
+        for name, handler in utils.iter_attrs(instance):
+            if not getattr(handler, "is_bot_update_handler", False):
+                continue
+
+            for update_type in getattr(handler, "bot_update_types", []):
+                self.inline.unregister_bot_update_handler(f"{handler.id}_{update_type}")
+                logger.debug(
+                    "Unregistered bot update handler %s of module %s for %s",
+                    name,
+                    instance.__class__.__name__,
+                    purpose,
                 )
 
     @property
@@ -835,7 +1002,7 @@ class Modules:
                 mod
                 for mod in self.modules
                 if mod.__class__.__name__.lower() == modname.lower()
-                or mod.name.lower() == modname.lower()
+                or getattr(mod, "name", "").lower() == modname.lower()
             ),
             False,
         )
@@ -857,7 +1024,7 @@ class Modules:
         else:
             result = self._db.get(key, "command_prefix", default)
         return result
-    
+
     def get_prefixes(self) -> set[str]:
         """Get all command prefixes"""
         from . import main
@@ -940,7 +1107,7 @@ class Modules:
     def dispatch(self, _command: str) -> typing.Tuple[str, typing.Optional[str]]:
         """Dispatch command to appropriate module"""
 
-        return next(
+        resolved = next(
             (
                 (cmd, self.commands[cmd.split()[0].lower()])
                 for cmd in [
@@ -952,6 +1119,35 @@ class Modules:
             ),
             (_command, None),
         )
+
+        cmd, func = resolved
+        if not func:
+            return resolved
+
+        try:
+            disabled_modules = self._db.get(main.__name__, "disabled_modules", [])
+            disabled_commands = self._db.get(main.__name__, "disabled_commands", {})
+        except Exception:
+            disabled_modules = []
+            disabled_commands = {}
+
+        module_name = None
+        try:
+            module_name = func.__self__.__class__.__name__
+        except Exception:
+            module_name = None
+
+        if module_name and module_name in disabled_modules:
+            return (_command, None)
+
+        if module_name and module_name in disabled_commands:
+            disabled_for_mod = [
+                x.lower() for x in disabled_commands.get(module_name, [])
+            ]
+            if cmd.split()[0].lower() in disabled_for_mod:
+                return (_command, None)
+
+        return (cmd, func)
 
     def send_config(self, skip_hook: bool = False):
         """Configure modules"""
@@ -1015,7 +1211,6 @@ class Modules:
 
     async def send_ready(self):
         """Send all data to all modules"""
-        await self.inline.register_manager()
         await asyncio.gather(
             *[self.send_ready_one_wrapper(mod) for mod in self.modules]
         )
@@ -1049,6 +1244,7 @@ class Modules:
 
             logger.debug("Unloading %s, because it raised SelfUnload", mod)
             self.modules.remove(mod)
+            return
         except SelfSuspend as e:
             if no_self_unload:
                 raise e
@@ -1067,6 +1263,26 @@ class Modules:
             self.modules.remove(mod)
             raise
 
+        # Check for pack_url and load translations
+        if hasattr(mod, "__source__"):
+            pack_url = next(
+                (
+                    line.replace(" ", "").split("#packurl:", maxsplit=1)[1]
+                    for line in mod.__source__.splitlines()
+                    if line.replace(" ", "").startswith("#packurl:")
+                ),
+                None,
+            )
+
+            if pack_url and (
+                transations := await self.translator.load_module_translations(
+                    pack_url,
+                    MODULES_LANGPACKS_PATH
+                    / f"{self.client.tg_id}_{mod.__class__.__name__}.yml",
+                )
+            ):
+                mod.strings.external_strings = transations
+
         for _, method in utils.iter_attrs(mod):
             if isinstance(method, InfiniteLoop):
                 setattr(method, "module_instance", mod)
@@ -1078,10 +1294,12 @@ class Modules:
 
         self.unregister_commands(mod, "update")
         self.unregister_raw_handlers(mod, "update")
+        self.unregister_bot_update_handlers(mod, "update")
 
         self.register_commands(mod)
         self.register_watchers(mod)
         self.register_raw_handlers(mod)
+        self.register_bot_update_handlers(mod)
 
     def get_classname(self, name: str) -> str:
         return next(
@@ -1128,6 +1346,7 @@ class Modules:
                 await module.on_unload()
 
                 self.unregister_raw_handlers(module, "unload")
+                self.unregister_bot_update_handlers(module, "unload")
                 self.unregister_loops(module, "unload")
                 self.unregister_commands(module, "unload")
                 self.unregister_watchers(module, "unload")

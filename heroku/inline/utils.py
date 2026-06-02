@@ -4,7 +4,7 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-# ©️ Codrago, 2024-2025
+# ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
 # 🌐 https://github.com/coddrago/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
@@ -22,45 +22,67 @@ import typing
 from copy import deepcopy
 from urllib.parse import urlparse
 
-from aiogram.types import (
-    CallbackQuery,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    InputFile,
-    WebAppInfo,
-    CopyTextButton,
-    InputMediaAnimation,
-    InputMediaAudio,
-    InputMediaDocument,
-    InputMediaPhoto,
-    InputMediaVideo,
-)
-from aiogram.exceptions import (
-    TelegramBadRequest,
-    TelegramAPIError,
-    TelegramRetryAfter,
+from herokutl.errors.rpcbaseerrors import RPCError
+from herokutl.errors.rpcerrorlist import (
+    FloodWaitError,
+    MediaPrevInvalidError,
+    MessageNotModifiedError,
 )
 
 from .. import utils
 from ..types import HerokuReplyMarkup
+from .tl import make_button
 from .types import InlineCall, InlineUnit
+
+if typing.TYPE_CHECKING:
+    from ..inline.core import InlineManager
 
 logger = logging.getLogger(__name__)
 
+VALID_BUTTON_STYLES = {"danger", "primary", "success"}
+TG_EMOJI_RE = re.compile(
+    r"<tg-emoji\b[^>]*\bemoji-id\s*=\s*['\"]?\d+['\"]?[^>]*>(.*?)</tg-emoji>",
+    flags=re.IGNORECASE | re.DOTALL,
+)
+
 
 class Utils(InlineUnit):
+    def _has_premium_emoji(self, text: typing.Any) -> bool:
+        return isinstance(text, str) and bool(TG_EMOJI_RE.search(text))
+
+    def _needs_premium_emoji_pre_edit(self, text: typing.Any) -> bool:
+        return self._has_premium_emoji(text) and bool(
+            getattr(getattr(self._client, "heroku_me", None), "premium", False)
+        )
+
+    def _get_button_style(self, button: dict) -> typing.Optional[str]:
+        """Extract and validate button style from button dict"""
+        style = button.get("style")
+        if style and style in VALID_BUTTON_STYLES:
+            return style
+        return None
+
+    def _get_button_emoji_id(self, button: dict) -> typing.Optional[str]:
+        """Extract button custom emoji ID (for premium emoji support)"""
+
+        emoji_id = button.get("emoji_id")
+
+        if emoji_id:
+            return str(emoji_id).strip()
+        return None
+
     def _generate_markup(
-        self,
+        self: "InlineManager",
         markup_obj: typing.Optional[typing.Union[HerokuReplyMarkup, str]],
-    ) -> typing.Optional[InlineKeyboardMarkup]:
+    ) -> typing.Optional[typing.List[typing.List[typing.Any]]]:
         """Generate markup for form or list of `dict`s"""
         if not markup_obj:
             return None
 
-        if isinstance(markup_obj, InlineKeyboardMarkup):
+        if hasattr(markup_obj, "SUBCLASS_OF_ID"):
             return markup_obj
 
-        markup = InlineKeyboardMarkup(inline_keyboard=[])
+        markup = []
 
         map_ = (
             self._units[markup_obj]["buttons"]
@@ -114,140 +136,128 @@ class Utils(InlineUnit):
             line = []
             for button in row:
                 try:
-                    if "url" in button:
-                        if not utils.check_url(button["url"]):
+                    btn_kwargs = {"text": str(button["text"])}
+
+                    if style := self._get_button_style(button):
+                        btn_kwargs["style"] = style
+
+                    if emoji_id := self._get_button_emoji_id(button):
+                        btn_kwargs["icon"] = int(emoji_id)
+
+                    match True:
+                        case _ if "url" in button:
+                            if not utils.check_url(button["url"]):
+                                logger.warning(
+                                    "Button have not been added to form, "
+                                    "because its url is invalid"
+                                )
+                                continue
+                            btn_kwargs["url"] = button["url"]
+
+                        case _ if "callback" in button:
+                            btn_kwargs["data"] = button["_callback_data"]
+
+                            if setup_callbacks:
+                                self._custom_map[button["_callback_data"]] = {
+                                    "handler": button["callback"],
+                                    "always_allow": button.get("always_allow", False),
+                                    "args": button.get("args", {}),
+                                    "kwargs": button.get("kwargs", {}),
+                                    "force_me": button.get("force_me", False),
+                                    "disable_security": button.get(
+                                        "disable_security", False
+                                    ),
+                                }
+
+                        case _ if "input" in button:
+                            btn_kwargs["switch_inline_query_current_chat"] = (
+                                button["_switch_query"] + " "
+                            )
+
+                        case _ if "data" in button:
+                            btn_kwargs["data"] = button["data"]
+
+                        case _ if "web_app" in button:
+                            btn_kwargs["web_app"] = button["web_app"]
+
+                        case _ if "copy" in button:
+                            btn_kwargs["copy_text"] = button["copy"]
+
+                        case _ if "switch_inline_query_current_chat" in button:
+                            btn_kwargs["switch_inline_query_current_chat"] = button[
+                                "switch_inline_query_current_chat"
+                            ]
+
+                        case _ if "switch_inline_query" in button:
+                            btn_kwargs["switch_inline_query"] = button[
+                                "switch_inline_query"
+                            ]
+
+                        case _:
                             logger.warning(
-                                "Button have not been added to form, "
-                                "because its url is invalid"
+                                (
+                                    "Button have not been added to "
+                                    "form, because it is not structured "
+                                    "properly. %s"
+                                ),
+                                button,
                             )
                             continue
 
-                        line += [
-                            InlineKeyboardButton(
-                                text=str(button["text"]),
-                                url=button["url"],
-                            )
-                        ]
-                    elif "callback" in button:
-                        line += [
-                            InlineKeyboardButton(
-                                text=str(button["text"]),
-                                callback_data=button["_callback_data"],
-                            )
-                        ]
-                        if setup_callbacks:
-                            self._custom_map[button["_callback_data"]] = {
-                                "handler": button["callback"],
-                                **(
-                                    {"always_allow": button["always_allow"]}
-                                    if button.get("always_allow", False)
-                                    else {}
-                                ),
-                                **(
-                                    {"args": button["args"]}
-                                    if button.get("args", False)
-                                    else {}
-                                ),
-                                **(
-                                    {"kwargs": button["kwargs"]}
-                                    if button.get("kwargs", False)
-                                    else {}
-                                ),
-                                **(
-                                    {"force_me": True}
-                                    if button.get("force_me", False)
-                                    else {}
-                                ),
-                                **(
-                                    {"disable_security": True}
-                                    if button.get("disable_security", False)
-                                    else {}
-                                ),
-                            }
-                    elif "input" in button:
-                        line += [
-                            InlineKeyboardButton(
-                                text=str(button["text"]),
-                                switch_inline_query_current_chat=button["_switch_query"]
-                                + " ",
-                            )
-                        ]
-                    elif "data" in button:
-                        line += [
-                            InlineKeyboardButton(
-                                text=str(button["text"]),
-                                callback_data=button["data"],
-                            )
-                        ]
-                    elif "web_app" in button:
-                        line += [
-                            InlineKeyboardButton(
-                                text=str(button["text"]),
-                                web_app=WebAppInfo(button["data"]),
-                            )
-                        ]
+                    line.append(make_button(**btn_kwargs))
 
-                    elif "copy" in button:
-                        line += [
-                            InlineKeyboardButton(
-                                text=str(button["text"]),
-                                copy_text=CopyTextButton(
-                                    text=button["copy"]
-                                )
-                            )
-                        ]
-                        
-                    elif "switch_inline_query_current_chat" in button:
-                        line += [
-                            InlineKeyboardButton(
-                                text=str(button["text"]),
-                                switch_inline_query_current_chat=button[
-                                    "switch_inline_query_current_chat"
-                                ],
-                            )
-                        ]
-                    elif "switch_inline_query" in button:
-                        line += [
-                            InlineKeyboardButton(
-                                text=str(button["text"]),
-                                switch_inline_query_current_chat=button[
-                                    "switch_inline_query"
-                                ],
-                            )
-                        ]
-                    else:
-                        logger.warning(
-                            (
-                                "Button have not been added to "
-                                "form, because it is not structured "
-                                "properly. %s"
-                            ),
-                            button,
-                        )
                 except KeyError:
                     logger.exception(
                         "Error while forming markup! Probably, you "
                         "passed wrong type combination for button. "
                         "Contact developer of module."
                     )
-                    return False
+                    return None
+                except Exception as e:
+                    logger.exception(f"Unexpected error creating button: {e}")
+                    return None
 
-            markup.inline_keyboard.append(line)
+            markup.append(line)
 
         return markup
 
     generate_markup = _generate_markup
 
-    async def _close_unit_handler(self, call: InlineCall):
-        return await self._client.delete_messages(call._units.get(call.unit_id).get('chat'), call._units.get(call.unit_id).get('message_id'))
+    async def _close_unit_handler(self: "InlineManager", call: InlineCall):
+        if call._units is None:
+            logger.error(
+                "call._units is None. Please report this issue to the developers. "
+                "Debug info: %s",
+                call.model_dump_json(),
+            )
+            try:
+                await call.answer(
+                    "❌ The userbot couldn't delete this inline message. "
+                    "See logs for more details."
+                )
+            except Exception:
+                logger.exception(
+                    "I can't even properly notify the user about the error 😭"
+                )
 
-    async def _unload_unit_handler(self, call: InlineCall):
+            return
+
+        return await self._client.delete_messages(
+            call._units.get(call.unit_id).get("chat"),
+            call._units.get(call.unit_id).get("message_id"),
+        )
+
+    async def _unload_unit_handler(self: "InlineManager", call: InlineCall):
         await call.unload()
 
-    async def _answer_unit_handler(self, call: InlineCall, text: str, show_alert: bool):
+    async def _answer_unit_handler(
+        self: "InlineManager", call: InlineCall, text: str, show_alert: bool
+    ):
         await call.answer(text, show_alert=show_alert)
 
-    def _reverse_method_lookup(self, needle: callable, /) -> typing.Optional[str]:
+    def _reverse_method_lookup(
+        self: "InlineManager", needle: callable, /
+    ) -> typing.Optional[str]:
         return next(
             (
                 name
@@ -260,7 +270,9 @@ class Utils(InlineUnit):
             None,
         )
 
-    async def check_inline_security(self, *, func: typing.Callable, user: int) -> bool:
+    async def check_inline_security(
+        self: "InlineManager", *, func: typing.Callable, user: int
+    ) -> bool:
         """Checks if user with id `user` is allowed to run function `func`"""
         return await self._client.dispatcher.security.check(
             message=None,
@@ -269,7 +281,9 @@ class Utils(InlineUnit):
             inline_cmd=self._reverse_method_lookup(func),
         )
 
-    def _find_caller_sec_map(self) -> typing.Optional[typing.Callable[[], int]]:
+    def _find_caller_sec_map(
+        self: "InlineManager",
+    ) -> typing.Optional[typing.Callable[[], int]]:
         try:
             caller = utils.find_caller()
             if not caller:
@@ -286,7 +300,7 @@ class Utils(InlineUnit):
         return None
 
     def _normalize_markup(
-        self, reply_markup: HerokuReplyMarkup
+        self: "InlineManager", reply_markup: HerokuReplyMarkup
     ) -> typing.List[typing.List[typing.Dict[str, typing.Any]]]:
         if isinstance(reply_markup, dict):
             return [[reply_markup]]
@@ -298,11 +312,11 @@ class Utils(InlineUnit):
 
         return reply_markup
 
-    def sanitise_text(self, text: str) -> str:
+    def sanitise_text(self: "InlineManager", text: str) -> str:
         return re.sub(r"</?emoji.*?>", "", text)
 
     async def _edit_unit(
-        self,
+        self: "InlineManager",
         text: typing.Optional[str] = None,
         reply_markup: typing.Optional[HerokuReplyMarkup] = None,
         *,
@@ -316,7 +330,7 @@ class Utils(InlineUnit):
         disable_security: typing.Optional[bool] = None,
         always_allow: typing.Optional[typing.List[int]] = None,
         disable_web_page_preview: bool = True,
-        query: typing.Optional[CallbackQuery] = None,
+        query: typing.Optional[typing.Any] = None,
         unit_id: typing.Optional[str] = None,
         inline_message_id: typing.Optional[str] = None,
         chat_id: typing.Optional[int] = None,
@@ -418,48 +432,32 @@ class Utils(InlineUnit):
         media = next(
             (media for media in [photo, file, video, audio, gif] if media), None
         )
+        if isinstance(media, dict):
+            media = media["url"]
 
         if isinstance(media, bytes):
             media = io.BytesIO(media)
             media.name = "upload.mp4"
 
         if isinstance(media, io.BytesIO):
-            media = InputFile(filename=media)
+            media.name = getattr(media, "name", "upload.mp4")
 
-        if file:
-            media = InputMediaDocument(media=media, caption=text, parse_mode="HTML")
-        elif photo:
-            media = InputMediaPhoto(media=media, caption=text, parse_mode="HTML")
-        elif audio:
-            if isinstance(audio, dict):
-                media = InputMediaAudio(
-                    media=audio["url"],
-                    title=audio.get("title"),
-                    performer=audio.get("performer"),
-                    duration=audio.get("duration"),
-                    caption=text,
-                    parse_mode="HTML",
-                )
-            else:
-                media = InputMediaAudio(
-                    media=audio,
-                    caption=text,
-                    parse_mode="HTML",
-                )
-        elif video:
-            media = InputMediaVideo(media=media, caption=text, parse_mode="HTML")
-        elif gif:
-            media = InputMediaAnimation(media=media, caption=text, parse_mode="HTML")
+        kind = (
+            "file"
+            if file
+            else (
+                "photo"
+                if photo
+                else "audio" if audio else "video" if video else "gif" if gif else None
+            )
+        )
 
         if media is None and text is None and reply_markup:
             try:
-                await self.bot.edit_message_reply_markup(
-                    **(
-                        {"inline_message_id": inline_message_id}
-                        if inline_message_id
-                        else {"chat_id": chat_id, "message_id": message_id}
-                    ),
-                    reply_markup=self.generate_markup(reply_markup),
+                await self._bot_client.edit_message(
+                    inline_message_id or chat_id,
+                    (unit.get("text") or "") if inline_message_id else message_id,
+                    buttons=self.generate_markup(reply_markup),
                 )
             except Exception:
                 return False
@@ -472,95 +470,62 @@ class Utils(InlineUnit):
 
         if media is None:
             try:
-                await self.bot.edit_message_text(
+                await self._bot_client.edit_message(
+                    inline_message_id or chat_id,
+                    None if inline_message_id else message_id,
                     text,
-                    **(
-                        {"inline_message_id": inline_message_id}
-                        if inline_message_id
-                        else {"chat_id": chat_id, "message_id": message_id}
-                    ),
-                    disable_web_page_preview=disable_web_page_preview,
-                    reply_markup=self.generate_markup(
+                    parse_mode="HTML",
+                    link_preview=not disable_web_page_preview,
+                    buttons=self.generate_markup(
                         reply_markup
                         if isinstance(reply_markup, list)
                         else unit.get("buttons", [])
                     ),
                 )
-            except TelegramBadRequest as e:
-                if "there is no text in the message to edit" not in str(e):
-                    raise
-
-                try:
-                    await self.bot.edit_message_caption(
-                        caption=text,
-                        **(
-                            {"inline_message_id": inline_message_id}
-                            if inline_message_id
-                            else {"chat_id": chat_id, "message_id": message_id}
-                        ),
-                        reply_markup=self.generate_markup(
-                            reply_markup
-                            if isinstance(reply_markup, list)
-                            else unit.get("buttons", [])
-                        ),
-                    )
-                except Exception:
-                    return False
-                else:
-                    return True
-            except TelegramAPIError as e:
-                if True: # TODO "" in e.message
-                    if query:
-                        with contextlib.suppress(Exception):
-                            await query.answer()
-                elif True: # TODO "" in e.message
+            except MessageNotModifiedError:
+                return True
+            except RPCError:
+                if query:
                     with contextlib.suppress(Exception):
-                        await query.answer(
-                            "I should have edited some message, but it is deleted :("
-                        )
-
+                        await query.answer()
                 return False
-            except TelegramRetryAfter as e:
-                logger.info("Sleeping %ss on aiogram FloodWait...", e.retry_after)
-                await asyncio.sleep(e.retry_after)
+            except FloodWaitError as e:
+                logger.info("Sleeping %ss on Telethon FloodWait...", e.seconds)
+                await asyncio.sleep(e.seconds)
                 return await self._edit_unit(**utils.get_kwargs())
-                
-
-                return False
             else:
                 return True
 
         try:
-            await self.bot.edit_message_media(
-                **(
-                    {"inline_message_id": inline_message_id}
-                    if inline_message_id
-                    else {"chat_id": chat_id, "message_id": message_id}
-                ),
-                media=media,
-                reply_markup=self.generate_markup(
+            await self._bot_client.edit_message(
+                inline_message_id or chat_id,
+                None if inline_message_id else message_id,
+                text,
+                parse_mode="HTML",
+                file=media,
+                force_document=kind == "file",
+                buttons=self.generate_markup(
                     reply_markup
                     if isinstance(reply_markup, list)
                     else unit.get("buttons", [])
                 ),
             )
-        except TelegramRetryAfter as e:
-            logger.info("Sleeping %ss on aiogram FloodWait...", e.retry_after)
-            await asyncio.sleep(e.retry_after)
+        except FloodWaitError as e:
+            logger.info("Sleeping %ss on Telethon FloodWait...", e.seconds)
+            await asyncio.sleep(e.seconds)
             return await self._edit_unit(**utils.get_kwargs())
-        except TelegramAPIError:
-            if True: # TODO
-                with contextlib.suppress(Exception):
-                    await query.answer(
-                        "I should have edited some message, but it is deleted :("
-                    )
-                return False
+        except (RPCError, MediaPrevInvalidError):
+            with contextlib.suppress(Exception):
+                await query.answer(
+                    "I should have edited some message, but it is deleted :("
+                )
+            return False
         else:
             return True
 
     async def _delete_unit_message(
-        self,
-        call: typing.Optional[CallbackQuery] = None,
+        self: "InlineManager",
+        call: typing.Optional[typing.Any] = None,
         unit_id: typing.Optional[str] = None,
         chat_id: typing.Optional[int] = None,
         message_id: typing.Optional[int] = None,
@@ -569,8 +534,8 @@ class Utils(InlineUnit):
         if getattr(getattr(call, "message", None), "chat", None):
             try:
                 await self.bot.delete_message(
-                    chat_id=call.message.chat.id,
-                    message_id=call.message.message_id,
+                    call.message.chat.id,
+                    call.message.message_id,
                 )
             except Exception:
                 return False
@@ -579,7 +544,7 @@ class Utils(InlineUnit):
 
         if chat_id and message_id:
             try:
-                await self.bot.delete_message(chat_id=chat_id, message_id=message_id)
+                await self.bot.delete_message(chat_id, message_id)
             except Exception:
                 return False
 
@@ -589,13 +554,16 @@ class Utils(InlineUnit):
             unit_id = call.unit_id
 
         try:
-            await self._client.delete_messages(call._units.get(unit_id).get('chat'), call._units.get(unit_id).get('message_id'))
+            await self._client.delete_messages(
+                call._units.get(unit_id).get("chat"),
+                call._units.get(unit_id).get("message_id"),
+            )
         except Exception:
             return False
 
         return True
 
-    async def _unload_unit(self, unit_id: str) -> bool:
+    async def _unload_unit(self: "InlineManager", unit_id: str) -> bool:
         """Params `self`, `unit_id` are for internal use only, do not try to pass them"""
         try:
             if "on_unload" in self._units[unit_id] and callable(
@@ -613,7 +581,7 @@ class Utils(InlineUnit):
         return True
 
     def build_pagination(
-        self,
+        self: "InlineManager",
         callback: typing.Callable[[int], typing.Awaitable[typing.Any]],
         total_pages: int,
         unit_id: typing.Optional[str] = None,
@@ -730,7 +698,7 @@ class Utils(InlineUnit):
         ]
 
     def _validate_markup(
-        self,
+        self: "InlineManager",
         buttons: typing.Optional[HerokuReplyMarkup],
     ) -> typing.List[typing.List[typing.Dict[str, typing.Any]]]:
         if buttons is None:
@@ -760,6 +728,9 @@ class Utils(InlineUnit):
                 or "data" in button
                 or "action" in button
                 or "copy" in button
+                or "web_app" in button
+                or "switch_inline_query_current_chat" in button
+                or "switch_inline_query" in button
                 for button in row
             )
             for row in buttons
@@ -771,7 +742,11 @@ class Utils(InlineUnit):
                 "  - `callback`\n"
                 "  - `input`\n"
                 "  - `data`\n"
-                "  - `action`"
+                "  - `action`\n"
+                "  - `copy`\n"
+                "  - `web_app`\n"
+                "  - `switch_inline_query_current_chat`\n"
+                "  - `switch_inline_query`"
             )
             return None
 

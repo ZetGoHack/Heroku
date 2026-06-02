@@ -13,11 +13,10 @@ def patch(client: CustomTelegramClient, session: SQLiteSession):
     session_id = re.findall(r"\d+", session.filename)[-1]
     client._sender._state = MTProtoState(session.auth_key, client._sender._loggers)
     client._connection = ConnectionTcpFull
-    client.connect = functools.partial(
-        client.connect,
-        unix_socket_path=(
-            Path(__file__).parent.parent.parent / f"heroku-{session_id}-proxy.sock"
-        ),
+
+    socket_path = (
+        Path(__file__).parent.parent.parent / f"heroku-{session_id}-proxy.sock"
     )
+    client.connect = functools.partial(client.connect, unix_socket_path=socket_path)
 
     logging.warning("Patched mtprotostate")

@@ -4,7 +4,7 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-# ©️ Codrago, 2024-2025
+# ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
 # 🌐 https://github.com/coddrago/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
@@ -15,12 +15,15 @@ import typing
 
 from .types import InlineUnit
 
+if typing.TYPE_CHECKING:
+    from ..inline.core import InlineManager
+
 logger = logging.getLogger(__name__)
 
 
 class BotPM(InlineUnit):
     def set_fsm_state(
-        self,
+        self: "InlineManager",
         user: typing.Union[str, int],
         state: typing.Union[str, bool],
     ) -> bool:
@@ -51,16 +54,19 @@ class BotPM(InlineUnit):
             )
             return False
 
-        if state:
-            self.fsm[str(user)] = state
-        elif str(user) in self.fsm:
-            del self.fsm[str(user)]
+        match True:
+            case _ if state:
+                self.fsm[str(user)] = state
+            case _ if str(user) in self.fsm:
+                del self.fsm[str(user)]
 
         return True
 
     ss = set_fsm_state
 
-    def get_fsm_state(self, user: typing.Union[str, int]) -> typing.Union[bool, str]:
+    def get_fsm_state(
+        self: "InlineManager", user: typing.Union[str, int]
+    ) -> typing.Union[bool, str]:
         """
         Get FSM state for user
         :param user: user id

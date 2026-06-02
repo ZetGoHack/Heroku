@@ -4,7 +4,7 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-# ©️ Codrago, 2024-2025
+# ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
 # 🌐 https://github.com/coddrago/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
@@ -12,6 +12,7 @@
 
 import re
 import string
+import random
 
 from herokutl.errors.rpcerrorlist import YouBlockedUserError
 from herokutl.tl.functions.contacts import UnblockRequest
@@ -19,6 +20,7 @@ from herokutl.tl.types import Message
 
 from .. import loader, utils
 from ..inline.types import BotInlineMessage, InlineCall
+
 
 @loader.tds
 class InlineStuff(loader.Module):
@@ -58,47 +60,35 @@ class InlineStuff(loader.Module):
         )
 
     async def _check_bot(self, username: str) -> bool:
-        async with self._client.conversation("@BotFather", exclusive=False) as conv:
-            try:
-                m = await conv.send_message("/token")
-            except YouBlockedUserError:
-                await self._client(UnblockRequest(id="@BotFather"))
-                m = await conv.send_message("/token")
+        if await self.inline._check_bot(username):
+            return True
 
-            r = await conv.get_response()
-
-            await m.delete()
-            await r.delete()
-
-            if not hasattr(r, "reply_markup") or not hasattr(r.reply_markup, "rows"):
-                return False
-
-            for row in r.reply_markup.rows:
-                for button in row.buttons:
-                    if username != button.text.strip("@"):
-                        continue
-
-                    m = await conv.send_message("/cancel")
-                    r = await conv.get_response()
-
-                    await m.delete()
-                    await r.delete()
-
-                    return True
+        try:
+            await self._client.get_entity(username)
+            return False
+        except:
+            return True
 
     @loader.command()
     async def ch_heroku_bot(self, message: Message):
         args = utils.get_args_raw(message).strip("@")
+
+        if not args:
+            from .. import main
+
+            uid = utils.rand(7)
+            genran = "".join(random.choice(main.LATIN_MOCK))
+            args = f"{genran}_{uid}_bot"
+
         if (
-            not args
-            or not args.lower().endswith("bot")
+            not args.lower().endswith("bot")
             or len(args) <= 4
             or any(
                 litera not in (string.ascii_letters + string.digits + "_")
                 for litera in args
             )
         ):
-            await utils.answer(message, self.strings("bot_username_invalid"))
+            await utils.answer(message, self.strings["bot_username_invalid"])
             return
 
         try:
@@ -107,63 +97,95 @@ class InlineStuff(loader.Module):
             pass
         else:
             if not await self._check_bot(args):
-                await utils.answer(message, self.strings("bot_username_occupied"))
+                await utils.answer(message, self.strings["bot_username_occupied"])
                 return
 
         self._db.set("heroku.inline", "custom_bot", args)
         self._db.set("heroku.inline", "bot_token", None)
-        await utils.answer(message, self.strings("bot_updated"))
+        await utils.answer(message, self.strings["bot_updated"])
 
     @loader.command()
     async def ch_bot_token(self, message: Message):
         args = utils.get_args_raw(message)
-        if not args or not re.match(r'[0-9]{8,10}:[a-zA-Z0-9_-]{34,36}', args):
-            await utils.answer(message, self.strings('token_invalid'))
+        if not args or not re.match(r"[0-9]{8,10}:[a-zA-Z0-9_-]{34,36}", args):
+            await utils.answer(message, self.strings["token_invalid"])
             return
         self._db.set("heroku.inline", "bot_token", args)
-        await utils.answer(message, self.strings("bot_updated"))
+        await utils.answer(message, self.strings["bot_updated"])
 
-    async def aiogram_watcher(self, message: BotInlineMessage):
-        if message.text != "/start" and message.text != "/profile":
-            return
-
-        if message.text == "/start":
-            await message.answer_photo(
-                "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/start_cmd.png",
-                caption=self.strings("this_is_heroku"),
-            )
-
-        if message.text == "/profile":
-            
-            if message.from_user.id != self.client.tg_id:
-                await message.answer("❌ You are not allowed to use this")
-            else:
+    async def bot_watcher(self, message: BotInlineMessage):
+        match message.text:
+            case "/start":
                 await message.answer_photo(
                     "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/start_cmd.png",
-                    caption = self.strings["profile_cmd"].format(prefix=self.get_prefix(),ram_usage=utils.get_ram_usage(),cpu_usage=utils.get_cpu_usage(),host=utils.get_named_platform()), 
-                    reply_markup = self.inline.generate_markup(
+                    caption=self.strings["this_is_heroku"].format(
+                        (
+                            "<tg-emoji emoji-id=5463379725441341739>🪐</tg-emoji>"
+                            if self._client.heroku_me.premium
+                            else "🪐"
+                        ),
+                        utils.get_platform_emoji() if self._client else "Heroku",
+                    ),
+                    reply_markup=self.inline.generate_markup(
                         markup_obj=[
                             [
                                 {
-                                    "text": "🚀 Restart", 
-                                    "callback": self.restart, 
-                                    "args": (message,)
+                                    "text": "GitHub",
+                                    "url": "https://github.com/coddrago/Heroku",
+                                    "emoji_id": "5231065262228250587",
                                 }
                             ],
                             [
                                 {
-                                    "text": "⚠️ Reset prefix", 
-                                    "callback": self.reset_prefix,
-                                    "args": (message,)
+                                    "text": self.strings["support_chat_caption"],
+                                    "url": "https://t.me/heroku_talks",
+                                    "emoji_id": "5363805650327450240",
                                 }
-                            ]
+                            ],
                         ]
-                    )
+                    ),
                 )
+            case "/profile":
+                if message.from_user.id != self.client.tg_id:
+                    pass
+                else:
+                    await message.answer_photo(
+                        "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/start_cmd.png",
+                        caption=self.strings["profile_cmd"].format(
+                            prefix=self.get_prefix(),
+                            ram_usage=utils.get_ram_usage(),
+                            cpu_usage=utils.get_cpu_usage(),
+                            host=utils.get_named_platform(),
+                        ),
+                        reply_markup=self.inline.generate_markup(
+                            markup_obj=[
+                                [
+                                    {
+                                        "text": "Restart",
+                                        "callback": self.restart,
+                                        "style": "primary",
+                                        "args": (message,),
+                                        "emoji_id": "5873204392429096339",
+                                    }
+                                ],
+                                [
+                                    {
+                                        "text": "Reset prefix",
+                                        "callback": self.reset_prefix,
+                                        "style": "primary",
+                                        "args": (message,),
+                                        "emoji_id": "5870903672937911120",
+                                    }
+                                ],
+                            ]
+                        ),
+                    )
+            case _:
+                return
 
     async def restart(self, call: InlineCall, message):
         await call.edit(self.strings["restart"])
-        await self.invoke("restart", "-f", message=message, peer=self.inline.bot.id)
+        await self.invoke("restart", "-f", message=message, peer=self.inline.bot_id)
 
     async def reset_prefix(self, call: InlineCall, message):
         await message.answer(self.strings["prefix_reset"])

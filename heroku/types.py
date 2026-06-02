@@ -4,7 +4,7 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-# ©️ Codrago, 2024-2025
+# ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
 # 🌐 https://github.com/coddrago/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
@@ -13,6 +13,7 @@
 
 import ast
 import asyncio
+import collections
 import contextlib
 import copy
 import importlib
@@ -46,12 +47,16 @@ from .inline.types import (
     BotInlineCall,
     BotInlineMessage,
     BotMessage,
+    HerokuReplyMarkup,
     InlineCall,
     InlineMessage,
     InlineQuery,
     InlineUnit,
 )
 from .pointers import PointerDict, PointerList
+
+if typing.TYPE_CHECKING:
+    from .loader import Modules
 
 __all__ = [
     "JSONSerializable",
@@ -78,7 +83,6 @@ logger = logging.getLogger(__name__)
 
 
 JSONSerializable = typing.Union[str, int, float, bool, list, dict, None]
-HerokuReplyMarkup = typing.Union[typing.List[typing.List[dict]], typing.List[dict], dict]
 ListLike = typing.Union[list, set, tuple]
 Command = typing.Callable[..., typing.Awaitable[typing.Any]]
 
@@ -120,6 +124,8 @@ class Module:
 
     def internal_init(self):
         """Called after the class is initialized in order to pass the client and db. Do not call it yourself"""
+        self.allmodules: "Modules"
+
         self.db = self.allmodules.db
         self._db = self.allmodules.db
         self.client = self.allmodules.client
@@ -129,8 +135,8 @@ class Module:
         self.get_prefixes = self.allmodules.get_prefixes
         self.inline = self.allmodules.inline
         self.allclients = self.allmodules.allclients
-        self.tg_id = self._client.tg_id
-        self._tg_id = self._client.tg_id
+        self.tg_id: int = self._client.tg_id
+        self._tg_id: int = self._client.tg_id
 
     async def on_unload(self):
         """Called after unloading / reloading module"""
@@ -284,17 +290,17 @@ class Module:
             interval = 0.1
 
         for frame in frames:
-            if isinstance(message, Message):
-                if inline:
+            match message:
+                case Message() if inline:
                     message = await self.inline.form(
                         message=message,
                         text=frame,
                         reply_markup={"text": "\u0020\u2800", "data": "empty"},
                     )
-                else:
+                case Message():
                     message = await utils.answer(message, frame)
-            elif isinstance(message, InlineMessage) and inline:
-                await message.edit(frame)
+                case InlineMessage() if inline:
+                    await message.edit(frame)
 
             await asyncio.sleep(interval)
 
@@ -362,33 +368,36 @@ class Module:
         """
         from . import utils
 
-
         channel = await self.client.get_entity(peer)
-        if isinstance(channel, ChannelForbidden):
-            if assure_joined:
-                raise LoadError(
-                    f"You need to join {channel.title} (@{peer}) in order to use this module, "
-                    "but you have been banned there"
-                )
-            return False
 
-        if channel.id in self._db.get("heroku.main", "declined_joins", []):
-            if assure_joined:
-                raise LoadError(
-                    f"You need to join @{channel.username} in order to use this module"
-                )
+        match channel:
+            case ChannelForbidden():
+                if assure_joined:
+                    raise LoadError(
+                        f"You need to join {channel.title} (@{peer}) in order to use this module, "
+                        "but you have been banned there"
+                    )
+                return False
 
-            return False
+            case _ if channel.id in self._db.get("heroku.main", "declined_joins", []):
+                if assure_joined:
+                    raise LoadError(
+                        f"You need to join @{channel.username} in order to use this module"
+                    )
+                return False
 
-        if not isinstance(channel, Channel):
-            raise TypeError("`peer` field must be a channel")
+            case Channel():
+                pass
+
+            case _:
+                raise TypeError("`peer` field must be a channel")
 
         if getattr(channel, "left", True):
             channel = await self.client.force_get_entity(peer)
 
         if not getattr(channel, "left", True):
             return True
-        
+
         event = asyncio.Event()
         await self.client(
             UpdateNotifySettingsRequest(
@@ -414,7 +423,7 @@ class Module:
                 [
                     {
                         "text": "💫 Approve",
-                        "callback": self.lookup("loader").approve_internal,
+                        "callback": self.lookup("LoaderMod").approve_internal,
                         "args": (channel, event),
                     },
                     {
@@ -593,7 +602,7 @@ class Module:
             and utils.check_url(url)
         ):
             with contextlib.suppress(Exception):
-                await self.lookup("loader")._send_stats(url)
+                await self.lookup("LoaderMod")._send_stats(url)
 
         lib_obj.source_url = url.strip("/")
         lib_obj.allmodules = self.allmodules
@@ -773,10 +782,21 @@ class StopLoop(Exception):
 class ModuleConfig(dict):
     """Stores config for modules and apparently libraries"""
 
-    def __init__(self, *entries: typing.Union[str, "ConfigValue"]):
-        if all(isinstance(entry, ConfigValue) for entry in entries):
+    def __init__(self, *entries: typing.Union[str, "ConfigValue", "ConfigCategory"]):
+        self._option_categories: dict[str, str] = dict()
+        self._categories: dict[str, "ConfigCategory"] = dict()
+
+        if all(isinstance(entry, (ConfigValue, ConfigCategory)) for entry in entries):
             # New config format processing
-            self._config = {config.option: config for config in entries}
+            self._config = {}
+            for entry in entries:
+                if isinstance(entry, ConfigCategory):
+                    self._categories[entry.name] = entry
+                    for cv in entry:
+                        self._config[cv.option] = cv
+                        self._option_categories[cv.option] = entry.name
+                else:
+                    self._config[entry.option] = entry
         else:
             # Legacy config processing
             keys = []
@@ -818,6 +838,19 @@ class ModuleConfig(dict):
     def getdef(self, key: str) -> str:
         """Get the default value by key"""
         return self._config[key].default
+
+    def get_category(self, key: str) -> typing.Optional["ConfigCategory"]:
+        cat_name = self._option_categories.get(key)
+        return self._categories.get(cat_name) if cat_name else None
+
+    def grouped_options(
+        self,
+    ) -> "collections.OrderedDict[str | None, list[str]]":
+        result = collections.OrderedDict()
+        for option in self._config:
+            cat = self._option_categories.get(option)
+            result.setdefault(cat, []).append(option)
+        return result
 
     def __setitem__(self, key: str, value: typing.Any):
         self._config[key].value = value
@@ -874,6 +907,7 @@ class ConfigValue:
     on_change: typing.Optional[
         typing.Union[typing.Callable[[], typing.Awaitable], typing.Callable]
     ] = None
+    folder: typing.Optional[str] = None
 
     def __post_init__(self):
         if isinstance(self.value, _Placeholder):
@@ -927,20 +961,26 @@ class ConfigValue:
 
                         value = self.default
                 else:
-                    defaults = {
-                        "String": "",
-                        "Integer": 0,
-                        "Boolean": False,
-                        "Series": [],
-                        "Float": 0.0,
-                    }
+                    match self.validator.internal_id:
+                        case "String":
+                            default_val = ""
+                        case "Integer":
+                            default_val = 0
+                        case "Boolean":
+                            default_val = False
+                        case "Series":
+                            default_val = []
+                        case "Float":
+                            default_val = 0.0
+                        case _:
+                            default_val = None
 
-                    if self.validator.internal_id in defaults:
+                    if default_val is not None:
                         logger.debug(
                             "Config value was None, so it was reset to %s",
-                            defaults[self.validator.internal_id],
+                            default_val,
                         )
-                        value = defaults[self.validator.internal_id]
+                        value = default_val
 
             # This attribute will tell the `Loader` to save this value in db
             self._save_marker = True
@@ -952,6 +992,30 @@ class ConfigValue:
                 asyncio.ensure_future(wrap(self.on_change))
             else:
                 syncwrap(self.on_change)
+
+
+class ConfigCategory(list):
+    def __init__(
+        self,
+        name: str,
+        *config_values: ConfigValue,
+        doc: typing.Callable[[], str] | str | "ConfigValue" = "No description",
+    ):
+        super().__init__(config_values)
+        self.name = str(name)
+        self.doc = doc
+
+    def getdoc(self) -> str:
+        if callable(self.doc):
+            try:
+                return self.doc()
+            except Exception:
+                return "No description"
+        return self.doc
+
+    @property
+    def _config_values(self) -> tuple[ConfigValue, ...]:
+        return tuple(self)
 
 
 def _get_members(

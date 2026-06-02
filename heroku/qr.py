@@ -1,7 +1,4 @@
-# https://raw.githubusercontent.com/lincolnloop/python-qrcode/b80fea6ee7e75f3024b9ed7adf891a143e0b14e3/qrcode/main.py
-# The code was copied in such weird way since the original project requires Pillow
-
-# ©️ Codrago, 2024-2025
+# ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
 # 🌐 https://github.com/coddrago/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
@@ -668,32 +665,35 @@ def mask_func(pattern):
     """
     Return the mask function for the given mask pattern.
     """
-    if pattern == 0:  # 000
-        return lambda i, j: (i + j) % 2 == 0
-    if pattern == 1:  # 001
-        return lambda i, j: i % 2 == 0
-    if pattern == 2:  # 010
-        return lambda i, j: j % 3 == 0
-    if pattern == 3:  # 011
-        return lambda i, j: (i + j) % 3 == 0
-    if pattern == 4:  # 100
-        return lambda i, j: (math.floor(i / 2) + math.floor(j / 3)) % 2 == 0
-    if pattern == 5:  # 101
-        return lambda i, j: (i * j) % 2 + (i * j) % 3 == 0
-    if pattern == 6:  # 110
-        return lambda i, j: ((i * j) % 2 + (i * j) % 3) % 2 == 0
-    if pattern == 7:  # 111
-        return lambda i, j: ((i * j) % 3 + (i + j) % 2) % 2 == 0
-    raise TypeError("Bad mask pattern: " + pattern)  # pragma: no cover
+    match pattern:
+        case 0:  # 000
+            return lambda i, j: (i + j) % 2 == 0
+        case 1:  # 001
+            return lambda i, j: i % 2 == 0
+        case 2:  # 010
+            return lambda i, j: j % 3 == 0
+        case 3:  # 011
+            return lambda i, j: (i + j) % 3 == 0
+        case 4:  # 100
+            return lambda i, j: (math.floor(i / 2) + math.floor(j / 3)) % 2 == 0
+        case 5:  # 101
+            return lambda i, j: (i * j) % 2 + (i * j) % 3 == 0
+        case 6:  # 110
+            return lambda i, j: ((i * j) % 2 + (i * j) % 3) % 2 == 0
+        case 7:  # 111
+            return lambda i, j: ((i * j) % 3 + (i + j) % 2) % 2 == 0
+        case _:
+            raise TypeError("Bad mask pattern: " + pattern)  # pragma: no cover
 
 
 def mode_sizes_for_version(version):
-    if version < 10:
-        return MODE_SIZE_SMALL
-    elif version < 27:
-        return MODE_SIZE_MEDIUM
-    else:
-        return MODE_SIZE_LARGE
+    match True:
+        case _ if version < 10:
+            return MODE_SIZE_SMALL
+        case _ if version < 27:
+            return MODE_SIZE_MEDIUM
+        case _:
+            return MODE_SIZE_LARGE
 
 
 def length_in_bits(mode, version):
@@ -968,26 +968,27 @@ class QRData:
         return len(self.data)
 
     def write(self, buffer):
-        if self.mode == MODE_NUMBER:
-            for i in range(0, len(self.data), 3):
-                chars = self.data[i : i + 3]
-                bit_length = NUMBER_LENGTH[len(chars)]
-                buffer.put(int(chars), bit_length)
-        elif self.mode == MODE_ALPHA_NUM:
-            for i in range(0, len(self.data), 2):
-                chars = self.data[i : i + 2]
-                if len(chars) > 1:
-                    buffer.put(
-                        ALPHA_NUM.find(chars[0]) * 45 + ALPHA_NUM.find(chars[1]), 11
-                    )
-                else:
-                    buffer.put(ALPHA_NUM.find(chars), 6)
-        else:
-            # Iterating a bytestring in Python 3 returns an integer,
-            # no need to ord().
-            data = self.data
-            for c in data:
-                buffer.put(c, 8)
+        match self.mode:
+            case 1:
+                for i in range(0, len(self.data), 3):
+                    chars = self.data[i : i + 3]
+                    bit_length = NUMBER_LENGTH[len(chars)]
+                    buffer.put(int(chars), bit_length)
+            case 2:
+                for i in range(0, len(self.data), 2):
+                    chars = self.data[i : i + 2]
+                    if len(chars) > 1:
+                        buffer.put(
+                            ALPHA_NUM.find(chars[0]) * 45 + ALPHA_NUM.find(chars[1]), 11
+                        )
+                    else:
+                        buffer.put(ALPHA_NUM.find(chars), 6)
+            case _:
+                # Iterating a bytestring in Python 3 returns an integer,
+                # no need to ord().
+                data = self.data
+                for c in data:
+                    buffer.put(c, 8)
 
     def __repr__(self):
         return repr(self.data)

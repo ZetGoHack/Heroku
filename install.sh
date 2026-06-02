@@ -1,127 +1,184 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-# === Проверка поддержки терминала ===
-if [ -z "$TERM" ] || [ "$TERM" = "dumb" ]; then
-    echo "Your terminal does not support color formatting. Using basic mode."
-    BLUE=""
-    CYAN=""
-    GREEN=""
-    RED=""
-    YELLOW=""
-    PURPLE=""
-    RESET=""
-    BOLD=""
+APP_NAME="Heroku"
+MODULE_NAME="heroku"
+REPO_URL="${HEROKU_REPO_URL:-https://github.com/coddrago/Heroku.git}"
+VENV_DIR="${HEROKU_VENV_DIR:-.venv}"
+LOG_FILE="heroku-install.log"
+
+if [ "${SUDO_USER:-}" != "" ] && command -v sudo >/dev/null 2>&1; then
+	RUN_AS_USER=(sudo -u "$SUDO_USER")
 else
-    BLUE="\033[34m"
-    CYAN="\033[36m"
-    GREEN="\033[32m"
-    RED="\033[31m"
-    YELLOW="\033[33m"
-    PURPLE="\033[35m"
-    RESET="\033[0m"
-    BOLD="\033[1m"
+	RUN_AS_USER=()
 fi
 
-center_title() {
-    local title="$1"
-    local title_length=${#title}
-    local width=$(tput cols 2>/dev/null || echo 50)
-    [ $width -lt $((title_length + 4)) ] && width=$((title_length + 4))
-    local padding=$(( (width - title_length) / 2 ))
-    local left_padding=$(printf "%${padding}s" | tr ' ' '-')
-    local right_padding=$(printf "%${padding}s" | tr ' ' '-')
-    [ $(( (width - title_length) % 2 )) -ne 0 ] && right_padding="${right_padding}-"
-    echo "${left_padding}${title}${right_padding}"
+info() {
+	printf "\033[0;34m%s\033[0m\n" "$1"
 }
 
-spinner() {
-    local pid=$1
-    local delay=0.1
-    local spinstr='|/-\'
-    while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
-        local temp=${spinstr#?}
-        printf " [%c]  " "$spinstr"
-        local spinstr=$temp${spinstr%"$temp"}
-        sleep $delay
-        printf "\b\b\b\b\b\b"
-    done
-    printf "    \b\b\b\b"
+ok() {
+	printf "\033[0;32m%s\033[0m\n" "$1"
 }
 
-LOG_DIR="Heroku"
-LOG_FILE="$LOG_DIR/heroku_installer.log"
-apt install curl
-mkdir -p "$LOG_DIR"
+fail() {
+	printf "\033[1;31m%s\033[0m\n" "$1" >&2
+	[ -f "$LOG_FILE" ] && cat "$LOG_FILE" >&2
+	exit "${2:-1}"
+}
 
-while true; do
-    clear
-    echo -e "${PURPLE}${BOLD}"
-    curl -s https://raw.githubusercontent.com/coddrago/Heroku/refs/heads/dev-test/assets/download.txt   
-    echo -e "${RESET}"
-    echo -e "${CYAN}${BOLD}$(center_title 'Menu')${RESET}"
-    echo -e "${BLUE}1. Install Heroku${RESET}"
-    echo -e "${BLUE}2. Install Heroku in venv${RESET}"
-    echo -e "${BLUE}3. Install Heroku in Docker${RESET}"
-    echo -e "${BLUE}4. Remove Heroku${RESET}"
-    echo -e "${BLUE}0. Exit${RESET}"
-    echo -e "${CYAN}$(center_title '')${RESET}"
-    read -p $'\033[33m> \033[0m ' choice
+run() {
+	"$@" >>"$LOG_FILE" 2>&1
+}
 
-    case $choice in
-        1)
-            echo -e "${GREEN}Installing Heroku...${RESET}"
-            (apt-get update && apt-get install -y git python3 python3-pip) &>> "$LOG_FILE" & spinner $!
-            if [ -d "Heroku" ]; then
-                echo -e "${YELLOW}Heroku directory already exists. Skipping clone.${RESET}"
-            else
-                git clone https://github.com/coddrago/Heroku &>> "$LOG_FILE" & spinner $!
-            fi
-            cd Heroku
-            pip3 install -r requirements.txt &>> "$LOG_FILE" & spinner $!
-            python3 -m heroku &>> "$LOG_FILE" & spinner $!
-            echo -e "${GREEN}Completed successfully!${RESET}"
-            read -p $'\033[33mPress Enter to continue... \033[0m'
-            cd ..
-            ;;
-        2)
-            echo -e "${GREEN}Installing Heroku in venv...${RESET}"
-            (apt-get update && apt-get install -y git python3 python3-pip python3-venv) &>> "$LOG_FILE" & spinner $!
-            if [ -d "Heroku" ]; then
-                echo -e "${YELLOW}Heroku directory already exists. Skipping clone.${RESET}"
-            else
-                git clone https://github.com/coddrago/Heroku &>> "$LOG_FILE" & spinner $!
-            fi
-            cd Heroku
-            python3 -m venv Heroku_UB
-            source Heroku_UB/bin/activate
-            pip install -r requirements.txt &>> "$LOG_FILE" & spinner $!
-            python3 -m heroku &>> "$LOG_FILE" & spinner $!
-            echo -e "${GREEN}Completed successfully!${RESET}"
-            read -p $'\033[33mPress Enter to continue... \033[0m'
-            cd ..
-            ;;
-        3)
-            echo -e "${GREEN}Installing Heroku in Docker...${RESET}"
-            (apt-get update && apt-get install curl -y) &>> "$LOG_FILE" & spinner $!
-            bash <(curl -s https://raw.githubusercontent.com/coddrago/Heroku/refs/heads/master/docker.sh) &>> "$LOG_FILE" & spinner $!
-            echo -e "${GREEN}Completed successfully!${RESET}"
-            read -p $'\033[33mPress Enter to continue... \033[0m'
-            ;;
-        4)
-            echo -e "${RED}Removing Heroku...${RESET}"
-            rm -rf Heroku &>> "$LOG_FILE"
-            docker stop heroku_ub &>> "$LOG_FILE" || true
-            docker rm -f heroku_ub &>> "$LOG_FILE" || true
-            echo -e "${GREEN}Completed successfully!${RESET}"
-            read -p $'\033[33mPress Enter to continue... \033[0m'
-            ;;
-        0)
-            exit 0
-            ;;
-        *)
-            echo -e "${RED}Invalid choice!${RESET}"
-            read -p $'\033[33mPress Enter to continue... \033[0m'
-            ;;
-    esac
-done
+sudo_run() {
+	if [ "$(id -u)" -eq 0 ]; then
+		run "$@"
+	elif command -v sudo >/dev/null 2>&1; then
+		run sudo "$@"
+	else
+		fail "Root privileges or sudo are required to install system packages." 2
+	fi
+}
+
+python_cmd() {
+	if command -v python3 >/dev/null 2>&1; then
+		printf "python3"
+	elif command -v python >/dev/null 2>&1; then
+		printf "python"
+	else
+		fail "Python is not installed." 2
+	fi
+}
+
+install_system_packages() {
+	info "Installing system packages..."
+
+	if echo "${OSTYPE:-}" | grep -qE "^linux-android"; then
+		run pkg update -y
+		run pkg install -y \
+			build-essential \
+			ffmpeg \
+			git \
+			libcairo \
+			libffi \
+			libjpeg-turbo \
+			libwebp \
+			ncurses-utils \
+			openssl \
+			python
+	elif command -v apt-get >/dev/null 2>&1; then
+		sudo_run apt-get update
+		sudo_run apt-get install -y \
+			build-essential \
+			ffmpeg \
+			git \
+			imagemagick \
+			libcairo2 \
+			libffi-dev \
+			libjpeg-dev \
+			libmagic1 \
+			libopenjp2-7 \
+			libtiff-dev \
+			libwebp-dev \
+			libz-dev \
+			python3 \
+			python3-dev \
+			python3-pip \
+			python3-venv
+	elif command -v pacman >/dev/null 2>&1; then
+		sudo_run pacman -Sy --needed --noconfirm \
+			base-devel \
+			ffmpeg \
+			file \
+			git \
+			imagemagick \
+			python \
+			python-pip
+	elif command -v dnf >/dev/null 2>&1; then
+		sudo_run dnf install -y \
+			ffmpeg \
+			file-libs \
+			gcc \
+			gcc-c++ \
+			git \
+			imagemagick \
+			python3 \
+			python3-devel \
+			python3-pip
+	elif command -v brew >/dev/null 2>&1; then
+		run brew install git jpeg webp
+	else
+		info "Unknown package manager, skipping system package installation."
+	fi
+}
+
+check_python() {
+	local py="$1"
+
+	"$py" - <<'PY'
+import sys
+
+if sys.version_info < (3, 10):
+    raise SystemExit("Python 3.10+ is required")
+PY
+}
+
+prepare_repo() {
+	if [ -d "$MODULE_NAME" ] && [ -f "requirements.txt" ]; then
+		return
+	fi
+
+	if [ -d "$APP_NAME/$MODULE_NAME" ]; then
+		cd "$APP_NAME"
+		return
+	fi
+
+	info "Cloning repo..."
+	rm -rf "$APP_NAME"
+	"${RUN_AS_USER[@]}" git clone "$REPO_URL" "$APP_NAME" >>"$LOG_FILE" 2>&1 || fail "Clone failed." 3
+	cd "$APP_NAME"
+}
+
+create_venv() {
+	local py="$1"
+
+	info "Creating virtual environment..."
+	"${RUN_AS_USER[@]}" "$py" -m venv "$VENV_DIR" >>"$LOG_FILE" 2>&1 || fail "Virtual environment creation failed." 4
+}
+
+install_python_packages() {
+	local venv_python="$VENV_DIR/bin/python"
+
+	info "Installing Python dependencies..."
+	"${RUN_AS_USER[@]}" "$venv_python" -m pip install --upgrade pip setuptools wheel >>"$LOG_FILE" 2>&1 || fail "Pip upgrade failed." 4
+	"${RUN_AS_USER[@]}" "$venv_python" -m pip install --upgrade -r requirements.txt --disable-pip-version-check >>"$LOG_FILE" 2>&1 || fail "Requirements installation failed." 4
+}
+
+start_app() {
+	info "Starting..."
+	"${RUN_AS_USER[@]}" "$VENV_DIR/bin/python" -m "$MODULE_NAME" "$@"
+}
+
+clear || true
+cat assets/download.txt
+printf "\033[3;34;40m Installing %s...\033[0m\n\n" "$APP_NAME"
+
+: >"$LOG_FILE"
+
+if [ "${SUDO_USER:-}" != "" ]; then
+	chown "$SUDO_USER:" "$LOG_FILE" >/dev/null 2>&1 || true
+fi
+
+install_system_packages
+PYTHON="$(python_cmd)"
+prepare_repo
+check_python "$PYTHON"
+create_venv "$PYTHON"
+install_python_packages
+
+touch .setup_complete
+rm -f "$LOG_FILE"
+
+ok "Installation complete."
+start_app "$@"

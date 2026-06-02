@@ -4,7 +4,7 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-# ©️ Codrago, 2024-2025
+# ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
 # 🌐 https://github.com/coddrago/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
@@ -12,6 +12,7 @@
 
 import asyncio
 import collections
+import copy
 import json
 import logging
 import os
@@ -27,7 +28,6 @@ except ImportError as e:
 
 import typing
 
-from herokutl.errors.rpcerrorlist import ChannelsTooMuchError
 from herokutl.tl.types import Message, User
 
 from . import main, utils
@@ -59,13 +59,16 @@ class NoAssetsChannel(Exception):
     """Raised when trying to read/store asset with no asset channel present"""
 
 
+class NoContentChannel(Exception):
+    """Raised when trying to read/store asset with no content channel present"""
+
+
 class Database(dict):
     def __init__(self, client: CustomTelegramClient):
         super().__init__()
         self._client: CustomTelegramClient = client
         self._next_revision_call: int = 0
         self._revisions: typing.List[dict] = []
-        self._assets: int = None
         self._me: User = None
         self._redis: redis.Redis = None
         self._saving_task: asyncio.Future = None
@@ -118,34 +121,62 @@ class Database(dict):
         self._db_file = main.BASE_PATH / f"config-{self._client.tg_id}.json"
         self.read()
 
-        try:
-            self._assets, _ = await utils.asset_channel(
-                self._client,
-                "heroku-assets",
-                "🌆 Your Heroku assets will be stored here",
-                archive=True,
-                avatar="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_assets.png"
+    async def ensure_content_channel(self):
+        content_channel = None
+        existing_channel_id = self.get("heroku.forums", "channel_id", None)
+
+        if existing_channel_id:
+            try:
+                content_channel = await self._client.get_entity(existing_channel_id)
+                logger.debug(
+                    "Found existing content channel with ID %s in database",
+                    existing_channel_id,
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Saved channel ID {existing_channel_id} not found or inaccessible: {e}"
+                )
+                content_channel = None
+                self.set("heroku.forums", "forums_cache", {"heroku-userbot": {}})
+
+        if not content_channel:
+            async for dialog in self._client.iter_dialogs():
+                if dialog.title and "heroku-userbot" in dialog.title.lower():
+                    content_channel = dialog.entity
+                    logger.debug(
+                        "Found existing channel '%s' with ID %s",
+                        dialog.title,
+                        dialog.entity.id,
+                    )
+                    self.set("heroku.forums", "channel_id", int(dialog.entity.id))
+                    break
+
+        if not content_channel:
+            content_channel, _ = await utils.asset_channel(
+                client=self._client,
+                title="heroku-userbot",
+                description="🪐 Content related to Heroku will be here",
+                silent=True,
+                invite_bot=True,
+                avatar="https://raw.githubusercontent.com/coddrago/assets/main/heroku/heroku.png",
+                forum=True,
+                hide_general=True,
+                _folder="heroku",
             )
-        except ChannelsTooMuchError:
-            self._assets = None
-            logger.error(
-                "Can't find and/or create assets folder\n"
-                "This may cause several consequences, such as:\n"
-                "- Non working assets feature (e.g. notes)\n"
-                "- This error will occur every restart\n\n"
-                "You can solve this by leaving some channels/groups"
-            )
+            self.set("heroku.forums", "channel_id", int(content_channel.id))
+
+        return content_channel
 
     def read(self):
         """Read database and stores it in self"""
         if self._redis:
             try:
-                self.update(
-                    **json.loads(
+                self._update_from_read(
+                    json.loads(
                         self._redis.get(
                             str(self._client.tg_id),
                         ).decode(),
-                    )
+                    ),
                 )
             except Exception:
                 logger.exception("Error reading redis database")
@@ -155,12 +186,19 @@ class Database(dict):
             db = self._db_file.read_text()
             if re.search(r'"(hikka\.)(\S+\":)', db):
                 logging.warning("Converting db after update")
-                db = re.sub(r'(hikka\.)(\S+\":)', lambda m: 'heroku.' + m.group(2), db)
-            self.update(**json.loads(db))
+                db = re.sub(r"(hikka\.)(\S+\":)", lambda m: "heroku." + m.group(2), db)
+            if re.search(r'"(legacy\.)(\S+\":)', db):
+                logging.warning("Converting db after update")
+                db = re.sub(r"(legacy\.)(\S+\":)", lambda m: "heroku." + m.group(2), db)
+            self._update_from_read(json.loads(db))
         except json.decoder.JSONDecodeError:
             logger.warning("Database read failed! Creating new one...")
         except FileNotFoundError:
             logger.debug("Database file not found, creating new one...")
+
+    def _update_from_read(self, items: dict) -> None:
+        """Update DB from persisted storage without write-protection checks."""
+        super().update(items)
 
     def process_db_autofix(self, db: dict) -> bool:
         if not utils.is_serializable(db):
@@ -246,33 +284,67 @@ class Database(dict):
         Save assets
         returns asset_id as integer
         """
-        if not self._assets:
-            raise NoAssetsChannel("Tried to save asset to non-existing asset channel")
+
+        try:
+            _assets_topic_id = self.get("heroku.forums", "forums_cache", {})[
+                "heroku-userbot"
+            ]["Assets"]
+        except (TypeError, KeyError):
+            raise NoAssetsChannel("Tried to save asset to non-existing asset topic.")
+
+        if not (_content_channel_id := self.get("heroku.forums", "channel_id", None)):
+            raise NoContentChannel(
+                "Tried to save asset with non-existing content channel."
+            )
 
         return (
-            (await self._client.send_message(self._assets, message)).id
+            (
+                await self._client.send_message(
+                    _content_channel_id, message, reply_to=_assets_topic_id
+                )
+            ).id
             if isinstance(message, Message)
             else (
                 await self._client.send_message(
-                    self._assets,
+                    _content_channel_id,
                     file=message,
                     force_document=True,
+                    message_thread_id=_assets_topic_id,
                 )
             ).id
         )
 
     async def fetch_asset(self, asset_id: int) -> typing.Optional[Message]:
         """Fetch previously saved asset by its asset_id"""
-        if not self._assets:
-            raise NoAssetsChannel(
-                "Tried to fetch asset from non-existing asset channel"
+
+        if not (_content_channel_id := self.get("heroku.forums", "channel_id", None)):
+            raise NoContentChannel(
+                "Tried to save asset with non-existing content channel."
             )
 
-        asset = await self._client.get_messages(self._assets, ids=[asset_id])
+        try:
+            _assets_topic_id = self.get("heroku.forums", "forums_cache", {})[
+                "heroku-userbot"
+            ]["Assets"]
+        except (TypeError, KeyError):
+            raise NoAssetsChannel("Tried to save asset to non-existing asset topic.")
+
+        asset = await self._client.get_messages(
+            _content_channel_id, reply_to=_assets_topic_id, ids=[asset_id]
+        )
 
         return asset[0] if asset else None
 
     def get(
+        self,
+        owner: str,
+        key: str,
+        default: typing.Optional[JSONSerializable] = None,
+    ) -> JSONSerializable:
+        """Get database key snapshot"""
+        return copy.deepcopy(self._get_raw(owner, key, default))
+
+    def _get_raw(
         self,
         owner: str,
         key: str,
@@ -310,6 +382,27 @@ class Database(dict):
         super().setdefault(owner, {})[key] = value
         return self.save()
 
+    def __setitem__(self, owner: str, value: JSONSerializable) -> None:
+        if not utils.is_serializable(owner):
+            raise RuntimeError(
+                "Attempted to write object to "
+                f"{owner=} ({type(owner)=}) of database. It is not "
+                "JSON-serializable key which will cause errors"
+            )
+
+        if not utils.is_serializable(value):
+            raise RuntimeError(
+                "Attempted to write object of "
+                f"{owner=} ({type(value)=}) to database. It is not "
+                "JSON-serializable value which will cause errors"
+            )
+
+        super().__setitem__(owner, value)
+
+    def update(self, *args, **kwargs) -> None:
+        items = dict(*args, **kwargs)
+        return super().update(items)
+
     def pointer(
         self,
         owner: str,
@@ -318,7 +411,7 @@ class Database(dict):
         item_type: typing.Optional[typing.Any] = None,
     ) -> typing.Union[JSONSerializable, PointerList, PointerDict]:
         """Get a pointer to database key"""
-        value = self.get(owner, key, default)
+        value = self._get_raw(owner, key, default)
         mapping = {
             list: PointerList,
             dict: PointerDict,
@@ -330,7 +423,7 @@ class Database(dict):
             None,
         )
 
-        if (current_value := self.get(owner, key, None)) and type(
+        if (current_value := self._get_raw(owner, key, None)) and type(
             current_value
         ) is not type(default):
             raise ValueError(
@@ -344,7 +437,7 @@ class Database(dict):
 
         if item_type is not None:
             if isinstance(value, list):
-                for item in self.get(owner, key, default):
+                for item in self._get_raw(owner, key, default):
                     if not isinstance(item, dict):
                         raise ValueError(
                             "Item type can only be specified for dedicated keys and"
@@ -356,7 +449,7 @@ class Database(dict):
                     item_type,
                 )
             if isinstance(value, dict):
-                for item in self.get(owner, key, default).values():
+                for item in self._get_raw(owner, key, default).values():
                     if not isinstance(item, dict):
                         raise ValueError(
                             "Item type can only be specified for dedicated keys and"

@@ -4,17 +4,17 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-# ©️ Codrago, 2024-2025
+# ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
 # 🌐 https://github.com/coddrago/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
 import getpass
-import platform as lib_platform
 import inspect
 import logging
 import os
+import platform as lib_platform
 import random
 import time
 import typing
@@ -83,9 +83,25 @@ class TestMod(loader.Module):
                 on_change=self._pass_config_to_logger,
             ),
             loader.ConfigValue(
-                "Text_Of_Ping",
-                "<emoji document_id=5920515922505765329>⚡️</emoji> <b>𝙿𝚒𝚗𝚐: </b><code>{ping}</code><b> 𝚖𝚜 </b>\n<emoji document_id=5900104897885376843>🕓</emoji><b> 𝚄𝚙𝚝𝚒𝚖𝚎: </b><code>{uptime}</code>",
-                lambda: self.strings["configping"],
+                "disable_internet_warn",
+                False,
+                "Ignore all internet errors",
+                validator=loader.validators.Boolean(),
+            ),
+            loader.ConfigValue(
+                "custom_message",
+                "<tg-emoji emoji-id=5920515922505765329>⚡️</tg-emoji> <b>𝙿𝚒𝚗𝚐: </b><code>{ping}</code><b> 𝚖𝚜 </b>\n<tg-emoji emoji-id=5900104897885376843>🕓</tg-emoji><b> 𝚄𝚙𝚝𝚒𝚖𝚎: </b><code>{uptime}</code>",
+                lambda: (
+                    self.strings["configping"]
+                    + (
+                        "\n"
+                        + self.strings["configpingph"].format(
+                            "\n" + utils.config_placeholders()
+                        )
+                        if utils.config_placeholders()
+                        else ""
+                    )
+                ),
                 validator=loader.validators.String(),
             ),
             loader.ConfigValue(
@@ -104,7 +120,7 @@ class TestMod(loader.Module):
                 "banner_url",
                 None,
                 lambda: self.strings["banner_url"],
-                validator=loader.validators.String(),
+                validator=loader.validators.RandomLink(),
             ),
             loader.ConfigValue(
                 "quote_media",
@@ -140,96 +156,7 @@ class TestMod(loader.Module):
             handler.handledbuffer = []
             handler.tg_buff = ""
 
-        await utils.answer(message, self.strings("logs_cleared"))
-
-    @loader.loop(interval=1, autostart=True)
-    async def watchdog(self):
-        if not os.path.isdir(DEBUG_MODS_DIR):
-            return
-
-        try:
-            for module in os.scandir(DEBUG_MODS_DIR):
-                last_modified = os.stat(module.path).st_mtime
-                cls_ = module.path.split("/")[-1].split(".py")[0]
-
-                if cls_ not in self._memory:
-                    self._memory[cls_] = last_modified
-                    continue
-
-                if self._memory[cls_] == last_modified:
-                    continue
-
-                self._memory[cls_] = last_modified
-                logger.debug("Reloading debug module %s", cls_)
-                with open(module.path, "r") as f:
-                    try:
-                        await next(
-                            module
-                            for module in self.allmodules.modules
-                            if module.__class__.__name__ == "LoaderMod"
-                        ).load_module(
-                            f.read(),
-                            None,
-                            save_fs=False,
-                        )
-                    except Exception:
-                        logger.exception("Failed to reload module in watchdog")
-        except Exception:
-            logger.exception("Failed debugging watchdog")
-            return
-
-    @loader.command()
-    async def debugmod(self, message: Message):
-        """| debug mod for your modules!"""
-        args = utils.get_args_raw(message)
-        instance = None
-        for module in self.allmodules.modules:
-            if (
-                module.__class__.__name__.lower() == args.lower()
-                or module.strings["name"].lower() == args.lower()
-            ):
-                if os.path.isfile(
-                    os.path.join(
-                        DEBUG_MODS_DIR,
-                        f"{module.__class__.__name__}.py",
-                    )
-                ):
-                    os.remove(
-                        os.path.join(
-                            DEBUG_MODS_DIR,
-                            f"{module.__class__.__name__}.py",
-                        )
-                    )
-
-                    try:
-                        delattr(module, "heroku_debug")
-                    except AttributeError:
-                        pass
-
-                    await utils.answer(message, self.strings("debugging_disabled"))
-                    return
-
-                module.heroku_debug = True
-                instance = module
-                break
-
-        if not instance:
-            await utils.answer(message, self.strings("bad_module"))
-            return
-
-        with open(
-            os.path.join(
-                DEBUG_MODS_DIR,
-                f"{instance.__class__.__name__}.py",
-            ),
-            "wb",
-        ) as f:
-            f.write(inspect.getmodule(instance).__loader__.data)
-
-        await utils.answer(
-            message,
-            self.strings("debugging_enabled").format(instance.__class__.__name__),
-        )
+        await utils.answer(message, self.strings["logs_cleared"])
 
     @loader.command()
     async def logs(
@@ -238,30 +165,39 @@ class TestMod(loader.Module):
         force: bool = False,
         lvl: typing.Union[int, None] = None,
     ):
+        raw_args = utils.get_args_raw(message) if isinstance(message, Message) else ""
+        args = raw_args.split()
+        if "-f" in args or "--force" in args:
+            force = True
+            args = [arg for arg in args if arg not in {"-f", "--force"}]
+
         if not isinstance(lvl, int):
-            args = utils.get_args_raw(message)
             if args:
                 try:
                     try:
-                        lvl = int(args.split()[0])
+                        lvl = int(args[0])
                     except ValueError:
-                        lvl = getattr(logging, args.split()[0].upper(), None)
+                        lvl = getattr(logging, args[0].upper(), None)
                 except IndexError:
                     lvl = None
             else:
                 lvl = None
 
         if not isinstance(lvl, int):
+            if force:
+                await utils.answer(message, self.strings["set_loglevel"])
+                return
+
             try:
                 if self.inline.init_complete:
                     await utils.answer(
                         message,
-                        self.strings("choose_loglevel"),
+                        self.strings["choose_loglevel"],
                         reply_markup=utils.chunks(
                             [
                                 {
                                     "text": name,
-                                "callback": self.logs,
+                                    "callback": self.logs,
                                     "args": (False, level),
                                 }
                                 for name, level in [
@@ -275,12 +211,12 @@ class TestMod(loader.Module):
                             ],
                             2,
                         )
-                        + [[{"text": self.strings("cancel"), "action": "close"}]],
-                )
-                else: 
+                        + [[{"text": self.strings["cancel"], "action": "close"}]],
+                    )
+                else:
                     raise
             except Exception as e:
-                await utils.answer(message, self.strings("set_loglevel") + f"\n{e}")
+                await utils.answer(message, self.strings["set_loglevel"] + f"\n{e}")
 
             return
 
@@ -301,27 +237,20 @@ class TestMod(loader.Module):
             else logging._levelToName[lvl]  # skipcq: PYL-W0212
         )
 
-        if (
-            lvl < logging.WARNING
-            and not force
-            and (
-                not isinstance(message, Message)
-                or "force_insecure" not in message.raw_text.lower()
-            )
-        ):
+        if lvl < logging.WARNING and not force:
             try:
                 if not self.inline.init_complete:
                     raise
 
                 cfg = {
-                    "text": self.strings("confidential").format(named_lvl),
+                    "text": self.strings["confidential"].format(named_lvl),
                     "reply_markup": [
                         {
-                            "text": self.strings("send_anyway"),
+                            "text": self.strings["send_anyway"],
                             "callback": self.logs,
                             "args": [True, lvl],
                         },
-                        {"text": self.strings("cancel"), "action": "close"},
+                        {"text": self.strings["cancel"], "action": "close"},
                     ],
                 }
                 if isinstance(message, Message):
@@ -332,19 +261,31 @@ class TestMod(loader.Module):
             except Exception:
                 await utils.answer(
                     message,
-                    self.strings("confidential_text").format(named_lvl),
+                    self.strings["confidential_text"].format(named_lvl),
                 )
 
             return
 
         if len(logs) <= 2:
-            back_button = {"text": self.strings["back"], "callback": self.logs}
-            await utils.answer(message, self.strings("no_logs").format(named_lvl), reply_markup=back_button)
+            await utils.answer(
+                message,
+                self.strings["no_logs"].format(named_lvl),
+                **(
+                    {}
+                    if force
+                    else {
+                        "reply_markup": {
+                            "text": self.strings["back"],
+                            "callback": self.logs,
+                        },
+                    }
+                ),
+            )
             return
 
         logs = self.lookup("evaluator").censor(logs)
 
-        logs = BytesIO(logs.encode("utf-16"))
+        logs = BytesIO(logs.encode("utf-8"))
         logs.name = "heroku-logs.txt"
 
         ghash = utils.get_git_hash()
@@ -359,20 +300,19 @@ class TestMod(loader.Module):
             ),
         )
 
-        if getattr(message, "out", True):
-            await message.delete()
+        caption = self.strings["logs_caption"].format(named_lvl, *other)
 
         if isinstance(message, Message):
             await utils.answer(
                 message,
-                logs,
-                caption=self.strings("logs_caption").format(named_lvl, *other),
+                caption,
+                file=logs,
             )
         else:
             await self._client.send_file(
                 message.form["chat"],
                 logs,
-                caption=self.strings("logs_caption").format(named_lvl, *other),
+                caption=caption,
                 reply_to=message.form["top_msg_id"],
             )
 
@@ -380,51 +320,56 @@ class TestMod(loader.Module):
     async def suspend(self, message: Message):
         try:
             time_sleep = float(utils.get_args_raw(message))
-            await utils.answer(
-                message,
-                self.strings("suspended").format(time_sleep),
-            )
-            time.sleep(time_sleep)
+            if time_sleep > 86400 * 365 * 100:
+                await utils.answer(message, self.strings["suspend_invalid_time"])
+            else:
+                await utils.answer(
+                    message,
+                    self.strings["suspended"].format(time_sleep),
+                )
+                time.sleep(time_sleep)
         except ValueError:
-            await utils.answer(message, self.strings("suspend_invalid_time"))
+            await utils.answer(message, self.strings["suspend_invalid_time"])
 
     @loader.command()
     async def ping(self, message: Message):
         """- Find out your userbot ping"""
         start = time.perf_counter_ns()
         message = await utils.answer(message, self.config["ping_emoji"])
-        banner = self.config["banner_url"]
-        if self.config["quote_media"] is True:
-            banner = InputMediaWebPage(self.config["banner_url"])
-        
+        banner = str(self.config["banner_url"])
+
+        if self.config["banner_url"] and self.config["quote_media"] is True:
+            banner = InputMediaWebPage(str(self.config["banner_url"]), optional=True)
+
+        elif not self.config["banner_url"]:
+            banner = None
+
+        data = {
+            "ping": round((time.perf_counter_ns() - start) / 10**6, 3),
+            "uptime": utils.formatted_uptime(),
+            "ping_hint": (
+                (self.config["hint"]) if random.choice([0, 0, 1]) == 1 else ""
+            ),
+            "hostname": lib_platform.node(),
+            "user": getpass.getuser(),
+            "platform": utils.get_platform_name(),
+        }
+        data = await utils.get_placeholders(data, self.config["custom_message"])
+        try:
+            placeholders_msg = self.config["custom_message"].format(**data)
+        except KeyError:
+            logger.exception("Missing placeholder in custom_message")
+            placeholders_msg = "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji>"
         await utils.answer(
             message,
-            self.config["Text_Of_Ping"].format(
-                ping=round((time.perf_counter_ns() - start) / 10**6, 3),
-                uptime=utils.formatted_uptime(),
-                ping_hint=(
-                    (self.config["hint"]) if random.choice([0, 0, 1]) == 1 else ""
-                ),
-                hostname=lib_platform.node(),
-                user=getpass.getuser(),
-            ),
-            file = banner,
-            invert_media = self.config["invert_media"]
+            placeholders_msg,
+            file=banner,
+            invert_media=self.config["invert_media"],
         )
-
 
     async def client_ready(self):
-        chat, _ = await utils.asset_channel(
-            self._client,
-            "heroku-logs",
-            "🪐 Your Heroku logs will appear in this chat",
-            silent=True,
-            invite_bot=True,
-            avatar="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_logs.png",
-        )
-
-        self.logchat = int(f"-100{chat.id}")
-
+        self._content_channel_id = await utils.wait_for_content_channel(self._db)
+        self.logchat = int(f"-100{self._content_channel_id}")
         logging.getLogger().handlers[0].install_tg_log(self)
         logger.debug("Bot logging installed for %s", self.logchat)
 

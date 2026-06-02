@@ -4,7 +4,7 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-# ©️ Codrago, 2024-2025
+# ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
 # 🌐 https://github.com/coddrago/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
@@ -23,9 +23,7 @@ def compat(code: str) -> str:
     ```python
         code = '''
             from ..inline import GeekInlineQuery, rand
-            from ..inline import rand, InlineQueryResultArticle
-            from ..inline import InlineQueryResultArticle, rand
-            from ..inline import rand, InlineQueryResultArticle, InputTextMessageContent
+            from ..inline import rand
         '''
         print(compat(code))
     ```

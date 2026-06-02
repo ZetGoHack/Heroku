@@ -4,7 +4,7 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-# ©️ Codrago, 2024-2025
+# ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
 # 🌐 https://github.com/coddrago/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
@@ -15,18 +15,19 @@ import logging
 import time
 import typing
 
-from aiogram.types import InlineQuery, InlineQueryResultArticle, InputTextMessageContent
-
 from .. import utils
 from .types import InlineUnit
+
+if typing.TYPE_CHECKING:
+    from ..inline.core import InlineManager
 
 logger = logging.getLogger(__name__)
 
 
 class QueryGallery(InlineUnit):
     async def query_gallery(
-        self,
-        query: InlineQuery,
+        self: "InlineManager",
+        query,
         items: typing.List[typing.Dict[str, typing.Any]],
         *,
         force_me: bool = False,
@@ -138,18 +139,14 @@ class QueryGallery(InlineUnit):
             }
 
             result += [
-                InlineQueryResultArticle(
-                    id=utils.rand(20),
+                await query.builder.article(
                     title=i["title"],
                     description=i["description"],
-                    input_message_content=InputTextMessageContent(
-                        message_text=f"🪐 <b>Opening gallery...</b>\n<i>#id: {id_}</i>",
-                        parse_mode="HTML",
-                        disable_web_page_preview=True,
-                    ),
-                    thumbnail_url=photo_url,
-                    thumb_width=128,
-                    thumb_height=128,
+                    text=f"🪐 <b>Opening gallery...</b>\n<i>#id: {id_}</i>",
+                    parse_mode="HTML",
+                    link_preview=False,
+                    thumb=self._web_document(photo_url),
+                    id=utils.rand(20),
                 )
             ]
 

@@ -6,19 +6,86 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-# ©️ Codrago, 2024-2025
+# ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
 # 🌐 https://github.com/coddrago/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
 import getpass
+import hashlib
 import os
+import shutil
 import subprocess
 import sys
-import hashlib
+from pathlib import Path
 
 from ._internal import restart
+
+if "--no-git" in sys.argv:
+    os.environ["HEROKU_NO_GIT"] = "1"
+
+
+def get_data_root():
+    for index, arg in enumerate(sys.argv):
+        if arg == "--data-root" and index + 1 < len(sys.argv):
+            return Path(sys.argv[index + 1]).expanduser()
+
+        if arg.startswith("--data-root="):
+            return Path(arg.split("=", maxsplit=1)[1]).expanduser()
+
+    return Path(
+        "/data"
+        if "DOCKER" in os.environ
+        else os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    )
+
+
+def wipe_data():
+    if not {"-w", "--wipe"} & set(sys.argv):
+        return
+
+    print(
+        "Are you sure you want to completely delete all session files, "
+        "their databases and modules? This action is irreversible [y/N]"
+    )
+    if input("> ").strip().lower() not in {"yes", "y"}:
+        print("Cancelled")
+        sys.exit(0)
+
+    data_root = get_data_root()
+    patterns = (
+        "config.json",
+        "config-*.json",
+        "*.session",
+        "*.session-journal",
+        "api_token.txt",
+    )
+    dirs = ("loaded_modules",)
+    removed = 0
+
+    for pattern in patterns:
+        for path in data_root.glob(pattern):
+            if not path.is_file():
+                continue
+
+            path.unlink()
+            removed += 1
+
+    for dirname in dirs:
+        path = data_root / dirname
+        if not path.is_dir():
+            continue
+
+        shutil.rmtree(path)
+        removed += 1
+
+    print(f"Removed files: {removed}")
+    sys.exit(0)
+
+
+wipe_data()
+
 
 def get_file_hash(filename):
     hasher = hashlib.sha256()
@@ -28,6 +95,7 @@ def get_file_hash(filename):
         return hasher.hexdigest()
     except FileNotFoundError:
         return None
+
 
 def deps():
     subprocess.run(
@@ -44,24 +112,28 @@ def deps():
             "requirements.txt",
         ],
         check=True,
+        timeout=600,
+        capture_output=True,
     )
     with open(".requirements_hash", "w") as f:
         f.write(get_file_hash("requirements.txt"))
 
+
 if (
     getpass.getuser() == "root"
     and "--root" not in " ".join(sys.argv)
+    and not {"-h", "--help"} & set(sys.argv)
     and all(trigger not in os.environ for trigger in {"DOCKER", "NO_SUDO"})
 ):
-    print("\U0001F6AB" * 15)
+    print("\U0001f6ab" * 15)
     print("You attempted to run Heroku on behalf of root user")
     print("Please, create a new user and restart script")
     print("If this action was intentional, pass --root argument instead")
-    print("\U0001F6AB" * 15)
+    print("\U0001f6ab" * 15)
     print()
     print("Type force_insecure to ignore this warning")
     print("Type no_sudo if your system has no sudo (Debian vibes)")
-    inp = input('> ').lower()
+    inp = input("> ").lower()
     if inp != "force_insecure":
         sys.exit(1)
     elif inp == "no_sudo":
@@ -69,10 +141,12 @@ if (
         print("Added NO_SUDO in your environment variables")
         restart()
 
-if sys.version_info < (3, 9, 0):
-    print("\U0001F6AB Error: you must use at least Python version 3.9.0")
+if sys.version_info < (3, 10, 0):
+    print("\U0001f6ab Error: you must use at least Python version 3.10.0")
 elif __package__ != "heroku":
-    print("\U0001F6AB Error: you cannot run this as a script; you must execute as a package")
+    print(
+        "\U0001f6ab Error: you cannot run this as a script; you must execute as a package"
+    )
 else:
     try:
         import herokutl
@@ -81,19 +155,23 @@ else:
     else:
         try:
             import herokutl  # noqa: F811
-            if tuple(map(int, herokutl.__version__.split("."))) < (1, 1, 0):
+
+            if tuple(map(int, herokutl.__version__.split("."))) < (1, 7, 2):
                 raise ImportError
         except ImportError:
-            print("\U0001F504 Installing dependencies...")
+            print("\U0001f504 Installing dependencies...")
             deps()
             restart()
 
     try:
         from . import log
+
         log.init()
         from . import main
     except ImportError as e:
-        print(f"{str(e)}\n\U0001F504 Attempting dependencies installation... Just wait ⏱")
+        print(
+            f"{str(e)}\n\U0001f504 Attempting dependencies installation... Just wait ⏱"
+        )
         deps()
         restart()
 
@@ -108,8 +186,10 @@ else:
             prev_hash = f.read().strip()
 
     if prev_hash != get_file_hash("requirements.txt"):
-        print("\U0001F504 Detected changes in requirements.txt, updating dependencies...")
+        print(
+            "\U0001f504 Detected changes in requirements.txt, updating dependencies..."
+        )
         deps()
         restart()
-    
+
     main.heroku.main()

@@ -4,7 +4,7 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-# ©️ Codrago, 2024-2025
+# ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
 # 🌐 https://github.com/coddrago/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
@@ -25,7 +25,6 @@ from herokutl.utils import is_list_like
 
 from .. import loader, utils
 from ..inline.types import InlineCall
-from ..web.debugger import WebDebugger
 
 logger = logging.getLogger(__name__)
 
@@ -51,12 +50,16 @@ GROUPS = [
 
 
 CONSTRUCTORS = {
-    (entity_name[0].lower() + entity_name[1:]).rsplit("Request", 1)[0]: getattr(cur_entity, "CONSTRUCTOR_ID")
+    (entity_name[0].lower() + entity_name[1:]).rsplit("Request", 1)[0]: getattr(
+        cur_entity, "CONSTRUCTOR_ID"
+    )
     for group in GROUPS
     for entity_name in dir(getattr(functions, group))
-    if hasattr((cur_entity := getattr(getattr(functions, group), entity_name)), "__bases__") 
-       and TLRequest in cur_entity.__bases__ 
-       and hasattr(cur_entity, "CONSTRUCTOR_ID")
+    if hasattr(
+        (cur_entity := getattr(getattr(functions, group), entity_name)), "__bases__"
+    )
+    and TLRequest in cur_entity.__bases__
+    and hasattr(cur_entity, "CONSTRUCTOR_ID")
 }
 
 
@@ -74,25 +77,25 @@ class APIRatelimiterMod(loader.Module):
             loader.ConfigValue(
                 "time_sample",
                 15,
-                lambda: self.strings("_cfg_time_sample"),
+                lambda: self.strings["_cfg_time_sample"],
                 validator=loader.validators.Integer(minimum=1),
             ),
             loader.ConfigValue(
                 "threshold",
                 100,
-                lambda: self.strings("_cfg_threshold"),
+                lambda: self.strings["_cfg_threshold"],
                 validator=loader.validators.Integer(minimum=10),
             ),
             loader.ConfigValue(
                 "local_floodwait",
                 30,
-                lambda: self.strings("_cfg_local_floodwait"),
+                lambda: self.strings["_cfg_local_floodwait"],
                 validator=loader.validators.Integer(minimum=10, maximum=3600),
             ),
             loader.ConfigValue(
                 "forbidden_methods",
                 ["joinChannel", "importChatInvite"],
-                lambda: self.strings("_cfg_forbidden_methods"),
+                lambda: self.strings["_cfg_forbidden_methods"],
                 validator=loader.validators.MultiChoice(
                     [
                         "sendReaction",
@@ -100,15 +103,22 @@ class APIRatelimiterMod(loader.Module):
                         "importChatInvite",
                     ]
                 ),
-                on_change=self.on_forbidden_methods_update
+                on_change=self.on_forbidden_methods_update,
             ),
         )
 
     async def client_ready(self):
         asyncio.ensure_future(self._install_protection())
-    
+
     async def on_forbidden_methods_update(self):
-        self._client.forbid_constructors(list(map(lambda x: CONSTRUCTORS[x], self.config['forbidden_methods'], )))
+        self._client.forbid_constructors(
+            list(
+                map(
+                    lambda x: CONSTRUCTORS[x],
+                    self.config["forbidden_methods"],
+                )
+            )
+        )
 
     async def _install_protection(self):
         await asyncio.sleep(30)  # Restart lock
@@ -153,19 +163,18 @@ class APIRatelimiterMod(loader.Module):
                         and not self._lock
                     ):
                         self._lock = True
-                        report = io.BytesIO(
-                            json.dumps(
-                                self._ratelimiter,
-                                indent=4,
-                            ).encode()
-                        )
+                        report_bytes = json.dumps(
+                            self._ratelimiter,
+                            indent=4,
+                        ).encode()
+                        report = io.BytesIO(report_bytes)
                         report.name = "local_fw_report.json"
 
                         await self.inline.bot.send_document(
                             self.tg_id,
                             report,
                             caption=self.inline.sanitise_text(
-                                self.strings("warning").format(
+                                self.strings["warning"].format(
                                     self.config["local_floodwait"],
                                     prefix=utils.escape_html(self.get_prefix()),
                                 )
@@ -192,57 +201,24 @@ class APIRatelimiterMod(loader.Module):
     @loader.command()
     async def suspend_api_protect(self, message: Message):
         if not (args := utils.get_args_raw(message)) or not args.isdigit():
-            await utils.answer(message, self.strings("args_invalid"))
+            await utils.answer(message, self.strings["args_invalid"])
             return
 
         self._suspend_until = time.perf_counter() + int(args)
-        await utils.answer(message, self.strings("suspended_for").format(args))
+        await utils.answer(message, self.strings["suspended_for"].format(args))
 
     @loader.command()
     async def api_fw_protection(self, message: Message):
         await self.inline.form(
             message=message,
-            text=self.strings("u_sure"),
+            text=self.strings["u_sure"],
             reply_markup=[
-                {"text": self.strings("btn_no"), "action": "close"},
-                {"text": self.strings("btn_yes"), "callback": self._finish},
-            ],
-        )
-
-    @property
-    def _debugger(self) -> WebDebugger:
-        return logging.getLogger().handlers[0].web_debugger
-
-    async def _show_pin(self, call: InlineCall):
-        self.inline.bot(await call.answer(f"Werkzeug PIN: {self._debugger.pin}", show_alert=True))
-
-    @loader.command()
-    async def debugger(self, message: Message):
-        if not self._debugger:
-            await utils.answer(message, self.strings("debugger_disabled"))
-            return
-
-        await self.inline.form(
-            message=message,
-            text=self.strings("web_pin"),
-            reply_markup=[
-                [
-                    {
-                        "text": self.strings("web_pin_btn"),
-                        "callback": self._show_pin,
-                    }
-                ],
-                [
-                    {"text": self.strings("proxied_url"), "url": self._debugger.url},
-                    {
-                        "text": self.strings("local_url"),
-                        "url": f"http://127.0.0.1:{self._debugger.port}",
-                    },
-                ],
+                {"text": self.strings["btn_no"], "action": "close"},
+                {"text": self.strings["btn_yes"], "callback": self._finish},
             ],
         )
 
     async def _finish(self, call: InlineCall):
         state = self.get("disable_protection", True)
         self.set("disable_protection", not state)
-        await call.edit(self.strings("on" if state else "off"))
+        await call.edit(self.strings["on" if state else "off"])

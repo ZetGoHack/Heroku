@@ -4,7 +4,7 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-# ©️ Codrago, 2024-2025
+# ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
 # 🌐 https://github.com/coddrago/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
@@ -16,7 +16,9 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 import typing
+from io import StringIO
 from types import ModuleType
 
 import herokutl
@@ -24,128 +26,9 @@ from herokutl.errors.rpcerrorlist import MessageIdInvalidError
 from herokutl.sessions import StringSession
 from herokutl.tl.types import Message
 from meval import meval
-from io import StringIO
 
 from .. import loader, main, utils
 from ..log import HerokuException
-
-
-class Brainfuck:
-    def __init__(self, memory_size: int = 30000):
-        if memory_size < 0:
-            raise ValueError("memory size cannot be negative")
-
-        self._data = [0] * memory_size
-        self.out = ""
-        self.error = None
-
-    @property
-    def data(self):
-        return self._data
-
-    def run(self, code: str) -> str:
-        self.out = ""
-        had_error = self._eval(code)
-
-        if had_error:
-            return ""
-
-        self._interpret(code)
-        return self.out
-
-    def _report_error(
-        self,
-        message: str,
-        line: typing.Optional[int] = None,
-        column: typing.Optional[int] = None,
-    ):
-        self.error = (
-            message + f" at line {line}, column {column}"
-            if line is not None and column is not None
-            else ""
-        )
-
-    def _eval(self, source: str):
-        line = col = 0
-
-        stk = []
-
-        loop_open = False
-
-        for c in source:
-            if c == "[":
-                if loop_open:
-                    self._report_error("unexpected token '['", line, col)
-                    return True
-
-                loop_open = True
-                stk.append("[")
-            elif c == "]":
-                loop_open = False
-                if len(stk) == 0:
-                    self._report_error("unexpected token ']'", line, col)
-                    return True
-
-                stk.pop()
-            elif c == "\n":
-                line += 1
-                col = -1
-
-            col += 1
-
-        if len(stk) != 0:
-            self._report_error("unmatched brackets")
-            return True
-
-        return False
-
-    def _interpret(self, source: str):
-        line = col = ptr = current = 0
-
-        while current < len(source):
-            if source[current] == ">":
-                if ptr == (len(self.data) - 1):
-                    self._report_error("pointer out of range", line, col)
-                    return True
-
-                ptr += 1
-            elif source[current] == "<":
-                if ptr == 0:
-                    self._report_error("pointer out of range", line, col)
-                    return True
-
-                ptr -= 1
-            elif source[current] == "+":
-                if self.data[ptr] >= 2**32:
-                    self._report_error("cell overflow")
-                    return True
-
-                self.data[ptr] += 1
-
-            elif source[current] == "-":
-                if self.data[ptr] == 0:
-                    self._report_error("cell underflow")
-                    return True
-
-                self.data[ptr] -= 1
-            elif source[current] == ".":
-                self.out += chr(self.data[ptr])
-            elif source[current] == "[":
-                if self.data[ptr] == 0:
-                    while source[current] != "]":
-                        current += 1
-            elif source[current] == "]":
-                if self.data[ptr] != 0:
-                    while source[current] != "[":
-                        current -= 1
-            elif source[current] == "\n":
-                line += 1
-                col = -1
-
-            col += 1
-            current += 1
-
-        return False
 
 
 @loader.tds
@@ -154,13 +37,52 @@ class Evaluator(loader.Module):
 
     strings = {"name": "Evaluator"}
 
+    class _SecureDB:
+        """
+        Proxy class to protect sensitive DB fields from eval
+        """
+
+        def __init__(self, original_db):
+            self._db = original_db
+
+        def __getattr__(self, name):
+            return getattr(self._db, name)
+
+        def __getitem__(self, item):
+            return self._db[item]
+
+        def set(self, *args, **kwargs):
+            if len(args) >= 2 and args[0] == "heroku.security" and args[1] == "owner":
+                raise ValueError(
+                    "⚠️ Security Protection: You cannot change the bot owner via evaluator."
+                )
+
+            return self._db.set(*args, **kwargs)
+
     @loader.command(alias="eval")
     async def e(self, message: Message):
+        args = utils.get_args_raw(message)
+        reply = await message.get_reply_message()
+
+        if not args and reply and reply.text:
+            args = reply.message
+
+        skip_output = args.startswith(("-so ", "--skip-output "))
+        if skip_output:
+            args = args.split(" ", 1)[1]
+
+        args = args.replace("\xa0", "\x20")
+
+        real_db = self.db
+        self.db = self._SecureDB(real_db)
+
+        output_print = StringIO()
+
         try:
-            output_print = StringIO()
+            start_time = time.time()
             with contextlib.redirect_stdout(output_print):
                 result = await meval(
-                    utils.get_args_raw(message),
+                    args,
                     globals(),
                     **await self.getattrs(message),
                 )
@@ -168,13 +90,14 @@ class Evaluator(loader.Module):
 
         except Exception:
             item = HerokuException.from_exc_info(*sys.exc_info())
+            print_output = output_print.getvalue()
 
             await utils.answer(
                 message,
-                self.strings("err").format(
+                self.strings["err"].format(
                     "4985626654563894116",
                     "python",
-                    utils.escape_html(utils.get_args_raw(message)),
+                    utils.escape_html(args),
                     "error",
                     self.censor(
                         (
@@ -184,31 +107,56 @@ class Evaluator(loader.Module):
                             + item.full_stack.splitlines()[-1]
                         )
                     ),
+                )
+                + (
+                    self.strings["print_outp"].format(
+                        "python",
+                        print_output,
+                        utils.escape_html(self.censor(print_output)),
+                    )
+                    if print_output
+                    else ""
                 ),
             )
 
+            return
+        finally:
+            self.db = real_db
+
+        if skip_output:
             return
 
         if callable(getattr(result, "stringify", None)):
             with contextlib.suppress(Exception):
                 result = str(result.stringify())
 
+        exec_time = time.time() - start_time
+
         with contextlib.suppress(MessageIdInvalidError):
             await utils.answer(
                 message,
-                self.strings("eval_py").format(
+                self.strings["eval_py"].format(
                     "4985626654563894116",
                     "python",
-                    utils.escape_html(utils.get_args_raw(message)),
-                ) + (self.strings["eval_result"].format(
-                    "python",
-                     utils.escape_html(self.censor(str(result)))
-                    ) if result or not print_output else ""
-                ) + (self.strings["print_outp"].format(
-                    "python",
-                    print_output,
-                    utils.escape_html(self.censor(print_output))
-                    ) if print_output else ""),
+                    utils.escape_html(args),
+                )
+                + (
+                    self.strings["eval_result"].format(
+                        "python", utils.escape_html(self.censor(str(result)))
+                    )
+                    if result or not print_output
+                    else ""
+                )
+                + (
+                    self.strings["print_outp"].format(
+                        "python",
+                        print_output,
+                        utils.escape_html(self.censor(print_output)),
+                    )
+                    if print_output
+                    else ""
+                )
+                + (self.strings["time_exec"].format(round(exec_time, 2))),
             )
 
     @loader.command()
@@ -217,11 +165,21 @@ class Evaluator(loader.Module):
             subprocess.check_output(
                 ["gcc" if c else "g++", "--version"],
                 stderr=subprocess.STDOUT,
+                timeout=10,
             )
+        except subprocess.TimeoutExpired:
+            await utils.answer(
+                message,
+                self.strings["no_compiler"].format(
+                    "4986046904228905931" if c else "4985844035743646190",
+                    "C (gcc)" if c else "C++ (g++)",
+                ),
+            )
+            return
         except Exception:
             await utils.answer(
                 message,
-                self.strings("no_compiler").format(
+                self.strings["no_compiler"].format(
                     "4986046904228905931" if c else "4985844035743646190",
                     "C (gcc)" if c else "C++ (g++)",
                 ),
@@ -229,7 +187,7 @@ class Evaluator(loader.Module):
             return
 
         code = utils.get_args_raw(message)
-        message = await utils.answer(message, self.strings("compiling"))
+        message = await utils.answer(message, self.strings["compiling"])
         error = False
         with tempfile.TemporaryDirectory() as tmpdir:
             file = os.path.join(tmpdir, "code.cpp")
@@ -241,9 +199,13 @@ class Evaluator(loader.Module):
                     ["gcc" if c else "g++", "-o", "code", "code.cpp"],
                     cwd=tmpdir,
                     stderr=subprocess.STDOUT,
+                    timeout=30,
                 ).decode()
             except subprocess.CalledProcessError as e:
                 result = e.output.decode()
+                error = True
+            except subprocess.TimeoutExpired:
+                result = "Compilation timeout"
                 error = True
 
             if not result:
@@ -252,15 +214,19 @@ class Evaluator(loader.Module):
                         ["./code"],
                         cwd=tmpdir,
                         stderr=subprocess.STDOUT,
+                        timeout=10,
                     ).decode()
                 except subprocess.CalledProcessError as e:
                     result = e.output.decode()
+                    error = True
+                except subprocess.TimeoutExpired:
+                    result = "Execution timeout"
                     error = True
 
         with contextlib.suppress(MessageIdInvalidError):
             await utils.answer(
                 message,
-                self.strings("err" if error else "eval").format(
+                self.strings["err" if error else "eval"].format(
                     "4986046904228905931" if c else "4985844035743646190",
                     "c" if c else "cpp",
                     utils.escape_html(code),
@@ -274,16 +240,173 @@ class Evaluator(loader.Module):
         await self.ecpp(message, c=True)
 
     @loader.command()
+    async def ers(self, message: Message):
+        try:
+            subprocess.check_output(
+                ["rustc", "--version"],
+                stderr=subprocess.STDOUT,
+                timeout=10,
+            )
+        except subprocess.TimeoutExpired:
+            await utils.answer(
+                message,
+                self.strings["no_compiler"].format(
+                    "5424780918776671920",
+                    "Rust (rustc)",
+                ),
+            )
+            return
+        except Exception:
+            await utils.answer(
+                message,
+                self.strings["no_compiler"].format(
+                    "5424780918776671920",
+                    "Rust (rustc)",
+                ),
+            )
+            return
+
+        code = utils.get_args_raw(message)
+        reply = await message.get_reply_message()
+
+        if not code and reply and reply.text:
+            code = reply.message
+
+        message = await utils.answer(message, self.strings["compiling"])
+        error = False
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file = os.path.join(tmpdir, "code.rs")
+            with open(file, "w") as f:
+                f.write(code)
+
+            try:
+                result = subprocess.check_output(
+                    ["rustc", "code.rs", "-o", "code"],
+                    cwd=tmpdir,
+                    stderr=subprocess.STDOUT,
+                    timeout=30,
+                ).decode()
+            except subprocess.CalledProcessError as e:
+                result = e.output.decode()
+                error = True
+            except subprocess.TimeoutExpired:
+                result = "Compilation timeout"
+                error = True
+
+            if not result:
+                try:
+                    result = subprocess.check_output(
+                        ["./code"],
+                        cwd=tmpdir,
+                        stderr=subprocess.STDOUT,
+                        timeout=10,
+                    ).decode()
+                except subprocess.CalledProcessError as e:
+                    result = e.output.decode()
+                    error = True
+                except subprocess.TimeoutExpired:
+                    result = "Execution timeout"
+                    error = True
+
+        with contextlib.suppress(MessageIdInvalidError):
+            await utils.answer(
+                message,
+                self.strings["err" if error else "eval"].format(
+                    "5424780918776671920",
+                    "rust",
+                    utils.escape_html(code),
+                    "error" if error else "output",
+                    utils.escape_html(result),
+                ),
+            )
+
+    @loader.command()
+    async def eg(self, message: Message):
+        try:
+            subprocess.check_output(
+                ["go", "version"],
+                stderr=subprocess.STDOUT,
+                timeout=10,
+            )
+        except subprocess.TimeoutExpired:
+            await utils.answer(
+                message,
+                self.strings["no_compiler"].format(
+                    "4994652309293105740",
+                    "Go",
+                ),
+            )
+            return
+        except Exception:
+            await utils.answer(
+                message,
+                self.strings["no_compiler"].format(
+                    "4994652309293105740",
+                    "Go",
+                ),
+            )
+            return
+
+        code = utils.get_args_raw(message)
+        reply = await message.get_reply_message()
+
+        if not code and reply and reply.text:
+            code = reply.message
+
+        message = await utils.answer(message, self.strings["compiling"])
+        error = False
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file = os.path.join(tmpdir, "code.go")
+            with open(file, "w") as f:
+                f.write(code)
+
+            try:
+                result = subprocess.check_output(
+                    ["go", "run", "code.go"],
+                    cwd=tmpdir,
+                    stderr=subprocess.STDOUT,
+                    timeout=30,
+                ).decode()
+            except subprocess.CalledProcessError as e:
+                result = e.output.decode()
+                error = True
+            except subprocess.TimeoutExpired:
+                result = "Execution timeout"
+                error = True
+
+        with contextlib.suppress(MessageIdInvalidError):
+            await utils.answer(
+                message,
+                self.strings["err" if error else "eval"].format(
+                    "4994652309293105740",
+                    "go",
+                    utils.escape_html(code),
+                    "error" if error else "output",
+                    utils.escape_html(result),
+                ),
+            )
+
+    @loader.command()
     async def enode(self, message: Message):
         try:
             subprocess.check_output(
                 ["node", "--version"],
                 stderr=subprocess.STDOUT,
+                timeout=10,
             )
+        except subprocess.TimeoutExpired:
+            await utils.answer(
+                message,
+                self.strings["no_compiler"].format(
+                    "4985643941807260310",
+                    "Node.js",
+                ),
+            )
+            return
         except Exception:
             await utils.answer(
                 message,
-                self.strings("no_compiler").format(
+                self.strings["no_compiler"].format(
                     "4985643941807260310",
                     "Node.js",
                 ),
@@ -302,145 +425,21 @@ class Evaluator(loader.Module):
                     ["node", "code.js"],
                     cwd=tmpdir,
                     stderr=subprocess.STDOUT,
+                    timeout=10,
                 ).decode()
             except subprocess.CalledProcessError as e:
                 result = e.output.decode()
+                error = True
+            except subprocess.TimeoutExpired:
+                result = "Execution timeout"
                 error = True
 
         with contextlib.suppress(MessageIdInvalidError):
             await utils.answer(
                 message,
-                self.strings("err" if error else "eval").format(
+                self.strings["err" if error else "eval"].format(
                     "4985643941807260310",
                     "javascript",
-                    utils.escape_html(code),
-                    "error" if error else "output",
-                    utils.escape_html(result),
-                ),
-            )
-
-    @loader.command()
-    async def ephp(self, message: Message):
-        try:
-            subprocess.check_output(
-                ["php", "--version"],
-                stderr=subprocess.STDOUT,
-            )
-        except Exception:
-            await utils.answer(
-                message,
-                self.strings("no_compiler").format(
-                    "4985815079074136919",
-                    "PHP",
-                ),
-            )
-            return
-
-        code = utils.get_args_raw(message)
-        error = False
-        with tempfile.TemporaryDirectory() as tmpdir:
-            file = os.path.join(tmpdir, "code.php")
-            with open(file, "w") as f:
-                f.write(f"<?php {code} ?>")
-
-            try:
-                result = subprocess.check_output(
-                    ["php", "code.php"],
-                    cwd=tmpdir,
-                    stderr=subprocess.STDOUT,
-                ).decode()
-            except subprocess.CalledProcessError as e:
-                result = e.output.decode()
-                error = True
-
-        with contextlib.suppress(MessageIdInvalidError):
-            await utils.answer(
-                message,
-                self.strings("err" if error else "eval").format(
-                    "4985815079074136919",
-                    "php",
-                    utils.escape_html(code),
-                    "error" if error else "output",
-                    utils.escape_html(result),
-                ),
-            )
-
-    @loader.command()
-    async def eruby(self, message: Message):
-        try:
-            subprocess.check_output(
-                ["ruby", "--version"],
-                stderr=subprocess.STDOUT,
-            )
-        except Exception:
-            await utils.answer(
-                message,
-                self.strings("no_compiler").format(
-                    "4985760855112024628",
-                    "Ruby",
-                ),
-            )
-            return
-
-        code = utils.get_args_raw(message)
-        error = False
-        with tempfile.TemporaryDirectory() as tmpdir:
-            file = os.path.join(tmpdir, "code.rb")
-            with open(file, "w") as f:
-                f.write(code)
-
-            try:
-                result = subprocess.check_output(
-                    ["ruby", "code.rb"],
-                    cwd=tmpdir,
-                    stderr=subprocess.STDOUT,
-                ).decode()
-            except subprocess.CalledProcessError as e:
-                result = e.output.decode()
-                error = True
-
-        with contextlib.suppress(MessageIdInvalidError):
-            await utils.answer(
-                message,
-                self.strings("err" if error else "eval").format(
-                    "4985760855112024628",
-                    "ruby",
-                    utils.escape_html(code),
-                    "error" if error else "output",
-                    utils.escape_html(result),
-                ),
-            )
-
-    @loader.command()
-    async def ebf(self, message: Message):
-        code = utils.get_args_raw(message)
-        if "-debug" in code:
-            code = code.replace("-debug", "")
-            code = code.replace(" ", "")
-            debug = True
-        else:
-            debug = False
-
-        error = False
-
-        bf = Brainfuck()
-        result = bf.run(code)
-        if bf.error:
-            result = bf.error
-            error = True
-
-        if not result:
-            result = "<empty>"
-
-        if debug:
-            result += "\n\n" + " | ".join(map(str, filter(lambda x: x, bf.data)))
-
-        with contextlib.suppress(MessageIdInvalidError):
-            await utils.answer(
-                message,
-                self.strings("err" if error else "eval").format(
-                    "5474256197542486673",
-                    "brainfuck",
                     utils.escape_html(code),
                     "error" if error else "output",
                     utils.escape_html(result),
@@ -462,7 +461,7 @@ class Evaluator(loader.Module):
                 f'{btoken.split(":")[0]}:{"*" * 26}',
             )
 
-        if htoken := self.lookup("loader").get("token", False):
+        if htoken := self.lookup("LoaderMod").get("token", False):
             ret = ret.replace(htoken, f'eugeo_{"*" * 26}')
 
         ret = ret.replace(
@@ -479,8 +478,6 @@ class Evaluator(loader.Module):
             "client": self._client,
             "reply": reply,
             "r": reply,
-            **self.get_sub(herokutl.tl.types),
-            **self.get_sub(herokutl.tl.functions),
             "event": message,
             "chat": message.to_id,
             "herokutl": herokutl,
@@ -489,12 +486,13 @@ class Evaluator(loader.Module):
             "utils": utils,
             "main": main,
             "loader": loader,
-            "f": herokutl.tl.functions,
             "c": self._client,
             "m": message,
             "lookup": self.lookup,
             "self": self,
             "db": self.db,
+            **self.get_sub(herokutl.tl.functions),
+            **self.get_sub(herokutl.tl.types),
         }
 
     def get_sub(self, obj: typing.Any, _depth: int = 1) -> dict:
@@ -516,11 +514,11 @@ class Evaluator(loader.Module):
                             lambda x: x[0][0] != "_"
                             and isinstance(x[1], ModuleType)
                             and x[1] != obj
-                            and x[1].__package__.rsplit(".", _depth)[0] == "herokutl.tl",
+                            and x[1].__package__.rsplit(".", _depth)[0]
+                            == "herokutl.tl",
                             obj.__dict__.items(),
                         )
                     ]
                 )
             ),
         }
-        

@@ -4,7 +4,7 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-# ©️ Codrago, 2024-2025
+# ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
 # 🌐 https://github.com/coddrago/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
@@ -12,8 +12,10 @@
 
 import asyncio
 import logging
-import re
 import os
+import random
+import re
+import typing
 
 from herokutl.errors.rpcerrorlist import YouBlockedUserError
 from herokutl.tl.functions.contacts import UnblockRequest
@@ -22,11 +24,15 @@ from .. import utils
 from .._internal import fw_protect
 from .types import InlineUnit
 
+if typing.TYPE_CHECKING:
+    from ..inline.core import InlineManager
+
 logger = logging.getLogger(__name__)
+BOT_BASE_PATTERN = re.compile(r"(\w*)_[0-9a-zA-Z]{6}_bot")
 
 
 class TokenObtainment(InlineUnit):
-    async def _create_bot(self):
+    async def _create_bot(self: "InlineManager"):
         logger.info("User doesn't have bot, attempting creating new one")
         async with self._client.conversation("@BotFather", exclusive=False) as conv:
             await fw_protect()
@@ -44,6 +50,8 @@ class TokenObtainment(InlineUnit):
             await m.delete()
             await r.delete()
 
+            from .. import main
+
             if self._db.get("heroku.inline", "custom_bot", False):
                 username = self._db.get("heroku.inline", "custom_bot").strip("@")
                 username = f"@{username}"
@@ -53,13 +61,15 @@ class TokenObtainment(InlineUnit):
                     pass
                 else:
                     uid = utils.rand(6)
-                    username = f"@heroku_{uid}_bot"
+                    genran = "".join(random.choice(main.LATIN_MOCK))
+                    username = f"@{genran}_{uid}_bot"
             else:
                 uid = utils.rand(6)
-                username = f"@heroku_{uid}_bot"
+                genran = "".join(random.choice(main.LATIN_MOCK))
+                username = f"@{genran}_{uid}_bot"
 
             for msg in [
-                f"🪐 Heroku userbot"[:64],
+                "🪐 Heroku userbot"[:64],
                 username,
                 "/setuserpic",
                 username,
@@ -79,7 +89,14 @@ class TokenObtainment(InlineUnit):
                 await fw_protect()
                 from .. import main
 
-                m = await conv.send_file(f"{os.getcwd()}/assets/heroku.png")
+                if "DOCKER" in os.environ:
+                    m = await conv.send_file(
+                        "https://raw.githubusercontent.com/coddrago/Heroku/refs/heads/master/assets/heroku-ava.png"
+                    )
+                else:
+                    m = await conv.send_file(
+                        main.BASE_PATH / "assets" / "heroku-ava.png"
+                    )
                 r = await conv.get_response()
 
                 logger.debug(">> <Photo>")
@@ -97,10 +114,10 @@ class TokenObtainment(InlineUnit):
             await m.delete()
             await r.delete()
 
-        return await self._assert_token(False)
+        return await self._assert_token(create_new_if_needed=False)
 
     async def _assert_token(
-        self,
+        self: "InlineManager",
         create_new_if_needed: bool = True,
         revoke_token: bool = False,
     ) -> bool:
@@ -141,20 +158,21 @@ class TokenObtainment(InlineUnit):
 
                 return await self._create_bot() if create_new_if_needed else False
 
+            from .. import main
+
             for row in r.reply_markup.rows:
                 for button in row.buttons:
-                    if self._db.get(
-                        "heroku.inline", "custom_bot", False
-                    ) and self._db.get(
-                        "heroku.inline", "custom_bot", False
-                    ) != button.text.strip("@"):
+                    btn_text = button.text.strip("@")
+
+                    if self._db.get("heroku.inline", "custom_bot", False) and (
+                        self._db.get("heroku.inline", "custom_bot", False) != btn_text
+                    ):
                         continue
 
-                    if not self._db.get(
-                        "heroku.inline",
-                        "custom_bot",
-                        False,
-                    ) and not re.search(r"@heroku_[0-9a-zA-Z]{6}_bot", button.text):
+                    if not self._db.get("heroku.inline", "custom_bot", False) and not (
+                        (match := BOT_BASE_PATTERN.fullmatch(btn_text))
+                        and match.group(1) in main.LATIN_MOCK
+                    ):
                         continue
 
                     await fw_protect()
@@ -208,6 +226,8 @@ class TokenObtainment(InlineUnit):
                         "/setinlinefeedback",
                         button.text,
                         "Enabled",
+                        "/setuserpic",
+                        button.text,
                     ]:
                         await fw_protect()
                         m = await conv.send_message(msg)
@@ -221,19 +241,43 @@ class TokenObtainment(InlineUnit):
                         await m.delete()
                         await r.delete()
 
+                    try:
+                        await fw_protect()
+                        from .. import main
 
+                        m = await conv.send_file(
+                            main.BASE_PATH / "assets" / "heroku-ava.png"
+                        )
+                        r = await conv.get_response()
+
+                        logger.debug(">> <Photo>")
+                        logger.debug("<< %s", r.raw_text)
+                    except Exception:
+                        await fw_protect()
+                        m = await conv.send_message("/cancel")
+                        r = await conv.get_response()
+
+                        logger.debug(">> %s", m.raw_text)
+                        logger.debug("<< %s", r.raw_text)
+
+                    await fw_protect()
+
+                    await m.delete()
+                    await r.delete()
+
+                    # TODO: add bot commands setup
                     return True
 
         return await self._create_bot() if create_new_if_needed else False
 
-    async def _reassert_token(self):
+    async def _reassert_token(self: "InlineManager"):
         is_token_asserted = await self._assert_token(revoke_token=True)
         if not is_token_asserted:
             self.init_complete = False
         else:
             await self.register_manager(ignore_token_checks=True)
 
-    async def _dp_revoke_token(self, already_initialised: bool = True):
+    async def _dp_revoke_token(self: "InlineManager", already_initialised: bool = True):
         if already_initialised:
             await self._stop()
             logger.error("Got polling conflict. Attempting token revocation...")
@@ -244,3 +288,33 @@ class TokenObtainment(InlineUnit):
             asyncio.ensure_future(self._reassert_token())
         else:
             return await self._reassert_token()
+
+    async def _check_bot(self: "InlineManager", username: str):
+        username = username.strip("@")
+        async with self._client.conversation("@BotFather", exclusive=False) as conv:
+            try:
+                m = await conv.send_message("/token")
+            except YouBlockedUserError:
+                await self._client(UnblockRequest(id="@BotFather"))
+                m = await conv.send_message("/token")
+
+            r = await conv.get_response()
+
+            await m.delete()
+            await r.delete()
+
+            if not hasattr(r, "reply_markup") or not hasattr(r.reply_markup, "rows"):
+                return False
+
+            for row in r.reply_markup.rows:
+                for button in row.buttons:
+                    if username != button.text.strip("@"):
+                        continue
+
+                    m = await conv.send_message("/cancel")
+                    r = await conv.get_response()
+
+                    await m.delete()
+                    await r.delete()
+
+                    return True

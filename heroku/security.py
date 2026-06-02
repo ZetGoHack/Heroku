@@ -1,28 +1,12 @@
 """Checks the commands' security"""
 
-#    Friendly Telegram (telegram userbot)
-#    Copyright (C) 2018-2021 The Authors
-
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
-
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU Affero General Public License for more details.
-
-#    You should have received a copy of the GNU Affero General Public License
-#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 # ©️ Dan Gazizullin, 2021-2023
 # This file is a part of Hikka Userbot
 # 🌐 https://github.com/hikariatama/Hikka
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-# ©️ Codrago, 2024-2025
+# ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
 # 🌐 https://github.com/coddrago/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
@@ -177,55 +161,83 @@ class SecurityManager:
         self._cache: typing.Dict[int, dict] = {}
         self._last_warning: int = 0
         self._sgroups: typing.Dict[str, SecurityGroup] = {}
+        self._rights_last_reload: float = 0.0
+        self._rights_reload_interval: float = 1.0
 
         self._any_admin = self.any_admin = db.get(__name__, "any_admin", False)
         self._default = self.default = db.get(__name__, "default", DEFAULT_PERMISSIONS)
         self._tsec_chat = self.tsec_chat = db.pointer(__name__, "tsec_chat", [])
         self._tsec_user = self.tsec_user = db.pointer(__name__, "tsec_user", [])
         self._owner = self.owner = db.pointer(__name__, "owner", [])
+        self._all_users = self.all_users = db.pointer(__name__, "all_users", [])
 
-        self._reload_rights()
+        self._reload_rights(force=True)
 
     def apply_sgroups(self, sgroups: typing.Dict[str, SecurityGroup]):
         """Apply security groups"""
         self._sgroups = sgroups
 
-    def _reload_rights(self):
+    def _reload_rights(self, *, force: bool = False):
         """
         Internal method to ensure that account owner is always in the owner list,
         to clear out outdated tsec rules and to remove prefixes of users, that is
         not in any security group
         """
+        now = time.monotonic()
+        if not force and now - self._rights_last_reload < self._rights_reload_interval:
+            return
+
+        self._rights_last_reload = now
+        dirty = False
 
         if self._client.tg_id not in self._owner:
             self._owner.append(self._client.tg_id)
+            dirty = True
 
         for info in self._tsec_user.copy():
             if info["expires"] and info["expires"] < time.time():
                 self._tsec_user.remove(info)
+                dirty = True
 
         for info in self._tsec_chat.copy():
             if info["expires"] and info["expires"] < time.time():
                 self._tsec_chat.remove(info)
-        
+                dirty = True
+
         sgroup_users = []
         for g in self._sgroups.values():
             for u in g.users:
                 sgroup_users.append(u)
 
-        tsec_users = [rule['target'] for rule in self._tsec_user]
+        tsec_users = [rule["target"] for rule in self._tsec_user]
         ub_owners = self.owner.copy()
 
-        all_users = sgroup_users + tsec_users + ub_owners
+        all_users = set(sgroup_users + tsec_users + ub_owners)
+
+        if set(self._all_users) != all_users:
+            self._all_users.clear()
+            self._all_users.extend(all_users)
+            dirty = True
 
         prefixes = self._db.get(main.__name__, "command_prefixes", {})
+        valid_prefixes = prefixes.copy()
 
-        for id in prefixes.copy():
-            if int(id) not in all_users:
-                del prefixes[id]
+        for id_ in prefixes.copy():
+            try:
+                allowed = int(id_) in all_users
+            except (TypeError, ValueError):
+                allowed = False
 
-        self._db.set(main.__name__, "command_prefixes", prefixes)
+            if not allowed:
+                del valid_prefixes[id_]
 
+        if valid_prefixes != prefixes:
+            prefixes.clear()
+            prefixes.update(valid_prefixes)
+            dirty = True
+
+        if dirty:
+            self._db.set(main.__name__, "command_prefixes", prefixes)
 
     def add_rule(
         self,
@@ -243,9 +255,13 @@ class SecurityManager:
         :param duration: rule duration in seconds
         :return: None
         """
-
-        if target_type not in {"chat", "user"}:
-            raise ValueError(f"Invalid target_type: {target_type}")
+        match target_type:
+            case "chat":
+                target_list = self._tsec_chat
+            case "user":
+                target_list = self._tsec_user
+            case _:
+                raise ValueError(f"Invalid target_type: {target_type}")
 
         if all(
             not rule.startswith(rule_type)
@@ -256,7 +272,7 @@ class SecurityManager:
         if duration < 0:
             raise ValueError(f"Invalid duration: {duration}")
 
-        (self._tsec_chat if target_type == "chat" else self._tsec_user).append(
+        target_list.append(
             {
                 "target": target.id,
                 "rule_type": rule.split("/")[0],
@@ -266,6 +282,7 @@ class SecurityManager:
                 "entity_url": utils.get_entity_url(target),
             }
         )
+        self._reload_rights(force=True)
 
     def remove_rules(self, target_type: str, target_id: int) -> bool:
         """
@@ -275,19 +292,22 @@ class SecurityManager:
         :param target_id: target entity ID
         :return: True if any rules were removed
         """
+        match target_type:
+            case "user":
+                target_list = self.tsec_user
+            case "chat":
+                target_list = self.tsec_chat
+            case _:
+                return False
 
         any_ = False
+        for rule in target_list.copy():
+            if rule["target"] == target_id:
+                target_list.remove(rule)
+                any_ = True
 
-        if target_type == "user":
-            for rule in self.tsec_user.copy():
-                if rule["target"] == target_id:
-                    self.tsec_user.remove(rule)
-                    any_ = True
-        elif target_type == "chat":
-            for rule in self.tsec_chat.copy():
-                if rule["target"] == target_id:
-                    self.tsec_chat.remove(rule)
-                    any_ = True
+        if any_:
+            self._reload_rights(force=True)
 
         return any_
 
@@ -300,19 +320,22 @@ class SecurityManager:
         :param rule_cont: rule name (module or command)
         :return: True if any rules were removed
         """
+        match target_type:
+            case "user":
+                target_list = self.tsec_user
+            case "chat":
+                target_list = self.tsec_chat
+            case _:
+                return False
 
         any_ = False
+        for rule in target_list.copy():
+            if rule["target"] == target_id and rule["rule"] == rule_cont:
+                target_list.remove(rule)
+                any_ = True
 
-        if target_type == "user":
-            for rule in self.tsec_user.copy():
-                if rule["target"] == target_id and rule["rule"] == rule_cont:
-                    self.tsec_user.remove(rule)
-                    any_ = True
-        elif target_type == "chat":
-            for rule in self.tsec_chat.copy():
-                if rule["target"] == target_id and rule["rule"] == rule_cont:
-                    self.tsec_chat.remove(rule)
-                    any_ = True
+        if any_:
+            self._reload_rights(force=True)
 
         return any_
 
@@ -392,7 +415,7 @@ class SecurityManager:
         user_id: typing.Optional[int] = None,
         inline_cmd: typing.Optional[str] = None,
         *,
-        usernames: typing.Optional[typing.List[str]] = None,
+        usernames: typing.Optional[typing.Set[str]] = None,
     ) -> bool:
         """
         Checks if message sender is permitted to execute certain function

@@ -4,7 +4,7 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-# ©️ Codrago, 2024-2025
+# ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
 # 🌐 https://github.com/coddrago/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
@@ -72,6 +72,14 @@ class Boolean(Validator):
     `1`, `"1"` etc. will be automatically converted to bool
     """
 
+    _TRUE_VALUES = frozenset(
+        ("True", "true", "1", 1, True, "yes", "Yes", "on", "On", "y", "Y")
+    )
+    _FALSE_VALUES = frozenset(
+        ("False", "false", "0", 0, False, "no", "No", "off", "Off", "n", "N")
+    )
+    _ALL_VALUES = _TRUE_VALUES | _FALSE_VALUES
+
     def __init__(self):
         super().__init__(
             self._validate,
@@ -81,12 +89,10 @@ class Boolean(Validator):
 
     @staticmethod
     def _validate(value: ConfigAllowedTypes, /) -> bool:
-        true = ["True", "true", "1", 1, True, "yes", "Yes", "on", "On", "y", "Y"]
-        false = ["False", "false", "0", 0, False, "no", "No", "off", "Off", "n", "N"]
-        if value not in true + false:
+        if value not in Boolean._ALL_VALUES:
             raise ValidationError("Passed value must be a boolean")
 
-        return value in true
+        return value in Boolean._TRUE_VALUES
 
 
 class Integer(Validator):
@@ -119,47 +125,50 @@ class Integer(Validator):
             else {}
         )
 
-        if minimum is not None and minimum != 0:
-            doc = (
-                {
+        match True:
+            case _ if minimum is not None and minimum != 0:
+                doc = (
+                    {
+                        lang: text.format(
+                            sign=_signs.get(lang, ""),
+                            digits=_digits.get(lang, ""),
+                            minimum=minimum,
+                        )
+                        for lang, text in translator.getdict(
+                            "validators.integer_min"
+                        ).items()
+                    }
+                    if maximum is None and maximum != 0
+                    else {
+                        lang: text.format(
+                            sign=_signs.get(lang, ""),
+                            digits=_digits.get(lang, ""),
+                            minimum=minimum,
+                            maximum=maximum,
+                        )
+                        for lang, text in translator.getdict(
+                            "validators.integer_range"
+                        ).items()
+                    }
+                )
+            case _ if maximum is None and maximum != 0:
+                doc = {
                     lang: text.format(
-                        sign=_signs.get(lang, ""),
-                        digits=_digits.get(lang, ""),
-                        minimum=minimum,
+                        sign=_signs.get(lang, ""), digits=_digits.get(lang, "")
                     )
-                    for lang, text in translator.getdict(
-                        "validators.integer_min"
-                    ).items()
+                    for lang, text in translator.getdict("validators.integer").items()
                 }
-                if maximum is None and maximum != 0
-                else {
+            case _:
+                doc = {
                     lang: text.format(
                         sign=_signs.get(lang, ""),
                         digits=_digits.get(lang, ""),
-                        minimum=minimum,
                         maximum=maximum,
                     )
                     for lang, text in translator.getdict(
-                        "validators.integer_range"
+                        "validators.integer_max"
                     ).items()
                 }
-            )
-        elif maximum is None and maximum != 0:
-            doc = {
-                lang: text.format(
-                    sign=_signs.get(lang, ""), digits=_digits.get(lang, "")
-                )
-                for lang, text in translator.getdict("validators.integer").items()
-            }
-        else:
-            doc = {
-                lang: text.format(
-                    sign=_signs.get(lang, ""),
-                    digits=_digits.get(lang, ""),
-                    maximum=maximum,
-                )
-                for lang, text in translator.getdict("validators.integer_max").items()
-            }
 
         super().__init__(
             functools.partial(
@@ -304,19 +313,20 @@ class Series(Validator):
             else {}
         )
 
-        if fixed_len is not None:
-            _len = translator.getdict("validators.fixed_len", fixed_len=fixed_len)
-        elif min_len is None:
-            if max_len is None:
-                _len = {}
-            else:
-                _len = translator.getdict("validators.max_len", max_len=max_len)
-        elif max_len is not None:
-            _len = translator.getdict(
-                "validators.len_range", min_len=min_len, max_len=max_len
-            )
-        else:
-            _len = translator.getdict("validators.min_len", min_len=min_len)
+        match True:
+            case _ if fixed_len is not None:
+                _len = translator.getdict("validators.fixed_len", fixed_len=fixed_len)
+            case _ if min_len is None:
+                if max_len is None:
+                    _len = {}
+                else:
+                    _len = translator.getdict("validators.max_len", max_len=max_len)
+            case _ if max_len is not None:
+                _len = translator.getdict(
+                    "validators.len_range", min_len=min_len, max_len=max_len
+                )
+            case _:
+                _len = translator.getdict("validators.min_len", min_len=min_len)
 
         super().__init__(
             functools.partial(
@@ -419,19 +429,22 @@ class String(Validator):
         if length is not None:
             doc = translator.getdict("validators.string_fixed_len", length=length)
         else:
-            if min_len is None:
-                if max_len is None:
-                    doc = translator.getdict("validators.string")
-                else:
+            match True:
+                case _ if min_len is None:
+                    if max_len is None:
+                        doc = translator.getdict("validators.string")
+                    else:
+                        doc = translator.getdict(
+                            "validators.string_max_len", max_len=max_len
+                        )
+                case _ if max_len is not None:
                     doc = translator.getdict(
-                        "validators.string_max_len", max_len=max_len
+                        "validators.string_len_range", min_len=min_len, max_len=max_len
                     )
-            elif max_len is not None:
-                doc = translator.getdict(
-                    "validators.string_len_range", min_len=min_len, max_len=max_len
-                )
-            else:
-                doc = translator.getdict("validators.string_min_len", min_len=min_len)
+                case _:
+                    doc = translator.getdict(
+                        "validators.string_min_len", min_len=min_len
+                    )
 
         super().__init__(
             functools.partial(
@@ -725,18 +738,19 @@ class Emoji(Validator):
         min_len: typing.Optional[int] = None,
         max_len: typing.Optional[int] = None,
     ):
-        if length is not None:
-            doc = translator.getdict("validators.emoji_fixed_len", length=length)
-        elif min_len is not None and max_len is not None:
-            doc = translator.getdict(
-                "validators.emoji_len_range", min_len=min_len, max_len=max_len
-            )
-        elif min_len is not None:
-            doc = translator.getdict("validators.emoji_min_len", min_len=min_len)
-        elif max_len is not None:
-            doc = translator.getdict("validators.emoji_max_len", max_len=max_len)
-        else:
-            doc = translator.getdict("validators.emoji")
+        match True:
+            case _ if length is not None:
+                doc = translator.getdict("validators.emoji_fixed_len", length=length)
+            case _ if min_len is not None and max_len is not None:
+                doc = translator.getdict(
+                    "validators.emoji_len_range", min_len=min_len, max_len=max_len
+                )
+            case _ if min_len is not None:
+                doc = translator.getdict("validators.emoji_min_len", min_len=min_len)
+            case _ if max_len is not None:
+                doc = translator.getdict("validators.emoji_max_len", max_len=max_len)
+            case _:
+                doc = translator.getdict("validators.emoji")
 
         super().__init__(
             functools.partial(
@@ -822,3 +836,39 @@ class EntityLike(RegExp):
             value = f"@{value}"
 
         return value
+
+
+class RandomLinkList(list):
+    def __str__(self):
+        import random
+
+        if not self:
+            return ""
+        return str(random.choice(self))
+
+    def __bytes__(self):
+        return str(self).encode("utf-8")
+
+    def __repr__(self):
+        return super().__repr__()
+
+
+class RandomLink(Series):
+    def __init__(self):
+        super().__init__(validator=Link(), min_len=1)
+        self.internal_id = "Series"
+        self.doc = {
+            "en": "A list of links, one of which will be chosen randomly",
+            "ru": "Список ссылок, одна из которых будет выбрана случайным образом",
+        }
+
+    @staticmethod
+    def _validate(value: ConfigAllowedTypes, /, **kwargs) -> RandomLinkList:
+        val_args = kwargs.copy()
+        if "validator" not in val_args:
+            val_args["validator"] = Link()
+        if "min_len" not in val_args:
+            val_args["min_len"] = 1
+
+        clean_list = Series._validate(value, **val_args)
+        return RandomLinkList(clean_list)

@@ -1,4 +1,21 @@
-heroku-tl-new==1.7.2
+herokutl==2.0.5
+pyaes
+aiofile==3.8.1
+aiofiles==24.1.0
+gitpython==3.1.2
+deep-translator
+meval==2.5
+aiohttp==3.13.5
+requests==2.33.1
+certifi==2024.8.30
+grapheme==0.6.0
+emoji==2.1.0
+psutil==6.0.0
+TgCrypto-pyrofork
+rsa==4.9
+ruamel.yaml==0.17.21
+bs4==0.0.2
+orjson
 Pillow
 
-# Python 3.9+
+# Python 3.10+

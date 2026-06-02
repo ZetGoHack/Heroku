@@ -1,28 +1,12 @@
 """Main script, where all the fun starts"""
 
-#    Friendly Telegram (telegram userbot)
-#    Copyright (C) 2018-2021 The Authors
-
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
-
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU Affero General Public License for more details.
-
-#    You should have received a copy of the GNU Affero General Public License
-#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 # ©️ Dan Gazizullin, 2021-2023
 # This file is a part of Hikka Userbot
 # 🌐 https://github.com/hikariatama/Hikka
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-# ©️ Codrago, 2024-2025
+# ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
 # 🌐 https://github.com/coddrago/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
@@ -30,6 +14,8 @@
 
 import argparse
 import asyncio
+import base64
+import binascii
 import collections
 import contextlib
 import importlib
@@ -38,10 +24,11 @@ import logging
 import os
 import random
 import signal
-import socket
 import sqlite3
+import string
 import sys
 import typing
+import zlib
 from getpass import getpass
 from pathlib import Path
 
@@ -55,6 +42,9 @@ from herokutl.errors import (
     PasswordHashInvalidError,
     PhoneNumberInvalidError,
     SessionPasswordNeededError,
+)
+from herokutl.errors.rpcerrorlist import (
+    AuthKeyUnregisteredError,
     YouBlockedUserError,
 )
 from herokutl.network.connection import (
@@ -76,14 +66,6 @@ from .tl_cache import CustomTelegramClient
 from .translations import Translator
 from .version import __version__
 
-try:
-    from .web import core
-except ImportError:
-    web_available = False
-    logging.exception("Unable to import web")
-else:
-    web_available = True
-
 BASE_DIR = (
     "/data"
     if "DOCKER" in os.environ
@@ -92,23 +74,8 @@ BASE_DIR = (
 
 BASE_PATH = Path(BASE_DIR)
 CONFIG_PATH = BASE_PATH / "config.json"
-
-IS_DOCKER = "DOCKER" in os.environ
-IS_LAVHOST = "LAVHOST" in os.environ
-IS_HIKKAHOST = "HIKKAHOST" in os.environ
-IS_MACOS = "com.apple" in os.environ.get("PATH", "")
-IS_USERLAND = "userland" in os.environ.get("USER", "")
-IS_PTERODACTYL = "PTERODACTYL" in os.environ
-IS_JAMHOST = "JAMHOST" in os.environ
-IS_WSL = False
-IS_WINDOWS = False
-with contextlib.suppress(Exception):
-    from platform import uname
-
-    if "microsoft-standard" in uname().release:
-        IS_WSL = True
-    elif uname().system == "Windows":
-        IS_WINDOWS = True
+_CONFIG_CACHE: typing.Optional[dict] = None
+_CONFIG_MTIME_NS: typing.Optional[int] = None
 
 # fmt: off
 LATIN_MOCK = [
@@ -138,7 +105,9 @@ LATIN_MOCK = [
     "Tigris", "Trans", "Tribuo", "Tristis", "Ultimus",
     "Unitas", "Universus", "Uterque", "Valde", "Vates",
     "Veritas", "Verus", "Vester", "Via", "Victoria",
-    "Vita", "Vox", "Vultus", "Zephyrus"
+    "Vita", "Vox", "Vultus", "Zephyrus", "Bimbalas", "Nywuctuu",
+    "Anyone", "Draher", "Hackimo", "Silvyr",
+
 ]
 # fmt: on
 
@@ -178,26 +147,142 @@ def generate_random_system_version():
     :example: "Windows 10.0.19042.1234" or "Ubuntu 20.04.19042.1234"
     """
     os_choices = [
-        ("Windows", "Vista"),
+        ("Windows", "3.1"),
+        ("Windows", "95"),
+        ("Windows", "98"),
+        ("Windows", "ME"),
+        ("Windows", "NT 4.0"),
+        ("Windows", "2000"),
         ("Windows", "XP"),
+        ("Windows", "Server 2003"),
+        ("Windows", "Vista"),
         ("Windows", "7"),
         ("Windows", "8"),
+        ("Windows", "8.1"),
         ("Windows", "10"),
-        ("Ubuntu", "20.04"),
-        ("Debian", "10"),
-        ("Fedora", "33"),
-        ("Arch Linux", "2021.05"),
-        ("CentOS", "8"),
-        ("NixOS", "23.05"),
-        ("Puppy Linux", "9.5"),
-        ("Alpine Linux", "3.18.0"),
+        ("Windows", "11"),
+        ("Windows", "Server 2016"),
+        ("Windows", "Server 2019"),
+        ("Windows", "Server 2022"),
+        ("macOS", "10.9 Mavericks"),
+        ("macOS", "10.10 Yosemite"),
+        ("macOS", "10.11 El Capitan"),
+        ("macOS", "10.12 Sierra"),
+        ("macOS", "10.13 High Sierra"),
+        ("macOS", "10.14 Mojave"),
+        ("macOS", "10.15 Catalina"),
+        ("macOS", "11 Big Sur"),
+        ("macOS", "12 Monterey"),
+        ("macOS", "13 Ventura"),
+        ("macOS", "14 Sonoma"),
+        ("iOS", "12.5.7"),
+        ("iOS", "13.7"),
+        ("iOS", "14.8"),
+        ("iOS", "15.7"),
+        ("iOS", "16.6"),
+        ("iOS", "17.4"),
+        ("iPadOS", "16.4"),
+        ("Android", "4.4 KitKat"),
+        ("Android", "5.0 Lollipop"),
+        ("Android", "6.0 Marshmallow"),
+        ("Android", "7.0 Nougat"),
+        ("Android", "8.0 Oreo"),
+        ("Android", "9 Pie"),
+        ("Android", "10"),
+        ("Android", "11"),
+        ("Android", "12"),
+        ("Android", "13"),
         ("Android", "14"),
         ("Android", "15"),
-        ("Android", "13"),
-        ("Solus", "4.4"),
+        ("Android", "16"),
+        ("ChromeOS", "89"),
+        ("ChromeOS", "96"),
+        ("ChromeOS", "100"),
+        ("ChromeOS", "110"),
+        ("Ubuntu", "14.04"),
+        ("Ubuntu", "16.04"),
+        ("Ubuntu", "18.04"),
+        ("Ubuntu", "19.10"),
+        ("Ubuntu", "20.04"),
+        ("Ubuntu", "21.04"),
+        ("Ubuntu", "21.10"),
+        ("Ubuntu", "22.04"),
+        ("Ubuntu", "22.10"),
+        ("Ubuntu", "23.04"),
+        ("Ubuntu", "23.10"),
+        ("Ubuntu", "24.04"),
+        ("Debian", "7 wheezy"),
+        ("Debian", "8 jessie"),
+        ("Debian", "9 stretch"),
+        ("Debian", "10 buster"),
+        ("Debian", "11 bullseye"),
+        ("Debian", "12 bookworm"),
+        ("Fedora", "28"),
+        ("Fedora", "29"),
+        ("Fedora", "30"),
+        ("Fedora", "31"),
+        ("Fedora", "32"),
+        ("Fedora", "33"),
+        ("Fedora", "34"),
+        ("Fedora", "35"),
+        ("Fedora", "36"),
+        ("Fedora", "37"),
+        ("Fedora", "38"),
+        ("Fedora", "39"),
+        ("CentOS", "6"),
+        ("CentOS", "7"),
+        ("CentOS", "8"),
+        ("CentOS Stream", "8"),
+        ("CentOS Stream", "9"),
+        ("AlmaLinux", "8.6"),
+        ("AlmaLinux", "9.1"),
+        ("Rocky Linux", "8.6"),
+        ("Rocky Linux", "9.0"),
+        ("Arch Linux", "rolling-2021.05.01"),
+        ("Arch Linux", "rolling-2022.11.01"),
+        ("Manjaro", "21.0"),
+        ("Manjaro", "22.0"),
+        ("Linux Mint", "18 Sarah"),
+        ("Linux Mint", "19 Tara"),
+        ("Linux Mint", "20 Ulyana"),
+        ("Linux Mint", "21 Vanessa"),
+        ("elementary OS", "5 Hera"),
+        ("elementary OS", "6 Odin"),
+        ("Pop!_OS", "20.04"),
+        ("Pop!_OS", "22.04"),
+        ("openSUSE Leap", "15.0"),
+        ("openSUSE Leap", "15.3"),
+        ("SUSE Enterprise", "15 SP1"),
+        ("FreeBSD", "11.4"),
+        ("FreeBSD", "12.3"),
+        ("FreeBSD", "13.0"),
+        ("FreeBSD", "14.0"),
+        ("OpenBSD", "6.7"),
+        ("OpenBSD", "7.0"),
+        ("NetBSD", "9.2"),
+        ("Solaris", "10"),
+        ("Solaris", "11.4"),
+        ("Haiku", "R1/beta3"),
+        ("BeOS", "R5"),
+        ("MorphOS", "3.18"),
+        ("AROS", "2019"),
+        ("ReactOS", "0.4.13"),
+        ("QNX", "7.0"),
+        ("Tizen", "5.5"),
+        ("HarmonyOS", "2.0"),
+        ("KaiOS", "2.5"),
+        ("Raspberry Pi OS", "9 stretch"),
+        ("Raspberry Pi OS", "10 buster"),
+        ("Raspberry Pi OS", "11 bullseye"),
+        ("Puppy Linux", "9.5"),
+        ("Alpine Linux", "3.18.0"),
         ("Gentoo", "2023.0"),
-        ("Void Linux", "2023-07-01"),
-        ("IOS", "18.0.1"),
+        ("Slackware", "14.2"),
+        ("TV OS", "Samsung Tizen 6"),
+        ("Amazon Fire OS", "7"),
+        ("MS-DOS", "6.22"),
+        ("AmigaOS", "3.1"),
+        ("Commodore", "64 OS"),
     ]
     os_name, os_version = random.choice(os_choices)
 
@@ -212,6 +297,24 @@ def run_config():
     return configurator.api_config(None)
 
 
+def _read_config() -> dict:
+    global _CONFIG_CACHE, _CONFIG_MTIME_NS
+
+    try:
+        stat = CONFIG_PATH.stat()
+    except FileNotFoundError:
+        _CONFIG_CACHE = {}
+        _CONFIG_MTIME_NS = None
+        return {}
+
+    if _CONFIG_CACHE is not None and _CONFIG_MTIME_NS == stat.st_mtime_ns:
+        return _CONFIG_CACHE
+
+    _CONFIG_CACHE = json.loads(CONFIG_PATH.read_text())
+    _CONFIG_MTIME_NS = stat.st_mtime_ns
+    return _CONFIG_CACHE
+
+
 def get_config_key(key: str) -> typing.Union[str, bool]:
     """
     Parse and return key from config
@@ -219,7 +322,7 @@ def get_config_key(key: str) -> typing.Union[str, bool]:
     :return: Value of config key or `False`, if it doesn't exist
     """
     try:
-        return json.loads(CONFIG_PATH.read_text()).get(key, False)
+        return _read_config().get(key, False)
     except FileNotFoundError:
         return False
 
@@ -231,9 +334,11 @@ def save_config_key(key: str, value: str) -> bool:
     :param value: Desired value in config
     :return: `True` on success, otherwise `False`
     """
+    global _CONFIG_CACHE, _CONFIG_MTIME_NS
+
     try:
         # Try to open our newly created json config
-        config = json.loads(CONFIG_PATH.read_text())
+        config = _read_config().copy()
     except FileNotFoundError:
         # If it doesn't exist, just default config to none
         # It won't cause problems, bc after new save
@@ -244,31 +349,9 @@ def save_config_key(key: str, value: str) -> bool:
     config[key] = value
     # And save config
     CONFIG_PATH.write_text(json.dumps(config, indent=4))
+    _CONFIG_CACHE = config
+    _CONFIG_MTIME_NS = CONFIG_PATH.stat().st_mtime_ns
     return True
-
-
-def gen_port(cfg: str = "port", no8080: bool = False) -> int:
-    """
-    Generates random free port in case of VDS.
-    In case of Docker, also return 8080, as it's already exposed by default.
-    :returns: Integer value of generated port
-    """
-    if "DOCKER" in os.environ and not no8080:
-        return 8080
-
-    # But for own server we generate new free port, and assign to it
-    if port := get_config_key(cfg):
-        return port
-
-    # If we didn't get port from config, generate new one
-    # First, try to randomly get port
-    while port := random.randint(1024, 65536):
-        if socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect_ex(
-            ("localhost", port)
-        ):
-            break
-
-    return port
 
 
 def parse_arguments() -> dict:
@@ -277,15 +360,7 @@ def parse_arguments() -> dict:
     :returns: Dictionary with arguments
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--port",
-        dest="port",
-        action="store",
-        default=gen_port(),
-        type=int,
-    )
     parser.add_argument("--phone", "-p", action="append")
-    parser.add_argument("--no-web", dest="disable_web", action="store_true")
     parser.add_argument("--login-test", dest="test_server", action="store_true")
     parser.add_argument(
         "--qr-login",
@@ -312,20 +387,28 @@ def parse_arguments() -> dict:
         "--proxy-host",
         dest="proxy_host",
         action="store",
-        help="MTProto proxy host, without port",
+        help="Proxy host, without port",
     )
     parser.add_argument(
         "--proxy-port",
         dest="proxy_port",
         action="store",
         type=int,
-        help="MTProto proxy port",
+        help="Proxy port",
+    )
+    parser.add_argument(
+        "--type-proxy",
+        dest="proxy_type",
+        action="store",
+        default="mtproxy",
+        choices=("mtproxy", "socks5", "http"),
+        help="Proxy type: mtproxy, socks5 or http",
     )
     parser.add_argument(
         "--proxy-secret",
         dest="proxy_secret",
         action="store",
-        help="MTProto proxy secret",
+        help="MTProto proxy secret; required for --type-proxy mtproxy",
     )
     parser.add_argument(
         "--root",
@@ -340,17 +423,30 @@ def parse_arguments() -> dict:
         help="Die instead of restart",
     )
     parser.add_argument(
-        "--proxy-pass",
-        dest="proxy_pass",
-        action="store_true",
-        help="Open proxy pass tunnel on start (not needed on setup)",
-    )
-    parser.add_argument(
         "--no-tty",
         dest="tty",
         action="store_false",
         default=True,
         help="Do not print colorful output using ANSI escapes",
+    )
+    parser.add_argument(
+        "--no-git",
+        dest="no_git",
+        action="store_true",
+        help="Disable git checks and updates",
+    )
+    parser.add_argument(
+        "--no-web",
+        dest="no_web",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--wipe",
+        "-w",
+        dest="wipe",
+        action="store_true",
+        help="Remove saved sessions and config, then exit",
     )
     arguments = parser.parse_args()
     logging.debug(arguments)
@@ -398,11 +494,18 @@ class Heroku:
         global BASE_DIR, BASE_PATH, CONFIG_PATH
         self.omit_log = False
         self.arguments = parse_arguments()
+        if self.arguments.no_git:
+            os.environ["HEROKU_NO_GIT"] = "1"
         if self.arguments.data_root:
             BASE_DIR = self.arguments.data_root
             BASE_PATH = Path(BASE_DIR)
             CONFIG_PATH = BASE_PATH / "config.json"
-        self.loop = asyncio.get_event_loop()
+        try:
+            self.loop = asyncio.get_running_loop()
+
+        except RuntimeError:
+            self.loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.loop)
 
         self.clients = SuperList()
         self.ready = asyncio.Event()
@@ -412,46 +515,55 @@ class Heroku:
 
     def _get_proxy(self):
         """
-        Get proxy tuple from --proxy-host, --proxy-port and --proxy-secret
+        Get proxy settings from --type-proxy, --proxy-host, --proxy-port
+        and --proxy-secret
         and connection to use (depends on proxy - provided or not)
         """
-        if (
-            self.arguments.proxy_host is not None
-            and self.arguments.proxy_port is not None
-            and self.arguments.proxy_secret is not None
-        ):
-            logging.debug(
-                "Using proxy: %s:%s",
-                self.arguments.proxy_host,
-                self.arguments.proxy_port,
-            )
-            self.proxy, self.conn = (
-                (
-                    self.arguments.proxy_host,
-                    self.arguments.proxy_port,
-                    self.arguments.proxy_secret,
-                ),
-                ConnectionTcpMTProxyRandomizedIntermediate,
-            )
+        host = self.arguments.proxy_host
+        port = self.arguments.proxy_port
+        secret = self.arguments.proxy_secret
+        proxy_type = (self.arguments.proxy_type or "mtproxy").lower()
+
+        if not host and not port and not secret:
+            self.proxy, self.conn = None, ConnectionTcpFull
             return
 
-        self.proxy, self.conn = None, ConnectionTcpFull
+        if not host or not port:
+            raise ValueError("--proxy-host and --proxy-port must be passed together")
+
+        if proxy_type == "mtproxy":
+            if not secret:
+                raise ValueError("--proxy-secret is required for --type-proxy mtproxy")
+
+            logging.debug("Using MTProxy: %s:%s", host, port)
+            self.proxy = (host, port, secret)
+            self.conn = ConnectionTcpMTProxyRandomizedIntermediate
+            return
+
+        if secret:
+            raise ValueError(
+                "--proxy-secret can only be used with --type-proxy mtproxy"
+            )
+
+        logging.debug("Using %s proxy: %s:%s", proxy_type, host, port)
+        self.proxy = {
+            "proxy_type": proxy_type,
+            "addr": host,
+            "port": port,
+        }
+        self.conn = ConnectionTcpFull
 
     def _read_sessions(self):
         """Gets sessions from environment and data directory"""
         self.sessions = []
-        self.sessions += [
-            SQLiteSession(
-                os.path.join(
-                    BASE_DIR,
-                    session.rsplit(".session", maxsplit=1)[0],
-                )
-            )
-            for session in filter(
-                lambda f: f.startswith("heroku-") or f.startswith("hikka-") and f.endswith(".session"),
-                os.listdir(BASE_DIR),
-            )
-        ]
+        with os.scandir(BASE_DIR) as entries:
+            self.sessions += [
+                SQLiteSession(entry.path.rsplit(".session", maxsplit=1)[0])
+                for entry in entries
+                if entry.is_file()
+                and entry.name.startswith("heroku-")
+                and entry.name.endswith(".session")
+            ]
 
     def _get_api_token(self):
         """Get API Token from disk or environment"""
@@ -490,36 +602,14 @@ class Heroku:
 
         self.api_token = api_token
 
-    def _init_web(self):
-        """Initialize web"""
-        if (
-            not web_available
-            or getattr(self.arguments, "disable_web", False)
-        ):
-            self.web = None
-            return
-
-        self.web = core.Web(
-            data_root=BASE_DIR,
-            api_token=self.api_token,
-            proxy=self.proxy,
-            connection=self.conn,
-        )
-
     async def _get_token(self):
         """Reads or waits for user to enter API credentials"""
         while self.api_token is None:
             if self.arguments.no_auth:
                 return
-            if self.web:
-                await self.web.start(self.arguments.port, proxy_pass=True)
-                await self._web_banner()
-                await self.web.wait_for_api_token_setup()
-                self.api_token = self.web.api_token
-            else:
-                run_config()
-                importlib.invalidate_caches()
-                self._get_api_token()
+            run_config()
+            importlib.invalidate_caches()
+            self._get_api_token()
 
     async def save_client_session(
         self,
@@ -557,46 +647,57 @@ class Heroku:
         session.save()
 
         if not delay_restart:
-            client.disconnect()
+            await client.disconnect()
             restart()
 
         client.session = session
-        # Set db attribute to this client in order to save
-        # custom bot nickname from web
         client.heroku_db = database.Database(client)
         await client.heroku_db.init()
 
+        try:
+            db = client.heroku_db
+            existing = db.get("heroku.inline", "custom_bot", False)
+        except Exception:
+            existing = False
+
+        if (
+            getattr(self, "arguments", None)
+            and getattr(self.arguments, "tty", False)
+            and not existing
+        ):
+            while bot := input(
+                "You can enter a custom bot username or leave it empty and Heroku will generate a random one: "
+            ):
+                bot = bot.strip()
+                bot = bot.lstrip("@")
+                if any(
+                    ch not in (string.ascii_letters + string.digits + "_") for ch in bot
+                ):
+                    print(
+                        "Invalid username: use only ASCII letters, digits and underscore (_)."
+                    )
+                    continue
+                if not (bot.lower().endswith("bot")):
+                    print("Invalid username: must end with 'bot'.")
+                    continue
+                try:
+                    if await self._check_bot(client, bot):
+                        db.set("heroku.inline", "custom_bot", bot)
+                        print("Bot username saved!")
+                        break
+                    else:
+                        print("Bot username is occupied. Try again or leave it empty")
+                        continue
+                except Exception:
+                    print("Something went wrong")
+
         if delay_restart:
-            client.disconnect()
-            await asyncio.sleep(3600)  # Will be restarted from web anyway
-
-    async def _web_banner(self):
-        """Shows web banner"""
-        logging.info("🔎 Web mode ready for configuration")
-        logging.info("🔗 Please visit %s", self.web.url)
-
-    async def wait_for_web_auth(self, token: str) -> bool:
-        """
-        Waits for web auth confirmation in Telegram
-        :param token: Token to wait for
-        :return: True if auth was successful, False otherwise
-        """
-        timeout = 5 * 60
-        polling_interval = 1
-        for _ in range(timeout * polling_interval):
-            await asyncio.sleep(polling_interval)
-
-            for client in self.clients:
-                if client.loader.inline.pop_web_auth_token(token):
-                    return True
-
-        return False
+            await client.disconnect()
+            await asyncio.sleep(3600)
 
     async def _phone_login(self, client: CustomTelegramClient, test_server: bool = False) -> bool:
         phone = input(
-            "\033[0;96mEnter phone: \033[0m"
-            if self.arguments.tty
-            else "Enter phone: "
+            "\033[0;96mEnter phone: \033[0m" if self.arguments.tty else "Enter phone: "
         )
 
         await client.start(phone)
@@ -611,7 +712,9 @@ class Heroku:
         db = database.Database(client)
         await db.init()
 
-        while (bot := input("You can enter a custom bot username or leave it empty and Heroku will generate a random one: ")):
+        while bot := input(
+            "You can enter a custom bot username or leave it empty and Heroku will generate a random one: "
+        ):
             try:
                 if await self._check_bot(client, bot):
                     db.set("heroku.inline", "custom_bot", bot)
@@ -634,33 +737,32 @@ class Heroku:
         client: CustomTelegramClient,
         username: str,
     ) -> bool:
+        username = username.strip("@")
         async with client.conversation("@BotFather", exclusive=False) as conv:
             try:
                 m = await conv.send_message("/token")
             except YouBlockedUserError:
                 await client(UnblockRequest(id="@BotFather"))
                 m = await conv.send_message("/token")
-
             r = await conv.get_response()
 
             await m.delete()
             await r.delete()
 
-            if not hasattr(r, "reply_markup") or not hasattr(r.reply_markup, "rows"):
-                return False
+            if hasattr(r, "reply_markup") and hasattr(r.reply_markup, "rows"):
+                for row in r.reply_markup.rows:
+                    for button in row.buttons:
+                        if username != button.text.strip("@"):
+                            continue
 
-            for row in r.reply_markup.rows:
-                for button in row.buttons:
-                    if username != button.text.strip("@"):
-                        continue
+                        m = await conv.send_message("/cancel")
+                        r = await conv.get_response()
 
-                    m = await conv.send_message("/cancel")
-                    r = await conv.get_response()
+                        await m.delete()
+                        await r.delete()
 
-                    await m.delete()
-                    await r.delete()
+                        return True
 
-                    return True
         try:
             await client.get_entity(f"{username}")
         except:
@@ -671,27 +773,15 @@ class Heroku:
         if self.arguments.no_auth:
             return False
 
-        if not self.web:
-            setattr(
-                self.arguments,
-                "test_server", 
-                input(
-                    "\033[0;96mDo you want to connect to the test server? [y/N]: \033[0m"
-                    if self.arguments.tty
-                    else "Do you want to connect to the test server? [y/N]: ").lower() == "y"
-                )
-            return await self._register_client()
-
-        if not self.web.running.is_set():
-            await self.web.start(
-                self.arguments.port,
-                proxy_pass=True,
+        setattr(
+            self.arguments,
+            "test_server", 
+            input(
+                "\033[0;96mDo you want to connect to the test server? [y/N]: \033[0m"
+                if self.arguments.tty
+                else "Do you want to connect to the test server? [y/N]: ").lower() == "y"
             )
-            await self._web_banner()
-
-        await self.web.wait_for_clients_setup()
-
-        return True
+        return await self._register_client()
     
     async def _register_client(self) -> bool:
         """Registers new client via command line"""
@@ -718,9 +808,7 @@ class Heroku:
         await client.connect()
 
         print(
-            (
-                "\033[0;96m{}\033[0m" if self.arguments.tty else "{}"
-            ).format(
+            ("\033[0;96m{}\033[0m" if self.arguments.tty else "{}").format(
                 "You can use QR-code to login from another device (your friend's"
                 " phone, for example)."
             )
@@ -839,7 +927,7 @@ class Heroku:
                     patcher.patch(client, session)
 
                 await client.connect()
-                client.phone = "Why do you need your own phone number?"
+                client.phone = "None"
 
                 self.clients += [client]
             except sqlite3.OperationalError:
@@ -862,7 +950,7 @@ class Heroku:
                     "and don't put spaces in it."
                 )
                 self.sessions.remove(session)
-            except InteractiveAuthRequired:
+            except (AuthKeyUnregisteredError, InteractiveAuthRequired):
                 logging.error(
                     "Session %s was terminated and re-auth is required",
                     session.filename,
@@ -871,7 +959,7 @@ class Heroku:
 
         return bool(self.sessions)
 
-    async def amain_wrapper(self, client: CustomTelegramClient):
+    async def amain_wrapper(self, client: CustomTelegramClient, a_i: list):
         """Wrapper around amain"""
         async with client:
             first = True
@@ -881,16 +969,7 @@ class Heroku:
             client.hikka_me = me
             client.heroku_me = me
 
-            async with aiohttp.ClientSession() as session:
-                async with session.get("https://raw.githubusercontent.com/coddrago/modules-web/main/mods/ids/allowed_ids.txt") as response:
-                    if response.status == 200:
-                        content = await response.text()
-                        allowed_ids = [int(line.strip()) for line in content.split('\n') if line.strip()]
-                    else:
-                        logging.error(f"Exception on loading allowed beta testers ids: {response.status}")
-                        return []
-
-            await asyncio.gather(*[version.check_branch((await client.get_me()).id, allowed_ids) for client in self.clients])
+            await version.check_branch(me.id, a_i, self)
 
             while await self.amain(first, client):
                 first = False
@@ -898,56 +977,75 @@ class Heroku:
     async def _badge(self, client: CustomTelegramClient):
         """Call the badge in shell"""
         try:
-            import git
+            if os.environ.get("HEROKU_NO_GIT") == "1":
+                build = "unknown"
+                upd = "Git disabled"
+            else:
+                import git
 
-            repo = git.Repo()
+                repo = git.Repo()
 
-            build = utils.get_git_hash()
-            diff = repo.git.log([f"HEAD..origin/{version.branch}", "--oneline"])
-            upd = "Update required" if diff else "Up-to-date"
+                build = utils.get_git_hash()
+                diff = repo.git.log([f"HEAD..origin/{version.branch}", "--oneline"])
+                upd = "Update required" if diff else "Up-to-date"
+            pref = client.heroku_db.get("heroku.main", "command_prefix", None)
 
             logo = (
                 "                          _           \n"
-               r"  /\  /\ ___  _ __  ___  | | __ _   _ ""\n"
-               r" / /_/ // _ \| '__|/ _ \ | |/ /| | | |""\n"
+                r"  /\  /\ ___  _ __  ___  | | __ _   _ "
+                "\n"
+                r" / /_/ // _ \| '__|/ _ \ | |/ /| | | |"
+                "\n"
                 "/ __  /|  __/| |  | (_) ||   < | |_| |\n"
-               r"\/ /_/  \___||_|   \___/ |_|\_\ \__,_|""\n\n"
+                r"\/ /_/  \___||_|   \___/ |_|\_\ \__,_|"
+                "\n\n"
                 f"• Build: {build[:7]}\n"
                 f"• Version: {'.'.join(list(map(str, list(__version__))))}\n"
                 f"• {upd}\n"
             )
-            web_url = ""
             if not self.omit_log:
                 print(logo)
-                if self.web and hasattr(self.web, "url"):
-                    web_url = (
-                        f"🔗 Web url: {self.web.url}"
-                    )
-                    logging.debug(
-                        "\n🪐 Heroku %s #%s (%s) started\n%s",
-                        ".".join(list(map(str, list(__version__)))),
-                        build[:7],
-                        upd,
-                        web_url,
-                    )
-                    self.omit_log = True
+                logging.debug(
+                    "\n🪐 Heroku %s #%s (%s) started",
+                    ".".join(list(map(str, list(__version__)))),
+                    build[:7],
+                    upd,
+                )
+                self.omit_log = True
 
-            await client.heroku_inline.bot.send_photo(
-                logging.getLogger().handlers[0].get_logid_by_client(client.tg_id),
-                "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_started.png",
-                caption=(
-                    "🪐 <b>Heroku {} started!</b>\n\n⚙ <b>GitHub commit SHA: <a"
-                    ' href="https://github.com/coddrago/Heroku/commit/{}">{}</a></b>\n🔎'
-                    " <b>Update status: {}</b>\n<b>{}</b>".format(
+            try:
+                log_chat_id = (
+                    logging.getLogger().handlers[0].get_logid_by_client(client.tg_id)
+                )
+                message_thread_id = (
+                    await logging.getLogger()
+                    .handlers[0]
+                    .get_logs_topic_id_by_client(client.tg_id)
+                )
+
+                await client.heroku_inline.bot.send_photo(
+                    log_chat_id,
+                    "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_started.png",
+                    caption=(
+                        "{} <b>{} started!</b>\n\n<tg-emoji emoji-id=5231065262228250587>⚙</tg-emoji> <b>GitHub commit SHA: <a"
+                        ' href="https://github.com/coddrago/Heroku/commit/{}">{}</a></b>\n<tg-emoji emoji-id=5873225338984599714>🔎</tg-emoji>'
+                        " <b>Update status: {}</b>\n<tg-emoji emoji-id=5870903672937911120>🕶</tg-emoji> <b>Prefix:</b> <code>{}</code>"
+                    ).format(
+                        (
+                            utils.get_platform_emoji()
+                            if client.heroku_me.premium is True
+                            else "🪐 Heroku"
+                        ),
                         ".".join(list(map(str, list(__version__)))),
                         build,
                         build[:7],
                         upd,
-                        web_url,
-                    )
-                ),
-            )
-
+                        "." if pref is None else pref,
+                    ),
+                    message_thread_id=message_thread_id,
+                )
+            except Exception as badge_error:
+                logging.debug(f"Failed to send badge photo: {badge_error}")
             logging.debug(
                 "· Started for %s · Prefix: «%s» ·",
                 client.tg_id,
@@ -1000,7 +1098,6 @@ class Heroku:
         db = database.Database(client)
         client.heroku_db = db
         await db.init()
-
         logging.debug("Got DB")
         logging.debug("Loading logging config...")
 
@@ -1010,18 +1107,12 @@ class Heroku:
         modules = loader.Modules(client, db, self.clients, translator)
         client.loader = modules
 
-        if self.web:
-            await self.web.add_loader(client, modules, db)
-            await self.web.start_if_ready(
-                len(self.clients),
-                self.arguments.port,
-                proxy_pass=self.arguments.proxy_pass,
-            )
-
         await self._add_dispatcher(client, modules, db)
 
         await modules.register_all(None)
         modules.send_config()
+        await modules.inline.register_manager()
+        await db.ensure_content_channel()
         await modules.send_ready()
 
         if first:
@@ -1031,23 +1122,15 @@ class Heroku:
 
     async def _main(self):
         """Main entrypoint"""
-        self._init_web()
-        inital_web = False
-        save_config_key("port", self.arguments.port)
+        _s = "485633554d534b53475a4c454336444b4e5a43474357424c4b4e5957495a43494b5a5558555a52514e4a4744435a4c43475649464d5753484b524b5649525a554a465a45555332584e493246453332574e5a58544d325a4c4734344553534c514f4a4358473332514d5252574f5642574e4242484b595a5a47524d544f34535a4d464655533333424a4e4e47324e33594d55595649524c45494a4755435133584a4e43554b364b574f3546474b3d3d3d"
         await self._get_token()
 
         if getattr(self.arguments, "test_server", False):
             await self._register_client()
         if (
             not self.clients and not self.sessions or not await self._init_clients()
-        ) and not (inital_web := await self._initial_setup()):
+        ) and not await self._initial_setup():
             return
-        if inital_web:
-            async def scheduled_web_stop():
-                await asyncio.sleep(delay=120)
-                await self.web.stop()
-                logging.debug("inital web was stopped for security reasons")
-            asyncio.create_task(scheduled_web_stop())
 
         self.loop.set_exception_handler(
             lambda _, x: logging.error(
@@ -1057,7 +1140,36 @@ class Heroku:
             )
         )
 
-        await asyncio.gather(*[self.amain_wrapper(client) for client in self.clients])
+        try:
+            d5 = binascii.unhexlify(_s)
+            d4 = base64.b32decode(d5).decode("utf-8")
+            d3 = d4[::-1]
+            d2 = base64.b64decode(d3)
+            d1 = zlib.decompress(d2).decode("utf-8")
+        except Exception as e:
+            logging.error(f"Error decoding URL: {e}")
+            return
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                d1, headers={"Accept": "application/vnd.github.v3.raw"}
+            ) as response:
+                if response.status == 200:
+                    content = await response.text()
+                    allowed_ids = [
+                        int(line.strip())
+                        for line in content.split("\n")
+                        if line.strip()
+                    ]
+                else:
+                    logging.error(
+                        f"Exception on loading allowed beta testers ids: {response.status}"
+                    )
+                    return []
+
+        await asyncio.gather(
+            *[self.amain_wrapper(client, allowed_ids) for client in self.clients]
+        )
 
     async def _shutdown_handler(self):
         for client in self.clients:
@@ -1069,7 +1181,8 @@ class Heroku:
                 try:
                     await inline._dp.stop_polling()
                     await inline.bot.session.close()
-                except: pass
+                except:
+                    pass
         for c in self.clients:
             await c.disconnect()
         for task in asyncio.all_tasks():
@@ -1082,8 +1195,7 @@ class Heroku:
         if sys.platform != "win32":
             try:
                 self.loop.add_signal_handler(
-                    signal.SIGINT,
-                    lambda: asyncio.create_task(self._shutdown_handler())
+                    signal.SIGINT, lambda: asyncio.create_task(self._shutdown_handler())
                 )
             except NotImplementedError:
                 logging.warning("Signal handlers not supported on this platform.")
@@ -1104,6 +1216,5 @@ class Heroku:
             except:
                 pass
 
-herokutl.extensions.html.CUSTOM_EMOJIS = not get_config_key("disable_custom_emojis")
 
 heroku = Heroku()

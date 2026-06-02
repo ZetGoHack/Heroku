@@ -4,7 +4,7 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-# ©️ Codrago, 2024-2025
+# ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
 # 🌐 https://github.com/coddrago/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
@@ -32,6 +32,13 @@ SUPPORTED_LANGUAGES = {
     "ru": "🇷🇺 Русский",
     "ua": "🇺🇦 Український",
     "de": "🇩🇪 Deutsch",
+    "jp": "🇯🇵 日本語",
+}
+MEME_LANGUAGES = {
+    "leet": "🏴‍☠️ 1337",
+    "uwu": "🏴‍☠️ UwU",
+    "tiktok": "🏴‍☠️ TikTokKid",
+    "neofit": "🏴‍☠️ Neofit",
 }
 
 
@@ -57,10 +64,12 @@ class BaseTranslator:
         suffix: str,
         prefix: str = "heroku.modules.",
     ) -> typing.Optional[dict]:
-        if suffix == ".json":
-            return json.loads(content)
+        match suffix:
+            case ".json":
+                return json.loads(content)
+            case _:
+                content = yaml.load(content)
 
-        content = yaml.load(content)
         if all(len(key) == 2 for key in content):
             return {
                 language: {
@@ -95,12 +104,37 @@ class BaseTranslator:
     def gettext(self, text: str) -> typing.Any:
         return self.getkey(text) or text
 
-    async def load_module_translations(self, pack_url: str) -> typing.Union[bool, dict]:
+    async def load_module_translations(
+        self, pack_url: str, cache_path: Path = None
+    ) -> typing.Union[bool, dict]:
         try:
-            data = yaml.load((await utils.run_sync(requests.get, pack_url)).text)
+            content = (await utils.run_sync(requests.get, pack_url)).text
+            data = yaml.load(content)
         except Exception:
             logger.exception("Unable to decode %s", pack_url)
-            return False
+            data = None
+            content = None
+
+        if not isinstance(data, dict):
+            if cache_path and cache_path.exists():
+                try:
+                    data = yaml.load(cache_path.read_text(encoding="utf-8"))
+                except Exception:
+                    logger.exception("Unable to decode cached %s", cache_path)
+                    return False
+
+                if not isinstance(data, dict):
+                    return {}
+
+            else:
+                return {}
+
+        if cache_path and content is not None:
+            try:
+                cache_path.parent.mkdir(parents=True, exist_ok=True)
+                cache_path.write_text(content, encoding="utf-8")
+            except Exception:
+                logger.exception("Failed to save `%s`'s cache copy", pack_url)
 
         if any(len(key) != 2 for key in data):
             return data
@@ -208,11 +242,23 @@ class Strings:
                     next(
                         (
                             f"strings_{lang}"
-                            for lang in self._translator.db.get(
-                                __name__,
-                                "lang",
-                                "en",
-                            ).split(" ")
+                            for original_lang in (
+                                self._translator.db.get(
+                                    __name__,
+                                    "lang",
+                                    "en",
+                                ).split(" ")
+                                if self._translator is not None
+                                else ["en"]
+                            )
+                            for lang in (
+                                [original_lang]
+                                + (
+                                    ["en"]
+                                    if original_lang in ["leet", "uwu", "neofit"]
+                                    else ["ru"] if original_lang == "tiktok" else []
+                                )
+                            )
                             if hasattr(self._mod, f"strings_{lang}")
                             and isinstance(getattr(self._mod, f"strings_{lang}"), dict)
                             and key in getattr(self._mod, f"strings_{lang}")
@@ -220,13 +266,11 @@ class Strings:
                         utils.rand(32),
                     ),
                     self._base_strings,
-                )
+                ).get(key)
                 if self._translator is not None
-                else self._base_strings
-            ).get(
-                key,
-                self._base_strings.get(key, "Unknown strings"),
+                else self._base_strings.get(key)
             )
+            or self._base_strings.get(key, f"Unknown strings: {key}")
         )
 
     def __call__(

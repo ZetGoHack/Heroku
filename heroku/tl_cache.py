@@ -4,7 +4,7 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-# ©️ Codrago, 2024-2025
+# ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
 # 🌐 https://github.com/coddrago/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
@@ -20,7 +20,6 @@ from herokutl import TelegramClient
 from herokutl import __name__ as __base_name__
 from herokutl import helpers
 from herokutl._updates import ChannelState, Entity, EntityType, SessionState
-from herokutl.errors import RPCError
 from herokutl.errors.rpcerrorlist import TopicDeletedError
 from herokutl.hints import EntityLike
 from herokutl.network import MTProtoSender
@@ -35,6 +34,7 @@ from herokutl.tl.types import (
     Updates,
     UpdatesCombined,
     UpdateShort,
+    User,
     UserFull,
 )
 from herokutl.utils import is_list_like
@@ -46,6 +46,12 @@ from .types import (
     CacheRecordPerms,
     Module,
 )
+
+if typing.TYPE_CHECKING:
+    from .database import Database
+    from .dispatcher import CommandDispatcher
+    from .loader import Modules
+    from .inline.core import InlineManager
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +103,14 @@ class CustomTelegramClient(TelegramClient):
                 typing.Any,
             ]
         ] = None
+        self.dispatcher: "CommandDispatcher"
+        self.tg_id: int
+        self._tg_id: int
+        self.heroku_me: "User"
+        self.hikka_me: "User"
+        self.heroku_db: "Database"
+        self.loader: "Modules"
+        self.heroku_inline: "InlineManager"
 
     async def connect(self, unix_socket_path: typing.Optional[str] = None):
         if self.session is None:
@@ -104,13 +118,14 @@ class CustomTelegramClient(TelegramClient):
                 "TelegramClient instance cannot be reused after logging out"
             )
 
-        if self._loop is None:
-            self._loop = helpers.get_running_loop()
-        elif self._loop != helpers.get_running_loop():
-            raise RuntimeError(
-                "The asyncio event loop must not change after connection (see the FAQ"
-                " for details)"
-            )
+        match True:
+            case _ if self._loop is None:
+                self._loop = helpers.get_running_loop()
+            case _ if self._loop != helpers.get_running_loop():
+                raise RuntimeError(
+                    "The asyncio event loop must not change after connection (see the FAQ"
+                    " for details)"
+                )
 
         connection = self._connection(
             self.session.server_address,
@@ -259,7 +274,7 @@ class CustomTelegramClient(TelegramClient):
         else:
             hashable_entity = entity
 
-        if str(hashable_entity).isdigit() and int(hashable_entity) < 0:
+        if str(hashable_entity).startswith("-100"):
             hashable_entity = int(str(hashable_entity)[4:])
 
         if (
@@ -384,9 +399,9 @@ class CustomTelegramClient(TelegramClient):
                 resolved_perms,
                 exp,
             )
-            self._heroku_perms_cache.setdefault(hashable_entity, {})[hashable_user] = (
-                cache_record
-            )
+            self._heroku_perms_cache.setdefault(hashable_entity, {})[
+                hashable_user
+            ] = cache_record
             logger.debug("Saved hashable_entity %s perms to cache", hashable_entity)
 
             def save_user(key: typing.Union[str, int]):
@@ -395,12 +410,12 @@ class CustomTelegramClient(TelegramClient):
                     self._heroku_perms_cache.setdefault(key, {})[user.id] = cache_record
 
                 if getattr(user, "username", None):
-                    self._heroku_perms_cache.setdefault(key, {})[f"@{user.username}"] = (
-                        cache_record
-                    )
-                    self._heroku_perms_cache.setdefault(key, {})[user.username] = (
-                        cache_record
-                    )
+                    self._heroku_perms_cache.setdefault(key, {})[
+                        f"@{user.username}"
+                    ] = cache_record
+                    self._heroku_perms_cache.setdefault(key, {})[
+                        user.username
+                    ] = cache_record
 
             if getattr(entity, "id", None):
                 logger.debug("Saved resolved_entity id %s perms to cache", entity.id)
