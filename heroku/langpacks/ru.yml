@@ -496,17 +496,17 @@ updater:
   _cmd_doc_ubstop: Остановить юзербота
 heroku_plugin_security:
   name: "HikkaPluginSecurity"
-  no_hash: "<emoji document_id=5210952531676504517>🚫</emoji> <b>Нужно указать название модуля</b>"
-  hash_not_found: "<emoji document_id=5210952531676504517>🚫</emoji> <b>Модуль с таким названием не найден</b>"
+  no_hash: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Нужно указать название модуля</b>"
+  hash_not_found: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Модуль с таким названием не найден</b>"
   hash_not_found_suggest: "<emoji document_id=5312383351217201533>⚠️</emoji> <b>Совпадений нет. Ближайшее:</b> <code>{}</code>"
-  hash_list: "<emoji document_id=5118861066981344121>✅</emoji> <b>Хеши модулей:</b>\n\n<blockquote expandable>{}</blockquote>"
-  no_hashes: "<emoji document_id=5210952531676504517>🚫</emoji> <b>Хеши модулей не найдены</b>"
-  external_removed: "<emoji document_id=5118861066981344121>✅</emoji> <b>Флаг is_external снят для</b> <code>{}</code>"
-  external_restored: "<emoji document_id=5118861066981344121>✅</emoji> <b>Флаг is_external возвращён для</b> <code>{}</code>"
+  hash_list: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>Хеши модулей:</b>\n\n<blockquote expandable>{}</blockquote>"
+  no_hashes: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Хеши модулей не найдены</b>"
+  external_removed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>Флаг is_external снят для</b> <code>{}</code>"
+  external_restored: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>Флаг is_external возвращён для</b> <code>{}</code>"
   already_internal: "<emoji document_id=5312383351217201533>⚠️</emoji> <b>Модуль</b> <code>{}</code> <b>уже внутренний</b>"
   already_external: "<emoji document_id=5312383351217201533>⚠️</emoji> <b>Модуль</b> <code>{}</code> <b>уже внешний</b>"
-  session_allowed: "<emoji document_id=5118861066981344121>✅</emoji> <b>Доступ к .session разрешён для</b> <code>{}</code>"
-  session_denied: "<emoji document_id=5118861066981344121>✅</emoji> <b>Доступ к .session запрещён для</b> <code>{}</code>"
+  session_allowed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>Доступ к .session разрешён для</b> <code>{}</code>"
+  session_denied: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>Доступ к .session запрещён для</b> <code>{}</code>"
   already_allowed: "<emoji document_id=5312383351217201533>⚠️</emoji> <b>Доступ к .session уже разрешён для</b> <code>{}</code>"
   already_denied: "<emoji document_id=5312383351217201533>⚠️</emoji> <b>Доступ к .session уже запрещён для</b> <code>{}</code>"
 
@@ -664,8 +664,8 @@ loader:
   '404': <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Модуль не найден</b>
   _cmd_doc_dlmall: Установить все модули из выбранного репозитория
   _cmd_doc_ml: <module> - Отправить модуль файлом
-  result: "<emoji document_id=5337183664630709422>🔎</emoji> <b>Результат поиска по</b> <code>{query}</code>\n\n<emoji document_id=5258270535710317499>📦</emoji> <b>{name}</b> от <b>{dev}</b>\n<emoji document_id=5879813604068298387>ℹ️</emoji> <i>{cls_doc}</i>\n<emoji document_id=5372981976804366741>🤖</emoji> <b>Команды:</b>\n{commands}\n\n<emoji document_id=5188377234380954537>🪐</emoji> <code>{prefix}dlmod {mhash}</code>"
-  not_subscribed: <emoji document_id=5210952531676504517>🚫</emoji> <b>Сначала нужно подписаться на канал модуля</b>
+  result: "<tg-emoji emoji-id=5337183664630709422>🔎</tg-emoji> <b>Результат поиска по</b> <code>{query}</code>\n\n<tg-emoji emoji-id=5258270535710317499>📦</tg-emoji> <b>{name}</b> от <b>{dev}</b>\n<emoji document_id=5879813604068298387>ℹ️</emoji> <i>{cls_doc}</i>\n<tg-emoji emoji-id=5372981976804366741>🤖</tg-emoji> <b>Команды:</b>\n{commands}\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <code>{prefix}dlmod {mhash}</code>"
+  not_subscribed: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Сначала нужно подписаться на канал модуля</b>
 translations:
   lang_saved: "{} <b>Язык сохранён!</b>"
   pack_saved: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Пакет переводов сохранён!</b>"

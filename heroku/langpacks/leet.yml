@@ -659,7 +659,7 @@ loader:
   '404': <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>M0dul3 n07 f0und</b>
   _cmd_doc_dlmall: 1n574ll 4ll m0dul35 fr0m 53l3c73d r3p0
   _cmd_doc_ml: <m0dul3> - 53nd m0dul3 45 4 f1l3
-  result: "<emoji document_id=5337183664630709422>🔎</emoji> <b>534rch r35ul7 f0r</b> <code>{query}</code>\n\n<emoji document_id=5258270535710317499>📦</emoji> <b>{name}</b> by <b>{dev}</b>\n<emoji document_id=5879813604068298387>ℹ️</emoji> <i>{cls_doc}</i>\n<emoji document_id=5372981976804366741>🤖</emoji> <b>C0mm4nd5:</b>\n{commands}\n\n<emoji document_id=5188377234380954537>🪐</emoji> <code>{prefix}dlmod {mhash}</code>"
+  result: "<tg-emoji emoji-id=5337183664630709422>🔎</tg-emoji> <b>534rch r35ul7 f0r</b> <code>{query}</code>\n\n<tg-emoji emoji-id=5258270535710317499>📦</tg-emoji> <b>{name}</b> by <b>{dev}</b>\n<emoji document_id=5879813604068298387>ℹ️</emoji> <i>{cls_doc}</i>\n<tg-emoji emoji-id=5372981976804366741>🤖</tg-emoji> <b>C0mm4nd5:</b>\n{commands}\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <code>{prefix}dlmod {mhash}</code>"
 translations:
   name: "7r4n5l4710n5"
   lang_saved: "{} <b>L4ngu4g3 54v3d!</b>"
@@ -788,6 +788,6 @@ heroku_plugin_security:
   _cls_doc: M4n4g3 3x73rn4l m0dul3 53cur17y 0v3rr1d35
   _cmd_doc_external: <m0dul3> - D3ny full u53rb07 4cc355 f0r m0dul3
   _cmd_doc_unexternal: <m0dul3> - Gr4n7 full u53rb07 4cc355 f0r m0dul3
-  no_hash: <emoji document_id=5210952531676504517>🚫</emoji> <b>Y0u mu57 5p3c1fy 4 m0dul3 n4m3</b>
-  hash_not_found: <emoji document_id=5210952531676504517>🚫</emoji> <b>M0dul3 w17h 7h15 n4m3 n07 f0und</b>
+  no_hash: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Y0u mu57 5p3c1fy 4 m0dul3 n4m3</b>
+  hash_not_found: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>M0dul3 w17h 7h15 n4m3 n07 f0und</b>
   hash_not_found_suggest: <emoji document_id=5312383351217201533>⚠️</emoji> <b>N0 m47ch35. Cl05357:</b> <code>{}</code>

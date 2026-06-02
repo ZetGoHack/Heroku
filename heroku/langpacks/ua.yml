@@ -644,9 +644,9 @@ loader:
   '404': <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Модуль не знайдено</b>
   _cmd_doc_dlmall: Встановити всі модулі з вибраного репозиторію
   _cmd_doc_ml: <module> - Надіслати модуль файлом
-  result: "<emoji document_id=5337183664630709422>🔎</emoji> <b>Результат пошуку за</b> <code>{query}</code>\n\n<emoji document_id=5258270535710317499>📦</emoji> <b>{name}</b> від <b>{dev}</b>\n<emoji document_id=5879813604068298387>ℹ️</emoji> <i>{cls_doc}</i>\n<emoji document_id=5372981976804366741>🤖</emoji> <b>Команди:</b>\n{commands}\n\n<emoji document_id=5188377234380954537>🪐</emoji> <code>{prefix}dlmod {mhash}</code>"
-  args: <emoji document_id=5210952531676504517>🚫</emoji> <b>Недостатньо аргументів</b>
-  not_subscribed: <emoji document_id=5210952531676504517>🚫</emoji> <b>Спочатку потрібно підписатися на канал модуля</b>
+  result: "<tg-emoji emoji-id=5337183664630709422>🔎</tg-emoji> <b>Результат пошуку за</b> <code>{query}</code>\n\n<tg-emoji emoji-id=5258270535710317499>📦</tg-emoji> <b>{name}</b> від <b>{dev}</b>\n<emoji document_id=5879813604068298387>ℹ️</emoji> <i>{cls_doc}</i>\n<tg-emoji emoji-id=5372981976804366741>🤖</tg-emoji> <b>Команди:</b>\n{commands}\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <code>{prefix}dlmod {mhash}</code>"
+  args: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Недостатньо аргументів</b>
+  not_subscribed: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Спочатку потрібно підписатися на канал модуля</b>
 translations:
   lang_saved: "{} <b>Мову збережено!</b>"
   pack_saved: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Пакет перекладів збережено!</b>"
@@ -775,6 +775,6 @@ heroku_plugin_security:
   _cls_doc: Керування обмеженнями безпеки зовнішніх модулів
   _cmd_doc_external: <module> - Заборонити модулю повний доступ до юзербота
   _cmd_doc_unexternal: <module> - Дозволити модулю повний доступ до юзербота
-  no_hash: <emoji document_id=5210952531676504517>🚫</emoji> <b>Вкажи назву модуля</b>
-  hash_not_found: <emoji document_id=5210952531676504517>🚫</emoji> <b>Модуль із такою назвою не знайдено</b>
+  no_hash: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Вкажи назву модуля</b>
+  hash_not_found: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Модуль із такою назвою не знайдено</b>
   hash_not_found_suggest: <emoji document_id=5312383351217201533>⚠️</emoji> <b>Збігів немає. Найближче:</b> <code>{}</code>

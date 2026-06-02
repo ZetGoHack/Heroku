@@ -660,7 +660,7 @@ loader:
   '404': <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>モジュールが見つかりません</b>
   _cmd_doc_dlmall: 選択したリポジトリから全モジュールをインストール
   _cmd_doc_ml: <module> - モジュールをファイルとして送信
-  result: "<emoji document_id=5337183664630709422>🔎</emoji> <b>検索結果:</b> <code>{query}</code>\n\n<emoji document_id=5258270535710317499>📦</emoji> <b>{name}</b> by <b>{dev}</b>\n<emoji document_id=5879813604068298387>ℹ️</emoji> <i>{cls_doc}</i>\n<emoji document_id=5372981976804366741>🤖</emoji> <b>コマンド:</b>\n{commands}\n\n<emoji document_id=5188377234380954537>🪐</emoji> <code>{prefix}dlmod {mhash}</code>"
+  result: "<tg-emoji emoji-id=5337183664630709422>🔎</tg-emoji> <b>検索結果:</b> <code>{query}</code>\n\n<tg-emoji emoji-id=5258270535710317499>📦</tg-emoji> <b>{name}</b> by <b>{dev}</b>\n<emoji document_id=5879813604068298387>ℹ️</emoji> <i>{cls_doc}</i>\n<tg-emoji emoji-id=5372981976804366741>🤖</tg-emoji> <b>コマンド:</b>\n{commands}\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <code>{prefix}dlmod {mhash}</code>"
 translations:
   name: "Translations"
   lang_saved: "{} <b>言語が保存されました！</b>"
@@ -789,6 +789,6 @@ heroku_plugin_security:
   _cls_doc: 外部モジュールのセキュリティ上書きを管理します
   _cmd_doc_external: <module> - モジュールのユーザーボット完全アクセスを拒否
   _cmd_doc_unexternal: <module> - モジュールのユーザーボット完全アクセスを許可
-  no_hash: <emoji document_id=5210952531676504517>🚫</emoji> <b>モジュール名を指定してください</b>
-  hash_not_found: <emoji document_id=5210952531676504517>🚫</emoji> <b>この名前のモジュールは見つかりません</b>
+  no_hash: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>モジュール名を指定してください</b>
+  hash_not_found: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>この名前のモジュールは見つかりません</b>
   hash_not_found_suggest: <emoji document_id=5312383351217201533>⚠️</emoji> <b>一致なし。最も近い候補:</b> <code>{}</code>
