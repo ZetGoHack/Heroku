@@ -642,7 +642,7 @@ loader:
   '404': <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Modul nicht gefunden</b>
   _cmd_doc_dlmall: Alle Module aus dem ausgewählten Repository installieren
   _cmd_doc_ml: <module> - Modul als Datei senden
-  result: "<tg-emoji emoji-id=5337183664630709422>🔎</tg-emoji> <b>Suchergebnis für</b> <code>{query}</code>\n\n<tg-emoji emoji-id=5258270535710317499>📦</tg-emoji> <b>{name}</b> von <b>{dev}</b>\n<emoji document_id=5879813604068298387>ℹ️</emoji> <i>{cls_doc}</i>\n<tg-emoji emoji-id=5372981976804366741>🤖</tg-emoji> <b>Befehle:</b>\n{commands}\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <code>{prefix}dlmod {mhash}</code>"
+  result: "<tg-emoji emoji-id=5337183664630709422>🔎</tg-emoji> <b>Suchergebnis für</b> <code>{query}</code>\n\n<tg-emoji emoji-id=5258270535710317499>📦</tg-emoji> <b>{name}</b> von <b>{dev}</b>\n<tg-emoji emoji-id=5879813604068298387>ℹ️</tg-emoji> <i>{cls_doc}</i>\n<tg-emoji emoji-id=5372981976804366741>🤖</tg-emoji> <b>Befehle:</b>\n{commands}\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <code>{prefix}dlmod {mhash}</code>"
   finding_module_in_repos: <tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <b>Suche Modul in Repositories...</b>
   modules_unloaded: <tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>Entladene Module:</b> {}
   modules_not_unloaded: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Nicht entladen:</b> {}
@@ -777,4 +777,4 @@ heroku_plugin_security:
   _cmd_doc_unexternal: <module> - Vollzugriff des Moduls auf den Userbot erlauben
   no_hash: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Du musst einen Modulnamen angeben</b>
   hash_not_found: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Modul mit diesem Namen nicht gefunden</b>
-  hash_not_found_suggest: <emoji document_id=5312383351217201533>⚠️</emoji> <b>Keine Treffer. Nächstes:</b> <code>{}</code>
+  hash_not_found_suggest: <tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Keine Treffer. Nächstes:</b> <code>{}</code>

@@ -660,7 +660,7 @@ loader:
   '404': <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Moduwe nyot found >w<</b>
   _cmd_doc_dlmall: Instaww aww moduwes fwom sewected wepositowy
   _cmd_doc_ml: <moduwe> - Send moduwe as a fiwe
-  result: "<tg-emoji emoji-id=5337183664630709422>🔎</tg-emoji> <b>Seawch wesuwt fow</b> <code>{query}</code>\n\n<tg-emoji emoji-id=5258270535710317499>📦</tg-emoji> <b>{name}</b> by <b>{dev}</b>\n<emoji document_id=5879813604068298387>ℹ️</emoji> <i>{cls_doc}</i>\n<tg-emoji emoji-id=5372981976804366741>🤖</tg-emoji> <b>Commands:</b>\n{commands}\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <code>{prefix}dlmod {mhash}</code>"
+  result: "<tg-emoji emoji-id=5337183664630709422>🔎</tg-emoji> <b>Seawch wesuwt fow</b> <code>{query}</code>\n\n<tg-emoji emoji-id=5258270535710317499>📦</tg-emoji> <b>{name}</b> by <b>{dev}</b>\n<tg-emoji emoji-id=5879813604068298387>ℹ️</tg-emoji> <i>{cls_doc}</i>\n<tg-emoji emoji-id=5372981976804366741>🤖</tg-emoji> <b>Commands:</b>\n{commands}\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <code>{prefix}dlmod {mhash}</code>"
 translations:
   name: "Twanswations"
   lang_saved: "{} <b>Wangwuage saved!</b>"
@@ -792,4 +792,4 @@ heroku_plugin_security:
   _cmd_doc_unexternal: <moduwe> - Gwant fuww usewbot access fow moduwe
   no_hash: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>You must specify a moduwe name</b>
   hash_not_found: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Moduwe with this name nyot found</b>
-  hash_not_found_suggest: <emoji document_id=5312383351217201533>⚠️</emoji> <b>No matches. Cwosest:</b> <code>{}</code>
+  hash_not_found_suggest: <tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>No matches. Cwosest:</b> <code>{}</code>
