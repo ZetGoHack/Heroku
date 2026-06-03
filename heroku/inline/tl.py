@@ -9,6 +9,7 @@ from herokutl.tl.functions.messages import (
     SetInlineBotResultsRequest,
 )
 from herokutl.tl.types import DocumentAttributeAudio
+from herokutl.tl import TLObject
 
 
 class TelethonBot:
@@ -16,6 +17,8 @@ class TelethonBot:
         self.client = client
 
     async def __call__(self, value):
+        if isinstance(value, TLObject):
+            return await self.client(value)
         if hasattr(value, "__await__"):
             return await value
         return value
