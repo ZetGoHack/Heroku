@@ -477,8 +477,6 @@ class LoaderMod(loader.Module):
 
     @loader.command(alias="lm")
     async def loadmod(self, message: Message):
-        args = utils.get_args_raw(message)
-
         msg = message if message.file else (await message.get_reply_message())
 
         if msg is None or msg.media is None:
@@ -650,13 +648,6 @@ class LoaderMod(loader.Module):
         _raise_install_errors: bool = False,
     ) -> bool:
         module_label = name or origin
-
-        def fail_install(message: str, *args: object) -> None:
-            rendered = message % args if args else message
-            if _raise_install_errors:
-                raise ModuleInstallError(rendered)
-
-            logger.error(message, *args)
 
         if any(
             line.replace(" ", "") == "#scope:ffmpeg" for line in doc.splitlines()
@@ -1472,7 +1463,7 @@ class LoaderMod(loader.Module):
 
         try:
             worked = await self.allmodules.unload_module(module)
-        except CoreUnloadError as e:
+        except CoreUnloadError:
             return self.strings["unload_core"].format(module)
 
         if not self.allmodules.secure_boot:

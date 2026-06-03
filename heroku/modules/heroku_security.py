@@ -1037,7 +1037,7 @@ class HerokuSecurityMod(loader.Module):
     async def _tsec_user(self, message: Message, args: list):
 
         match args:
-            case [single]:
+            case [_]:
                 if not message.is_private and not message.is_reply:
                     await utils.answer(message, self.strings["no_target"])
                     return

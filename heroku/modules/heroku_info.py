@@ -10,21 +10,11 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-import git
 import time
-import git
 import psutil
-import os
-import glob
-import requests
-import re
 import logging
-import emoji
 import herokutl
 
-from typing import Optional
-from pathlib import Path
-from io import BytesIO
 from herokutl.errors import WebpageMediaEmptyError
 from herokutl.types import InputMediaWebPage
 from herokutl.tl.types import Message

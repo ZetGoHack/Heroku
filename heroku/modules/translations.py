@@ -27,6 +27,7 @@ class Translations(loader.Module):
     strings = {"name": "Translations"}
 
     async def _change_language(self, call: InlineCall, lang: str):
+        lang = translations.normalize_language(lang)
         self._db.set(translations.__name__, "lang", lang)
         await self.allmodules.reload_translations()
 
@@ -42,7 +43,11 @@ class Translations(loader.Module):
         lang = self._db.get(translations.__name__, "lang", None)
         if not lang:
             return None
-        result = " ".join(l for l in lang.split() if not utils.check_url(l))
+        result = " ".join(
+            translations.normalize_language(l)
+            for l in lang.split()
+            if not utils.check_url(l)
+        )
         return result if result else None
 
     async def _choose_language(
@@ -174,6 +179,7 @@ class Translations(loader.Module):
         await call.edit(self.strings["lang_deleted"])
 
     def _get_flag(self, lang: str) -> str:
+        lang = translations.normalize_language(lang)
         emoji_flags = {
             "🇬🇧": "<tg-emoji emoji-id=6323589145717376403>🇬🇧</tg-emoji>",
             "🇺🇿": "<tg-emoji emoji-id=6323430017179059570>🇺🇿</tg-emoji>",
@@ -195,8 +201,10 @@ class Translations(loader.Module):
             "en": "🇬🇧",
             "tt": "🥟",
             "kz": "🇰🇿",
+            "uk": "🇺🇦",
             "ua": "🇺🇦",
             "de": "🇩🇪",
+            "ja": "🇯🇵",
             "jp": "🇯🇵",
             "fr": "🇫🇷",
             "uz": "🇺🇿",
@@ -217,6 +225,8 @@ class Translations(loader.Module):
         if any(len(i) != 2 and not utils.check_url(i) for i in args.split()):
             await utils.answer(message, self.strings["incorrect_language"])
             return
+
+        args = " ".join(translations.normalize_language_token(x) for x in args.split())
 
         seen = set()
         seen_add = seen.add

@@ -17,7 +17,6 @@ import asyncio
 import base64
 import binascii
 import collections
-import contextlib
 import importlib
 import json
 import logging
@@ -33,7 +32,6 @@ from getpass import getpass
 from pathlib import Path
 
 import aiohttp
-import herokutl
 from herokutl import events
 from herokutl.errors import (
     ApiIdInvalidError,

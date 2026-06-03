@@ -18,7 +18,6 @@ import random
 import signal
 import sys
 import subprocess
-import re
 
 
 async def fw_protect():

@@ -1252,7 +1252,7 @@ class QRCode:
             self.modules = copy_2d_array(precomputed_qr_blanks[self.version])
         else:
             self.modules = [
-                [None] * self.modules_count for i in range(self.modules_count)
+                [None] * self.modules_count for _ in range(self.modules_count)
             ]
             self.setup_position_probe_pattern(0, 0)
             self.setup_position_probe_pattern(self.modules_count - 7, 0)

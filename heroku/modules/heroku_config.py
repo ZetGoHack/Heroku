@@ -234,9 +234,10 @@ class HerokuConfigMod(loader.Module):
             next(
                 (
                     validator.doc[lang]
-                    for lang in self._db.get(translations.__name__, "lang", "en").split(
-                        " "
-                    )
+                    for original_lang in self._db.get(
+                        translations.__name__, "lang", "en"
+                    ).split(" ")
+                    for lang in translations.iter_language_codes(original_lang)
                     if lang in validator.doc
                 ),
                 validator.doc["en"],
@@ -827,9 +828,10 @@ class HerokuConfigMod(loader.Module):
                 next(
                     (
                         validator.doc[lang]
-                        for lang in self._db.get(
+                        for original_lang in self._db.get(
                             translations.__name__, "lang", "en"
                         ).split(" ")
+                        for lang in translations.iter_language_codes(original_lang)
                         if lang in validator.doc
                     ),
                     validator.doc["en"],
@@ -1187,8 +1189,6 @@ class HerokuConfigMod(loader.Module):
                     folders[folder_name] = {}
                 folders[folder_name][mod_name] = [p for p in mod.config]
         try:
-            from . import presets as _presets_mod
-
             preset_folders = self.db.get("presets", "folders")
         except Exception:
             preset_folders = {}

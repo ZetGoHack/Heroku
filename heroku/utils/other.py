@@ -12,7 +12,6 @@ import logging
 import random
 import signal
 import typing
-import inspect
 
 import herokutl
 from herokutl import hints

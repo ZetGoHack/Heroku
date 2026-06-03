@@ -30,9 +30,17 @@ PACKS = Path(__file__).parent / "langpacks"
 SUPPORTED_LANGUAGES = {
     "en": "🇬🇧 English",
     "ru": "🇷🇺 Русский",
-    "ua": "🇺🇦 Український",
+    "uk": "🇺🇦 Український",
     "de": "🇩🇪 Deutsch",
-    "jp": "🇯🇵 日本語",
+    "ja": "🇯🇵 日本語",
+}
+LANGUAGE_ALIASES = {
+    "ua": "uk",
+    "jp": "ja",
+}
+LANGUAGE_COMPAT_ALIASES = {
+    "uk": ("ua",),
+    "ja": ("jp",),
 }
 MEME_LANGUAGES = {
     "leet": "🏴‍☠️ 1337",
@@ -40,6 +48,34 @@ MEME_LANGUAGES = {
     "tiktok": "🏴‍☠️ TikTokKid",
     "neofit": "🏴‍☠️ Neofit",
 }
+
+
+def normalize_language(language: str) -> str:
+    return LANGUAGE_ALIASES.get(language, language)
+
+
+def normalize_language_token(language: str) -> str:
+    return language if utils.check_url(language) else normalize_language(language)
+
+
+def iter_language_codes(language: str) -> typing.Iterator[str]:
+    if utils.check_url(language):
+        yield language
+        return
+
+    language = normalize_language(language)
+    yield language
+    yield from LANGUAGE_COMPAT_ALIASES.get(language, ())
+
+
+def get_language_pack_path(language: str) -> typing.Optional[Path]:
+    for code in iter_language_codes(language):
+        for suffix in (".json", ".yml"):
+            path = PACKS / f"{code}{suffix}"
+            if path.exists():
+                return path
+
+    return None
 
 
 def fmt(text: str, kwargs: dict) -> str:
@@ -141,7 +177,12 @@ class BaseTranslator:
 
         if lang := self.db.get(__name__, "lang", False):
             return next(
-                (data[language] for language in lang.split() if language in data),
+                (
+                    data[code]
+                    for language in lang.split()
+                    for code in iter_language_codes(language)
+                    if code in data
+                ),
                 data.get("en", {}),
             )
 
@@ -160,7 +201,7 @@ class Translator(BaseTranslator):
         self.raw_data["en"] = self._data.copy()
         any_ = False
         if lang := self.db.get(__name__, "lang", False):
-            for language in lang.split():
+            for language in map(normalize_language_token, lang.split()):
                 if utils.check_url(language):
                     try:
                         data = self._get_pack_raw(
@@ -176,21 +217,17 @@ class Translator(BaseTranslator):
                     any_ = True
                     continue
 
-                for possible_path in [
-                    PACKS / f"{language}.json",
-                    PACKS / f"{language}.yml",
-                ]:
-                    if possible_path.exists():
-                        data = self._get_pack_content(possible_path)
-                        self._data.update(data)
-                        self.raw_data[language] = data
-                        any_ = True
+                if possible_path := get_language_pack_path(language):
+                    data = self._get_pack_content(possible_path)
+                    self._data.update(data)
+                    self.raw_data[language] = data
+                    any_ = True
 
         for language in SUPPORTED_LANGUAGES:
-            if language not in self.raw_data and (PACKS / f"{language}.yml").exists():
-                self.raw_data[language] = self._get_pack_content(
-                    PACKS / f"{language}.yml"
-                )
+            if language not in self.raw_data and (
+                possible_path := get_language_pack_path(language)
+            ):
+                self.raw_data[language] = self._get_pack_content(possible_path)
 
         return any_
 
@@ -199,7 +236,10 @@ class ExternalTranslator(BaseTranslator):
     def __init__(self):
         self.data = {}
         for lang in SUPPORTED_LANGUAGES:
-            self.data[lang] = self._get_pack_content(PACKS / f"{lang}.yml", prefix="")
+            pack_path = get_language_pack_path(lang)
+            self.data[lang] = (
+                self._get_pack_content(pack_path, prefix="") if pack_path else {}
+            )
 
     def get(self, key: str, lang: str) -> str:
         return self.data[lang].get(key, False) or key
@@ -252,7 +292,7 @@ class Strings:
                                 else ["en"]
                             )
                             for lang in (
-                                [original_lang]
+                                list(iter_language_codes(original_lang))
                                 + (
                                     ["en"]
                                     if original_lang in ["leet", "uwu", "neofit"]

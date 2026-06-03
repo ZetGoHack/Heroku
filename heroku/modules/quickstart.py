@@ -12,9 +12,8 @@
 
 import logging
 import os
-from random import choice
 
-from .. import loader, main, translations, utils
+from .. import loader, translations, utils
 from ..inline.types import BotInlineCall
 
 logger = logging.getLogger(__name__)

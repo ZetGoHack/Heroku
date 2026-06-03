@@ -39,7 +39,6 @@ from .inline.core import InlineManager
 from .translations import Strings, Translator
 from .types import (
     Command,
-    ConfigCategory,
     ConfigValue,
     CoreOverwriteError,
     CoreUnloadError,
@@ -106,21 +105,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-_EXTERNAL_ORIGIN_PREFIXES = ("<external", "<file", "<string")
-
-
-def _is_external_origin(origin: str) -> bool:
-    if not origin:
-        return False
-    if not isinstance(origin, str):
-        return False
-    if origin.startswith("<core"):
-        return False
-    if origin.startswith(_EXTERNAL_ORIGIN_PREFIXES):
-        return True
-    return "loaded_modules" in origin
-
 
 owner = security.owner
 

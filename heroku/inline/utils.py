@@ -484,15 +484,15 @@ class Utils(InlineUnit):
                 )
             except MessageNotModifiedError:
                 return True
+            except FloodWaitError as e:
+                logger.info("Sleeping %ss on Telethon FloodWait...", e.seconds)
+                await asyncio.sleep(e.seconds)
+                return await self._edit_unit(**utils.get_kwargs())
             except RPCError:
                 if query:
                     with contextlib.suppress(Exception):
                         await query.answer()
                 return False
-            except FloodWaitError as e:
-                logger.info("Sleeping %ss on Telethon FloodWait...", e.seconds)
-                await asyncio.sleep(e.seconds)
-                return await self._edit_unit(**utils.get_kwargs())
             else:
                 return True
 

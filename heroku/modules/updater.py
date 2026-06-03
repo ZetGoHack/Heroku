@@ -37,7 +37,7 @@ from herokutl.tl.types import (
     TextWithEntities,
 )
 
-from .. import loader, main, utils, version
+from .. import loader, utils, version
 from .._internal import restart
 from ..inline.types import BotInlineCall, InlineCall
 
@@ -813,7 +813,7 @@ class UpdaterMod(loader.Module):
         if int(args) > 10:
             await utils.answer(message, self.strings["rollback_too_far"])
             return
-        form = await self.inline.form(
+        await self.inline.form(
             message=message,
             text=self.strings["rollback_confirm"].format(num=args),
             reply_markup=[
