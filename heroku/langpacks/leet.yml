@@ -600,7 +600,7 @@ loader:
   modules_not_unloaded: "<tg-emoji emoji-id=5253780051471642059>❌</tg-emoji> <b>F41l3d 2 unl04d {not_unloaded} m0dul35.</b>\n<blockquote expandable>{errors}</blockquote>"
   requirements_failed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>R3qu1r3m3n75 1n574ll4710n f41l3d</b>"
   requirements_restarted: "🚀 <b>Ur u53rb07 15 r3574r73d, 4f73r r3574r7, 1n574ll 7h3 m0dul3 4g41n.</b>"
-  requirements_installing: "<tg-emoji emoji-id=5328311576736833844>🚀</tg-emoji> <b>1n574ll1ng r3qu1r3m3n75:\n\n{}</b>"
+  requirements_installing: "<tg-emoji emoji-id=5873225338984599714>🚀</tg-emoji> <b>1n574ll1ng r3qu1r3m3n75:\n\n{}</b>"
   requirements_restart: "<tg-emoji emoji-id=5875145601682771643>🚀</tg-emoji> <b>R3qu1r3m3n75 1n574ll3d, bu7 4 r3574r7 15 r3qu1r3d 4</b> <code>{}</code> <b>2 4pply</b>"
   all_modules_deleted: "<tg-emoji emoji-id=5784993237412351403>✅</tg-emoji> <b>4ll m0dul35 d3l373d</b>"
   undoc: "<tg-emoji emoji-id=5427052514094619126>🤷‍♀️</tg-emoji> N0 d0c5"

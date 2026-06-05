@@ -601,7 +601,7 @@ loader:
   modules_not_unloaded: "<tg-emoji emoji-id=5253780051471642059>❌</tg-emoji> <b>Faiwed to unwoad {not_unloaded} moduwes.</b>\n<blockquote expandable>{errors}</blockquote>"
   requirements_failed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Wequiwements instawwation faiwed</b>"
   requirements_restarted: "🚀 <b>Youw usewbot is westawted, aftew westawt, instaww da moduwe again.</b>"
-  requirements_installing: "<tg-emoji emoji-id=5328311576736833844>🚀</tg-emoji> <b>Instawwing wequiwements:\n\n{}</b>"
+  requirements_installing: "<tg-emoji emoji-id=5873225338984599714>🚀</tg-emoji> <b>Instawwing wequiwements:\n\n{}</b>"
   requirements_restart: "<tg-emoji emoji-id=5875145601682771643>🚀</tg-emoji> <b>Wequiwements instawwed, but a westawt is wequiwed fow</b> <code>{}</code> <b>to appwy</b>"
   all_modules_deleted: "<tg-emoji emoji-id=5784993237412351403>✅</tg-emoji> <b>Aww moduwes deweted</b>"
   undoc: "<tg-emoji emoji-id=5427052514094619126>🤷‍♀️</tg-emoji> Nyo docs"
