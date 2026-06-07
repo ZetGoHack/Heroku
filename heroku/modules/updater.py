@@ -44,6 +44,9 @@ from ..inline.types import BotInlineCall, InlineCall
 logger = logging.getLogger(__name__)
 NO_GIT = os.environ.get("HEROKU_NO_GIT") == "1"
 
+os.environ["GIT_TERMINAL_PROMPT"] = "0"
+os.environ["GIT_ASKPASS"] ="echo"
+
 
 @loader.tds
 class UpdaterMod(loader.Module):
@@ -91,12 +94,14 @@ class UpdaterMod(loader.Module):
             return False
         try:
             with git.Repo() as repo:
-                for remote in repo.remotes:
-                    remote.fetch()
+                origin = repo.remote("origin")
+                logger.debug("Fetching changelog from %s", origin.url)
+                origin.fetch()
 
                 if not (diff := [*repo.iter_commits(f"HEAD..origin/{version.branch}")]):
                     return False
         except Exception:
+            logger.exception("Failed to build changelog")
             return False
 
         res = "\n".join(
@@ -429,26 +434,32 @@ class UpdaterMod(loader.Module):
         restart()
 
     async def download_common(self):
-        try:
-            with Repo(os.path.dirname(utils.get_base_dir())) as repo:
-                origin = repo.remote("origin")
-                r = origin.pull()
-                new_commit = repo.head.commit
-                for info in r:
-                    if info.old_commit:
-                        for d in new_commit.diff(info.old_commit):
-                            if d.b_path == "requirements.txt":
-                                return True
-            return False
-        except git.exc.InvalidGitRepositoryError:
-            repo = Repo.init(os.path.dirname(utils.get_base_dir()))
-            with repo:
-                origin = repo.create_remote("origin", self.config["GIT_ORIGIN_URL"])
-                origin.fetch()
-                repo.create_head("master", origin.refs.master)
-                repo.heads.master.set_tracking_branch(origin.refs.master)
-                repo.heads.master.checkout(True)
-            return False
+        def _sync():
+            try:
+                with Repo(os.path.dirname(utils.get_base_dir())) as repo:
+                    origin = repo.remote("origin")
+                    logger.debug("Fetching updates from %s", origin.url)
+                    r = origin.pull()
+                    new_commit = repo.head.commit
+                    for info in r:
+                        if info.old_commit:
+                            for d in new_commit.diff(info.old_commit):
+                                if d.b_path == "requirements.txt":
+                                    return True
+                return False
+            except git.exc.InvalidGitRepositoryError:
+                repo = Repo.init(os.path.dirname(utils.get_base_dir()))
+                with repo:
+                    origin = repo.create_remote("origin", self.config["GIT_ORIGIN_URL"])
+                    logger.debug("Fetching initial updates from %s", origin.url)
+                    origin.fetch()
+                    repo.create_head("master", origin.refs.master)
+                    repo.heads.master.set_tracking_branch(origin.refs.master)
+                    repo.heads.master.checkout(True)
+                return False
+
+        async with asyncio.timeout(120):
+            return await asyncio.to_thread(_sync)
 
     @staticmethod
     def req_common():
@@ -558,7 +569,11 @@ class UpdaterMod(loader.Module):
             with contextlib.suppress(Exception):
                 msg_obj = await utils.answer(msg_obj, self.strings["downloading"])
 
-            req_update = await self.download_common()
+            try:
+                req_update = await self.download_common()
+            except TimeoutError:
+                logger.exception("Timed out while fetching updates from git remote")
+                return
 
             with contextlib.suppress(Exception):
                 msg_obj = await utils.answer(msg_obj, self.strings["installing"])
