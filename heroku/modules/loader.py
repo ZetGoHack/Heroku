@@ -33,10 +33,11 @@ from importlib.machinery import ModuleSpec
 from urllib.parse import urlparse
 
 import requests
+from herokutl.tl.custom import Message
 from herokutl.errors.common import ScamDetectionError
 from herokutl.errors.rpcerrorlist import MediaCaptionTooLongError
 from herokutl.tl.functions.channels import JoinChannelRequest
-from herokutl.tl.types import Channel, InputMediaWebPage, Message
+from herokutl.tl.types import Channel, InputMediaWebPage
 
 from .. import loader, main, utils
 from .._local_storage import RemoteStorage
@@ -1235,7 +1236,12 @@ class LoaderMod(loader.Module):
             developer = ""
 
         banner_kwargs = {}
-        if self.config["show_banner"] and not subscribe_markup:
+        if (
+            self.config["show_banner"]
+            and not subscribe_markup
+            and not message.document
+            or message.web_preview
+        ):
             try:
                 banner_url = self._get_banner_url(doc)
                 if banner_url:
