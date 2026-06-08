@@ -458,8 +458,10 @@ class UpdaterMod(loader.Module):
                     repo.heads.master.checkout(True)
                 return False
 
-        async with asyncio.timeout(120):
-            return await asyncio.to_thread(_sync)
+        return await asyncio.wait_for(
+            asyncio.to_thread(_sync),
+            timeout=120,
+        )
 
     @staticmethod
     def req_common():
