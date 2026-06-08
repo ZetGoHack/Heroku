@@ -402,6 +402,10 @@ class Utils(InlineUnit):
         else:
             unit = {}
 
+        if unit:
+            chat_id = chat_id or unit.get("chat")
+            message_id = message_id or unit.get("message_id")
+
         if not chat_id or not message_id:
             inline_message_id = (
                 inline_message_id

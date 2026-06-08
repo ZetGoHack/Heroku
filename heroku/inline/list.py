@@ -138,6 +138,9 @@ class List(InlineUnit):
             )
             return False
 
+        first_page_needs_premium_emoji_pre_edit = self._needs_premium_emoji_pre_edit(
+            self.sanitise_text(strings[0])
+        )
         unit_id = utils.rand(16)
 
         perms_map = None if manual_security else self._find_caller_sec_map()
@@ -151,6 +154,7 @@ class List(InlineUnit):
             "uid": unit_id,
             "current_index": 0,
             "strings": strings,
+            "premium_emoji_pre_edit": first_page_needs_premium_emoji_pre_edit,
             "future": asyncio.Event(),
             **({"ttl": round(time.time()) + ttl} if ttl else {}),
             **({"force_me": force_me} if force_me else {}),
@@ -241,6 +245,14 @@ class List(InlineUnit):
         if status_message and not message.out:
             await status_message.delete()
 
+        if first_page_needs_premium_emoji_pre_edit:
+            await self._bot_client.edit_message(
+                self._units[unit_id]["inline_message_id"],
+                self.sanitise_text(self._units[unit_id]["strings"][0]),
+                parse_mode="HTML",
+                buttons=self._list_markup(unit_id),
+            )
+
         return InlineMessage(self, unit_id, self._units[unit_id]["inline_message_id"])
 
     async def _list_page(
@@ -308,7 +320,11 @@ class List(InlineUnit):
                         [
                             await inline_query.builder.article(
                                 title="Heroku",
-                                text=self.sanitise_text(unit["strings"][0]),
+                                text=(
+                                    "🪐"
+                                    if unit.get("premium_emoji_pre_edit")
+                                    else self.sanitise_text(unit["strings"][0])
+                                ),
                                 parse_mode="HTML",
                                 link_preview=False,
                                 buttons=self._list_markup(inline_query.query),
