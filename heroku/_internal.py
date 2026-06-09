@@ -18,14 +18,14 @@ import random
 import signal
 import sys
 import subprocess
-import re
+from collections.abc import Callable
 
 
 async def fw_protect():
     await asyncio.sleep(random.randint(1000, 2000) / 1000)
 
 
-def get_startup_callback() -> callable:
+def get_startup_callback() -> Callable:
     return lambda *_: os.execl(
         sys.executable,
         sys.executable,
@@ -88,14 +88,18 @@ def print_banner(banner: str):
                 banner,
             )
         ),
-        "r",
     ) as f:
         print(f.read())
 
 
-def check_commit_ancestor(commit, repo_path):
+def check_commit_ancestor(repo, branch):
     """Check if commit is ancestor of origin/master"""
     try:
+        commit = repo.commit(branch).hexsha
+        repo_path = repo.working_tree_dir or os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..")
+        )
+
         proc = subprocess.run(
             [
                 "git",
@@ -128,7 +132,7 @@ def get_branch_name(repo_path):
     if not branch_name:
         try:
             head_path = os.path.join(repo_path, ".git", "HEAD")
-            with open(head_path, "r", encoding="utf-8") as f:
+            with open(head_path, encoding="utf-8") as f:
                 content = f.read().strip()
             if content.startswith("ref:"):
                 branch_name = content.split("/")[-1]

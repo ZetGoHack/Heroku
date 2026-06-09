@@ -67,7 +67,6 @@ PRESETS = {
         "https://github.com/amm1edev/ame_repo/raw/refs/heads/main/filter.py",
         "https://mods.codrago.life/id.py",
         "https://mods.codrago.life/autoclicker.py",
-        "https://github.com/archquise/H.Modules/raw/refs/heads/main/aiogram3/hikarichat.py",
         "https://raw.githubusercontent.com/SenkoGuardian/SenModules/refs/heads/My-Modules/Gemini.py",
         "https://raw.githubusercontent.com/yummy1gay/modules/main/yg_checks.py",
         "https://raw.githubusercontent.com/coddrago/modules/main/chatmodule.py",
@@ -111,7 +110,7 @@ class Presets(loader.Module):
             utils.chunks,
             [
                 {
-                    "text": self.strings(f"_{preset}_title"),
+                    "text": self.strings[f"_{preset}_title"],
                     "callback": self._preset,
                     "args": (preset,),
                 }
@@ -130,12 +129,12 @@ class Presets(loader.Module):
         await self.inline.bot.send_photo(
             self._client.tg_id,
             "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/presets_cmd.png",
-            caption=self.strings("welcome"),
+            caption=self.strings["welcome"],
             reply_markup=self.inline.generate_markup(self._markup_gen()),
         )
 
     async def _back(self, call: InlineCall):
-        await call.edit(self.strings("welcome"), reply_markup=self._markup_gen())
+        await call.edit(self.strings["welcome"], reply_markup=self._markup_gen())
 
     async def _choose_menu(
         self,
@@ -187,9 +186,9 @@ class Presets(loader.Module):
 
         kb += [
             [
-                {"text": self.strings("back"), "callback": self._back},
+                {"text": self.strings["back"], "callback": self._back},
                 {
-                    "text": self.strings("install"),
+                    "text": self.strings["install"],
                     "callback": self._install,
                     "args": (preset, to_install),
                 },
@@ -197,9 +196,9 @@ class Presets(loader.Module):
         ]
 
         await call.edit(
-            self.strings("preset").format(
-                self.strings(f"_{preset}_title"),
-                self.strings(f"_{preset}_desc"),
+            self.strings["preset"].format(
+                self.strings[f"_{preset}_title"],
+                self.strings[f"_{preset}_desc"],
                 "\n".join(
                     map(
                         lambda x: x[0],
@@ -208,7 +207,7 @@ class Presets(loader.Module):
                                 (
                                     "{} <b>{}</b>".format(
                                         (
-                                            self.strings("already_installed")
+                                            self.strings["already_installed"]
                                             if self._is_installed(link)
                                             else "▫️"
                                         ),
@@ -259,11 +258,11 @@ class Presets(loader.Module):
         await call.delete()
         m = await self._client.send_message(
             chat if chat else self.inline.bot_id,
-            self.strings("installing").format(preset),
+            self.strings["installing"].format(preset),
         )
         for i, module in enumerate(modules):
             await m.edit(
-                self.strings("installing_module").format(
+                self.strings["installing_module"].format(
                     preset,
                     i,
                     len(modules),
@@ -271,30 +270,30 @@ class Presets(loader.Module):
                 )
             )
             try:
-                await self.lookup("loader").download_and_install(module, None)
+                await self.lookup("LoaderMod").download_and_install(module, None)
             except Exception:
                 logger.exception("Failed to install module %s", module)
 
             await asyncio.sleep(1)
 
-        if self.lookup("loader").fully_loaded:
-            self.lookup("loader").update_modules_in_db()
+        if self.lookup("LoaderMod").fully_loaded:
+            self.lookup("LoaderMod").update_modules_in_db()
 
-        await m.edit(self.strings("installed").format(preset))
+        await m.edit(self.strings["installed"].format(preset))
         if origin:
             await self._menu()
 
     def _is_installed(self, link: str) -> bool:
         return any(
             link.strip().lower() == installed.strip().lower()
-            for installed in self.lookup("loader").get("loaded_modules", {}).values()
+            for installed in self.lookup("LoaderMod").get("loaded_modules", {}).values()
         )
 
     async def _preset(self, call: InlineCall, preset: str):
         await call.edit(
-            self.strings("preset").format(
-                self.strings(f"_{preset}_title"),
-                self.strings(f"_{preset}_desc"),
+            self.strings["preset"].format(
+                self.strings[f"_{preset}_title"],
+                self.strings[f"_{preset}_desc"],
                 "\n".join(
                     map(
                         lambda x: x[0],
@@ -303,7 +302,7 @@ class Presets(loader.Module):
                                 (
                                     "{} <b>{}</b>".format(
                                         (
-                                            self.strings("already_installed")
+                                            self.strings["already_installed"]
                                             if self._is_installed(link)
                                             else "▫️"
                                         ),
@@ -320,9 +319,9 @@ class Presets(loader.Module):
                 ),
             ),
             reply_markup=[
-                {"text": self.strings("back"), "callback": self._back},
+                {"text": self.strings["back"], "callback": self._back},
                 {
-                    "text": self.strings("install"),
+                    "text": self.strings["install"],
                     "callback": self._choose_menu,
                     "args": (
                         0,
@@ -332,7 +331,7 @@ class Presets(loader.Module):
             ],
         )
 
-    async def aiogram_watcher(self, message: BotInlineMessage):
+    async def bot_watcher(self, message: BotInlineMessage):
         if message.text != "/presets" or message.from_user.id != self._client.tg_id:
             return
 
@@ -351,7 +350,7 @@ class Presets(loader.Module):
         await self.inline.form(
             message=message,
             photo="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/presets_cmd.png",
-            text=self.strings("welcome").replace(
+            text=self.strings["welcome"].replace(
                 "/presets", self.get_prefix() + "presets"
             ),
             reply_markup=self._markup_gen(),
@@ -362,12 +361,12 @@ class Presets(loader.Module):
         """Custom preset loader. Reply to a file or send a file with the command."""
         msg = message if message.file else (await message.get_reply_message())
         if not msg or not msg.file:
-            await message.edit(self.lookup("loader").strings["no_file"])
+            await message.edit(self.lookup("LoaderMod").strings["no_file"])
             return
         try:
             data = orjson.loads(await msg.download_media(bytes))
         except Exception:
-            await message.edit(self.lookup("loader").strings["load_failed"])
+            await message.edit(self.lookup("LoaderMod").strings["load_failed"])
             logger.exception("Failed to load preset from file")
             return
 
@@ -377,7 +376,7 @@ class Presets(loader.Module):
             or "modules" not in data
             or not isinstance(data["modules"], list)
         ):
-            await message.edit(self.lookup("loader").strings["load_failed"])
+            await message.edit(self.lookup("LoaderMod").strings["load_failed"])
             logger.error("Invalid preset format")
             return
 
@@ -385,7 +384,7 @@ class Presets(loader.Module):
         await message.delete()
         try:
             description = data["description"]
-        except:
+        except Exception:
             description = self.lookup("help").strings["undoc"]
 
         modules_list = []
@@ -395,7 +394,7 @@ class Presets(loader.Module):
             )
             if self._is_installed(link):
                 modules_list.append(
-                    f"<b>{module_name}</b> {self.strings('already_installed')}"
+                    f"<b>{module_name}</b> {self.strings['already_installed']}"
                 )
             else:
                 modules_list.append(f"▫️ <b>{module_name}</b>")
@@ -404,10 +403,10 @@ class Presets(loader.Module):
 
         await self.inline.form(
             message=message,
-            text=self.strings("preset").format(data["name"], description, modules),
+            text=self.strings["preset"].format(data["name"], description, modules),
             reply_markup=[
                 {
-                    "text": self.strings("install"),
+                    "text": self.strings["install"],
                     "callback": self._install,
                     "args": (data["name"], data["modules"], False, chat),
                 },
@@ -427,13 +426,15 @@ class Presets(loader.Module):
         FOLDERS = self.db.get("presets", "folders")
         if len(args) < 2:
             await message.edit(
-                self.strings("add_to_folder_usage").format(prefix=self.get_prefix())
+                self.strings["add_to_folder_usage"].format(prefix=self.get_prefix())
             )
             return
         folder_name = args[0]
         module_name = args[1]
-        if folder_name in FOLDERS and module_name.lower() in [m.lower() for m in FOLDERS[folder_name]]:
-            await message.edit(self.strings("already_in_folder").format(folder_name))
+        if folder_name in FOLDERS and module_name.lower() in [
+            m.lower() for m in FOLDERS[folder_name]
+        ]:
+            await message.edit(self.strings["already_in_folder"].format(folder_name))
             return
         for mod in self.allmodules.modules:
             if mod.__class__.__name__.lower() == module_name.lower():
@@ -442,10 +443,10 @@ class Presets(loader.Module):
                 FOLDERS[folder_name].append(module_name)
                 self.db.set("presets", "folders", FOLDERS)
                 await message.edit(
-                    self.strings("added_to_folder").format(module_name, folder_name)
+                    self.strings["added_to_folder"].format(module_name, folder_name)
                 )
                 return
-        await message.edit(self.strings("module_not_found").format(module_name))
+        await message.edit(self.strings["module_not_found"].format(module_name))
 
     @loader.command(alias="fl")
     async def folderload(self, message: Message):
@@ -456,12 +457,12 @@ class Presets(loader.Module):
         FOLDERS = self.db.get("presets", "folders")
         if len(args) < 1:
             await message.edit(
-                self.strings("folder_load_usage").format(prefix=self.get_prefix())
+                self.strings["folder_load_usage"].format(prefix=self.get_prefix())
             )
             return
         folder_name = args[0]
         if folder_name not in FOLDERS:
-            await message.edit(self.strings("folder_not_found").format(folder_name))
+            await message.edit(self.strings["folder_not_found"].format(folder_name))
             return
         modules = []
         for module_name in FOLDERS[folder_name]:
@@ -472,7 +473,7 @@ class Presets(loader.Module):
                         modules.append(origin)
                     break
         if not modules:
-            await message.edit(self.strings("no_modules_in_folder").format(folder_name))
+            await message.edit(self.strings["no_modules_in_folder"].format(folder_name))
             return
         file = io.BytesIO(
             orjson.dumps(
@@ -482,7 +483,7 @@ class Presets(loader.Module):
         file.name = f"{folder_name}.json"
         await utils.answer(
             message,
-            self.strings("folder").format(folder_name, prefix=self.get_prefix()),
+            self.strings["folder"].format(folder_name, prefix=self.get_prefix()),
             file=file,
             reply_to=getattr(message, "reply_to_msg_id", None),
         )
@@ -496,7 +497,7 @@ class Presets(loader.Module):
         FOLDERS = self.db.get("presets", "folders")
         if len(args) < 2:
             await message.edit(
-                self.strings("remove_from_folder_usage").format(
+                self.strings["remove_from_folder_usage"].format(
                     prefix=self.get_prefix()
                 )
             )
@@ -504,11 +505,11 @@ class Presets(loader.Module):
         folder_name = args[0]
         module_name = args[1]
         if folder_name not in FOLDERS:
-            await message.edit(self.strings("folder_not_found").format(folder_name))
+            await message.edit(self.strings["folder_not_found"].format(folder_name))
             return
         if module_name.lower() not in [m.lower() for m in FOLDERS[folder_name]]:
             await message.edit(
-                self.strings("module_not_in_folder").format(module_name, folder_name)
+                self.strings["module_not_in_folder"].format(module_name, folder_name)
             )
             return
         FOLDERS[folder_name].remove(module_name)
@@ -516,7 +517,7 @@ class Presets(loader.Module):
             del FOLDERS[folder_name]
         self.db.set("presets", "folders", FOLDERS)
         await message.edit(
-            self.strings("removed_from_folder").format(module_name, folder_name)
+            self.strings["removed_from_folder"].format(module_name, folder_name)
         )
 
     @loader.command(alias="la")
@@ -524,19 +525,19 @@ class Presets(loader.Module):
         """Load aliases from file. Send a file with the command or reply to a file."""
         msg = message if message.file else (await message.get_reply_message())
         if not msg or not msg.file:
-            await message.edit(self.lookup("loader").strings["no_file"])
+            await message.edit(self.lookup("LoaderMod").strings["no_file"])
             return
         try:
             data = orjson.loads(await msg.download_media(bytes))
         except Exception:
-            await message.edit(self.lookup("loader").strings["load_failed"])
+            await message.edit(self.lookup("LoaderMod").strings["load_failed"])
             logger.exception("Failed to load aliases from file")
             return
         if not isinstance(data, list) or not all(
             isinstance(item, dict) and "alias" in item and "command" in item
             for item in data
         ):
-            await message.edit(self.lookup("loader").strings["load_failed"])
+            await message.edit(self.lookup("LoaderMod").strings["load_failed"])
             logger.error("Invalid aliases format")
             return
 

@@ -13,6 +13,7 @@
 
 import ast
 import asyncio
+import collections
 import contextlib
 import copy
 import importlib
@@ -76,461 +77,9 @@ __all__ = [
     "BotInlineMessage",
     "PointerDict",
     "PointerList",
-    "SafeClientProxy",
-    "SafeDatabaseProxy",
-    "SafeInlineProxy",
-    "SafeAllModulesProxy",
 ]
 
 logger = logging.getLogger(__name__)
-
-
-def _is_external_origin(origin: str) -> bool:
-    if not origin:
-        return False
-    return not origin.startswith("<core")
-
-
-def _make_safe_client_proxy():
-    import random
-    import weakref
-    from . import utils
-
-    _client_map = weakref.WeakKeyDictionary()
-    _origin_map = weakref.WeakKeyDictionary()
-    _module_map = weakref.WeakKeyDictionary()
-    _inline_map = weakref.WeakKeyDictionary()
-    _user_id_map = weakref.WeakKeyDictionary()
-
-    _PROTECTED_REQUESTS = {
-        "GetStarGiftsRequest",
-        "GetSavedStarGiftRequest",
-        "GetResaleStarGiftsRequest",
-        "GetUniqueStarGiftRequest",
-        "GetUniqueStarGiftValueInfoRequest",
-        "GetStarGiftUpgradePreviewRequest",
-        "GetStarGiftWithdrawalUrlRequest",
-        "UpgradeStarGiftRequest",
-        "TransferStarGiftRequest",
-        "CreateStarGiftCollectionRequest",
-        "SendStarsFormRequest",
-        "GetStarsGiftOptionsRequest",
-        "GetStarsTransactionsRequest",
-        "RefundStarsChargeRequest",
-    }
-
-    _PAID_REQUESTS = {
-        "SendMessageRequest",
-        "SendMediaRequest",
-        "ForwardMessagesRequest",
-        "SearchPostsRequest",
-    }
-
-    class SafeClientProxy:
-        __slots__ = ("__weakref__",)
-
-        _BLOCKED_ATTRS = {
-            "session",
-            "_sender",
-            "_connection",
-            "_transport",
-            "_auth_key",
-            "_log",
-            "_mtproto",
-            "_updates_handle",
-            "_keepalive_handle",
-        }
-
-        _BLOCKED_MAGIC = {
-            "__class__",
-            "__dict__",
-            "__getattribute__",
-            "__setattr__",
-            "__weakref__",
-            "__reduce__",
-            "__reduce_ex__",
-            "__getstate__",
-            "__setstate__",
-        }
-
-        def __init__(self, client, origin: str):
-            _client_map[self] = client
-            _origin_map[self] = origin
-
-        def __getattribute__(self, name: str):
-            if name in SafeClientProxy._BLOCKED_MAGIC:
-                raise AttributeError("Access denied")
-            if name in SafeClientProxy._BLOCKED_ATTRS:
-                logger.warning(
-                    "Blocked access to client.%s from %s",
-                    name,
-                    _origin_map.get(self, "<unknown>"),
-                )
-                raise AttributeError("Access to client attribute is blocked")
-            return getattr(_client_map[self], name)
-
-        def __setattr__(self, name: str, value):
-            if (
-                name in SafeClientProxy._BLOCKED_MAGIC
-                or name in SafeClientProxy._BLOCKED_ATTRS
-            ):
-                logger.warning(
-                    "Blocked write to client.%s from %s",
-                    name,
-                    _origin_map.get(self, "<unknown>"),
-                )
-                raise AttributeError("Write to client attribute is blocked")
-            setattr(_client_map[self], name, value)
-
-        def _set_module_info(self, module_object, inline_object, user_id: int):
-            _module_map[self] = module_object
-            _inline_map[self] = inline_object
-            _user_id_map[self] = user_id
-
-        def _send_permission_request(self, request_name: str, module, star_count=None):
-            async def _async_send():
-                user_id = _user_id_map.get(self)
-                if not user_id:
-                    return
-
-                star_text = f" with {star_count} stars" if star_count else ""
-                message_text = f"<b>{module.__class__.__name__}</b> wants to use <code>{request_name}</code>{star_text}, allow?"
-
-                yes_callback_id = utils.rand(24)
-                no_callback_id = utils.rand(24)
-
-                buttons = [
-                    [
-                        {
-                            "text": "✅",
-                            "callback": yes_callback_id,
-                        },
-                        {
-                            "text": "❌",
-                            "callback": no_callback_id,
-                        },
-                    ]
-                ]
-
-                if random.choice([True, False]):
-                    buttons[0].reverse()
-
-                try:
-                    await _client_map[self].send_message(
-                        user_id,
-                        message_text,
-                        buttons=buttons,
-                    )
-                except Exception as e:
-                    logger.debug("Failed to send permission request: %s", e)
-
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    asyncio.create_task(_async_send())
-                else:
-                    loop.run_until_complete(_async_send())
-            except Exception:
-                logger.debug("Failed to schedule permission request")
-
-        def __call__(self, *args, **kwargs):
-            client = _client_map[self]
-
-            if args and hasattr(args[0], "__class__"):
-                request_name = args[0].__class__.__name__
-                module = _module_map.get(self)
-
-                if request_name in _PROTECTED_REQUESTS and module:
-                    star_count = getattr(args[0], "stars", None)
-                    self._send_permission_request(request_name, module, star_count)
-
-                elif request_name in _PAID_REQUESTS and module:
-                    allow_paid = getattr(module, "allow_paid_stars", None)
-                    if allow_paid is False:
-                        raise PermissionError(
-                            f"Module {module.__class__.__name__} denies paid requests like {request_name}"
-                        )
-
-                    if allow_paid is None:
-                        self._send_permission_request(request_name, module)
-
-            return client(*args, **kwargs)
-
-        def __repr__(self) -> str:
-            return "<SafeClientProxy>"
-
-    return SafeClientProxy
-
-
-SafeClientProxy = _make_safe_client_proxy()
-
-
-def _make_safe_db_proxy():
-    import weakref
-
-    _db_map = weakref.WeakKeyDictionary()
-    _origin_map = weakref.WeakKeyDictionary()
-
-    class SafeDatabaseProxy:
-        __slots__ = ("__weakref__",)
-
-        _BLOCKED_ATTRS = {
-            "_client",
-            "_redis",
-            "_content_channel_id",
-            "_assets_topic",
-            "_me",
-            "_db_file",
-            "_saving_task",
-            "_revisions",
-            "_next_revision_call",
-            "redis_init",
-            "remote_force_save",
-            "_redis_save",
-            "_redis_save_sync",
-        }
-
-        _BLOCKED_MAGIC = {
-            "__class__",
-            "__dict__",
-            "__getattribute__",
-            "__setattr__",
-            "__weakref__",
-            "__reduce__",
-            "__reduce_ex__",
-            "__getstate__",
-            "__setstate__",
-        }
-
-        def __init__(self, db, origin: str):
-            _db_map[self] = db
-            _origin_map[self] = origin
-
-        def __getattribute__(self, name: str):
-            if name in SafeDatabaseProxy._BLOCKED_MAGIC:
-                raise AttributeError("Access denied")
-            if name in SafeDatabaseProxy._BLOCKED_ATTRS:
-                logger.warning(
-                    "Blocked access to db.%s from %s",
-                    name,
-                    _origin_map.get(self, "<unknown>"),
-                )
-                raise AttributeError("Access to db attribute is blocked")
-            return getattr(_db_map[self], name)
-
-        def __setattr__(self, name: str, value):
-            if (
-                name in SafeDatabaseProxy._BLOCKED_MAGIC
-                or name in SafeDatabaseProxy._BLOCKED_ATTRS
-            ):
-                logger.warning(
-                    "Blocked write to db.%s from %s",
-                    name,
-                    _origin_map.get(self, "<unknown>"),
-                )
-                raise AttributeError("Write to db attribute is blocked")
-            setattr(_db_map[self], name, value)
-
-        def __getitem__(self, key):
-            return _db_map[self][key]
-
-        def __setitem__(self, key, value):
-            _db_map[self][key] = value
-
-        def __delitem__(self, key):
-            del _db_map[self][key]
-
-        def __contains__(self, key):
-            return key in _db_map[self]
-
-        def __repr__(self) -> str:
-            return "<SafeDatabaseProxy>"
-
-    return SafeDatabaseProxy
-
-
-SafeDatabaseProxy = _make_safe_db_proxy()
-
-
-def _make_safe_inline_proxy():
-    import weakref
-
-    _inline_map = weakref.WeakKeyDictionary()
-    _origin_map = weakref.WeakKeyDictionary()
-
-    class SafeInlineProxy:
-        __slots__ = ("__weakref__",)
-
-        _BLOCKED_ATTRS = {
-            "_client",
-            "_db",
-            "_allmodules",
-            "_token",
-            "_bot",
-            "_dp",
-        }
-
-        _BLOCKED_MAGIC = {
-            "__class__",
-            "__dict__",
-            "__getattribute__",
-            "__setattr__",
-            "__weakref__",
-            "__reduce__",
-            "__reduce_ex__",
-            "__getstate__",
-            "__setstate__",
-        }
-
-        def __init__(self, inline, origin: str):
-            _inline_map[self] = inline
-            _origin_map[self] = origin
-
-        def __getattribute__(self, name: str):
-            if name in SafeInlineProxy._BLOCKED_MAGIC:
-                raise AttributeError("Access denied")
-            if name in SafeInlineProxy._BLOCKED_ATTRS:
-                logger.warning(
-                    "Blocked access to inline.%s from %s",
-                    name,
-                    _origin_map.get(self, "<unknown>"),
-                )
-                raise AttributeError("Access to inline attribute is blocked")
-            return getattr(_inline_map[self], name)
-
-        def __setattr__(self, name: str, value):
-            if (
-                name in SafeInlineProxy._BLOCKED_MAGIC
-                or name in SafeInlineProxy._BLOCKED_ATTRS
-            ):
-                logger.warning(
-                    "Blocked write to inline.%s from %s",
-                    name,
-                    _origin_map.get(self, "<unknown>"),
-                )
-                raise AttributeError("Write to inline attribute is blocked")
-            setattr(_inline_map[self], name, value)
-
-        def __repr__(self) -> str:
-            return "<SafeInlineProxy>"
-
-    return SafeInlineProxy
-
-
-SafeInlineProxy = _make_safe_inline_proxy()
-
-
-def _make_safe_allmodules_proxy():
-    import weakref
-
-    _allmodules_map = weakref.WeakKeyDictionary()
-    _safe_client_map = weakref.WeakKeyDictionary()
-    _safe_allclients_map = weakref.WeakKeyDictionary()
-    _safe_db_map = weakref.WeakKeyDictionary()
-    _safe_inline_map = weakref.WeakKeyDictionary()
-
-    class SafeAllModulesProxy:
-        __slots__ = ("__weakref__",)
-
-        _BLOCKED_ATTRS = {
-            "modules",
-            "watchers",
-            "inline",
-            "client",
-            "allclients",
-            "db",
-            "_db",
-            "_client",
-        }
-
-        _BLOCKED_MAGIC = {
-            "__class__",
-            "__dict__",
-            "__getattribute__",
-            "__setattr__",
-            "__weakref__",
-            "__reduce__",
-            "__reduce_ex__",
-            "__getstate__",
-            "__setstate__",
-        }
-
-        def __init__(
-            self, allmodules, safe_client, safe_allclients, safe_db, safe_inline
-        ):
-            _allmodules_map[self] = allmodules
-            _safe_client_map[self] = safe_client
-            _safe_allclients_map[self] = safe_allclients
-            _safe_db_map[self] = safe_db
-            _safe_inline_map[self] = safe_inline
-
-        @property
-        def client(self):
-            return _safe_client_map[self]
-
-        @property
-        def allclients(self):
-            return _safe_allclients_map[self]
-
-        @property
-        def db(self):
-            return _safe_db_map[self]
-
-        @property
-        def _db(self):
-            return _safe_db_map[self]
-
-        @property
-        def inline(self):
-            return _safe_inline_map[self]
-
-        def __getattribute__(self, name: str):
-            if name in SafeAllModulesProxy._BLOCKED_MAGIC:
-                raise AttributeError("Access denied")
-            return object.__getattribute__(self, name)
-
-        def __getattr__(self, name: str):
-            if name in SafeAllModulesProxy._BLOCKED_ATTRS:
-                raise AttributeError("Access to allmodules attribute is blocked")
-            return getattr(_allmodules_map[self], name)
-
-        def __setattr__(self, name: str, value):
-            if (
-                name in SafeAllModulesProxy._BLOCKED_MAGIC
-                or name in SafeAllModulesProxy._BLOCKED_ATTRS
-            ):
-                raise AttributeError("Write to allmodules attribute is blocked")
-            setattr(_allmodules_map[self], name, value)
-
-        def __delattr__(self, name: str):
-            if (
-                name in SafeAllModulesProxy._BLOCKED_MAGIC
-                or name in SafeAllModulesProxy._BLOCKED_ATTRS
-            ):
-                raise AttributeError("Delete of allmodules attribute is blocked")
-            delattr(_allmodules_map[self], name)
-
-        def __repr__(self) -> str:
-            return "<SafeAllModulesProxy>"
-
-        def _get_real_allmodules(self):
-            for frame_info in inspect.stack():
-                mod = frame_info.frame.f_globals.get("__name__", None)
-                if not mod or mod == __name__:
-                    continue
-                spec = frame_info.frame.f_globals.get("__spec__", None)
-                origin = getattr(spec, "origin", None) if spec else None
-                if not origin:
-                    origin = frame_info.frame.f_globals.get("__file__", "")
-                if origin and _is_external_origin(origin):
-                    raise AttributeError("Access denied")
-                break
-            return _allmodules_map[self]
-
-    return SafeAllModulesProxy
-
-
-SafeAllModulesProxy = _make_safe_allmodules_proxy()
 
 
 JSONSerializable = typing.Union[str, int, float, bool, list, dict, None]
@@ -577,52 +126,15 @@ class Module:
         """Called after the class is initialized in order to pass the client and db. Do not call it yourself"""
         self.allmodules: "Modules"
 
-        origin = getattr(self, "__origin__", "")
-        is_external = _is_external_origin(origin)
-        if getattr(self, "__force_internal__", False):
-            is_external = False
-
         self.db = self.allmodules.db
         self._db = self.allmodules.db
-        self.is_external = is_external
-
-        if is_external:
-            safe_client = SafeClientProxy(self.allmodules.client, origin)
-            safe_allclients = [
-                SafeClientProxy(c, origin) for c in self.allmodules.allclients
-            ]
-            safe_db = SafeDatabaseProxy(self.allmodules.db, origin)
-            safe_inline = SafeInlineProxy(self.allmodules.inline, origin)
-
-            try:
-                user_id = self.allmodules.client.tg_id
-                safe_client._set_module_info(self, self.allmodules.inline, user_id)
-                for client in safe_allclients:
-                    client._set_module_info(self, self.allmodules.inline, user_id)
-            except Exception as e:
-                logger.debug("Failed to set module info for request checking: %s", e)
-
-            self.allmodules = SafeAllModulesProxy(
-                self.allmodules,
-                safe_client,
-                safe_allclients,
-                safe_db,
-                safe_inline,
-            )
-            self.client = safe_client
-            self._client = safe_client
-            self.allclients = safe_allclients
-            self.db = safe_db
-            self._db = safe_db
-        else:
-            self.client = self.allmodules.client
-            self._client = self.allmodules.client
-            self.allclients = self.allmodules.allclients
-
+        self.client = self.allmodules.client
+        self._client = self.allmodules.client
         self.lookup = self.allmodules.lookup
         self.get_prefix = self.allmodules.get_prefix
         self.get_prefixes = self.allmodules.get_prefixes
         self.inline = self.allmodules.inline
+        self.allclients = self.allmodules.allclients
         self.tg_id: int = self._client.tg_id
         self._tg_id: int = self._client.tg_id
 
@@ -645,9 +157,9 @@ class Module:
     async def invoke(
         self,
         command: str,
-        args: typing.Optional[str] = None,
-        peer: typing.Optional[EntityLike] = None,
-        message: typing.Optional[Message] = None,
+        args: str | None = None,
+        peer: EntityLike | None = None,
+        message: Message | None = None,
         edit: bool = False,
     ) -> Message:
         """
@@ -675,42 +187,42 @@ class Module:
         return message
 
     @property
-    def commands(self) -> typing.Dict[str, Command]:
+    def commands(self) -> dict[str, Command]:
         """List of commands that module supports"""
         return get_commands(self)
 
     @property
-    def heroku_commands(self) -> typing.Dict[str, Command]:
+    def heroku_commands(self) -> dict[str, Command]:
         """List of commands that module supports"""
         return get_commands(self)
 
     @property
-    def inline_handlers(self) -> typing.Dict[str, Command]:
+    def inline_handlers(self) -> dict[str, Command]:
         """List of inline handlers that module supports"""
         return get_inline_handlers(self)
 
     @property
-    def heroku_inline_handlers(self) -> typing.Dict[str, Command]:
+    def heroku_inline_handlers(self) -> dict[str, Command]:
         """List of inline handlers that module supports"""
         return get_inline_handlers(self)
 
     @property
-    def callback_handlers(self) -> typing.Dict[str, Command]:
+    def callback_handlers(self) -> dict[str, Command]:
         """List of callback handlers that module supports"""
         return get_callback_handlers(self)
 
     @property
-    def heroku_callback_handlers(self) -> typing.Dict[str, Command]:
+    def heroku_callback_handlers(self) -> dict[str, Command]:
         """List of callback handlers that module supports"""
         return get_callback_handlers(self)
 
     @property
-    def watchers(self) -> typing.Dict[str, Command]:
+    def watchers(self) -> dict[str, Command]:
         """List of watchers that module supports"""
         return get_watchers(self)
 
     @property
-    def heroku_watchers(self) -> typing.Dict[str, Command]:
+    def heroku_watchers(self) -> dict[str, Command]:
         """List of watchers that module supports"""
         return get_watchers(self)
 
@@ -748,9 +260,9 @@ class Module:
 
     async def animate(
         self,
-        message: typing.Union[Message, InlineMessage],
-        frames: typing.List[str],
-        interval: typing.Union[float, int],
+        message: Message | InlineMessage,
+        frames: list[str],
+        interval: float | int,
         *,
         inline: bool = False,
     ) -> None:
@@ -797,7 +309,7 @@ class Module:
     def get(
         self,
         key: str,
-        default: typing.Optional[JSONSerializable] = None,
+        default: JSONSerializable | None = None,
     ) -> JSONSerializable:
         return self._db.get(self.__class__.__name__, key, default)
 
@@ -807,9 +319,9 @@ class Module:
     def pointer(
         self,
         key: str,
-        default: typing.Optional[JSONSerializable] = None,
-        item_type: typing.Optional[typing.Any] = None,
-    ) -> typing.Union[JSONSerializable, PointerList, PointerDict]:
+        default: JSONSerializable | None = None,
+        item_type: typing.Any | None = None,
+    ) -> JSONSerializable | PointerList | PointerDict:
         return self._db.pointer(self.__class__.__name__, key, default, item_type)
 
     async def _decline(
@@ -839,7 +351,7 @@ class Module:
         self,
         peer: EntityLike,
         reason: str,
-        assure_joined: typing.Optional[bool] = False,
+        assure_joined: bool | None = False,
     ) -> bool:
         """
         Request to join a channel.
@@ -911,7 +423,7 @@ class Module:
                 [
                     {
                         "text": "💫 Approve",
-                        "callback": self.lookup("loader").approve_internal,
+                        "callback": self.lookup("LoaderMod").approve_internal,
                         "args": (channel, event),
                     },
                     {
@@ -945,7 +457,7 @@ class Module:
         self,
         url: str,
         *,
-        suspend_on_error: typing.Optional[bool] = False,
+        suspend_on_error: bool | None = False,
         _did_requirements: bool = False,
     ) -> "Library":
         """
@@ -1090,7 +602,7 @@ class Module:
             and utils.check_url(url)
         ):
             with contextlib.suppress(Exception):
-                await self.lookup("loader")._send_stats(url)
+                await self.lookup("LoaderMod")._send_stats(url)
 
         lib_obj.source_url = url.strip("/")
         lib_obj.allmodules = self.allmodules
@@ -1181,7 +693,7 @@ class Library:
     def _lib_get(
         self,
         key: str,
-        default: typing.Optional[JSONSerializable] = None,
+        default: JSONSerializable | None = None,
     ) -> JSONSerializable:
         return self._db.get(self.__class__.__name__, key, default)
 
@@ -1191,8 +703,8 @@ class Library:
     def _lib_pointer(
         self,
         key: str,
-        default: typing.Optional[JSONSerializable] = None,
-    ) -> typing.Union[JSONSerializable, PointerDict, PointerList]:
+        default: JSONSerializable | None = None,
+    ) -> JSONSerializable | PointerDict | PointerList:
         return self._db.pointer(self.__class__.__name__, key, default)
 
 
@@ -1211,8 +723,8 @@ class CoreOverwriteError(LoadError):
 
     def __init__(
         self,
-        module: typing.Optional[str] = None,
-        command: typing.Optional[str] = None,
+        module: str | None = None,
+        command: str | None = None,
     ):
         self.type = "module" if module else "command"
         self.target = module or command
@@ -1270,10 +782,21 @@ class StopLoop(Exception):
 class ModuleConfig(dict):
     """Stores config for modules and apparently libraries"""
 
-    def __init__(self, *entries: typing.Union[str, "ConfigValue"]):
-        if all(isinstance(entry, ConfigValue) for entry in entries):
+    def __init__(self, *entries: typing.Union[str, "ConfigValue", "ConfigCategory"]):
+        self._option_categories: dict[str, str] = dict()
+        self._categories: dict[str, "ConfigCategory"] = dict()
+
+        if all(isinstance(entry, (ConfigValue, ConfigCategory)) for entry in entries):
             # New config format processing
-            self._config = {config.option: config for config in entries}
+            self._config = {}
+            for entry in entries:
+                if isinstance(entry, ConfigCategory):
+                    self._categories[entry.name] = entry
+                    for cv in entry:
+                        self._config[cv.option] = cv
+                        self._option_categories[cv.option] = entry.name
+                else:
+                    self._config[entry.option] = entry
         else:
             # Legacy config processing
             keys = []
@@ -1298,7 +821,7 @@ class ModuleConfig(dict):
             {option: config.value for option, config in self._config.items()}
         )
 
-    def getdoc(self, key: str, message: typing.Optional[Message] = None) -> str:
+    def getdoc(self, key: str, message: Message | None = None) -> str:
         """Get the documentation by key"""
         ret = self._config[key].doc
 
@@ -1315,6 +838,19 @@ class ModuleConfig(dict):
     def getdef(self, key: str) -> str:
         """Get the default value by key"""
         return self._config[key].default
+
+    def get_category(self, key: str) -> typing.Optional["ConfigCategory"]:
+        cat_name = self._option_categories.get(key)
+        return self._categories.get(cat_name) if cat_name else None
+
+    def grouped_options(
+        self,
+    ) -> "collections.OrderedDict[str | None, list[str]]":
+        result = collections.OrderedDict()
+        for option in self._config:
+            cat = self._option_categories.get(option)
+            result.setdefault(cat, []).append(option)
+        return result
 
     def __setitem__(self, key: str, value: typing.Any):
         self._config[key].value = value
@@ -1363,15 +899,11 @@ def syncwrap(func: typing.Callable[[], typing.Any]) -> typing.Any:
 class ConfigValue:
     option: str
     default: typing.Any = None
-    doc: typing.Union[typing.Callable[[], str], str] = "No description"
+    doc: typing.Callable[[], str] | str = "No description"
     value: typing.Any = field(default_factory=_Placeholder)
-    validator: typing.Optional[
-        typing.Callable[[JSONSerializable], JSONSerializable]
-    ] = None
-    on_change: typing.Optional[
-        typing.Union[typing.Callable[[], typing.Awaitable], typing.Callable]
-    ] = None
-    folder: typing.Optional[str] = None
+    validator: None | (typing.Callable[[JSONSerializable], JSONSerializable]) = None
+    on_change: None | (typing.Callable[[], typing.Awaitable] | typing.Callable) = None
+    folder: str | None = None
 
     def __post_init__(self):
         if isinstance(self.value, _Placeholder):
@@ -1458,10 +990,34 @@ class ConfigValue:
                 syncwrap(self.on_change)
 
 
+class ConfigCategory(list):
+    def __init__(
+        self,
+        name: str,
+        *config_values: ConfigValue,
+        doc: typing.Callable[[], str] | str | "ConfigValue" = "No description",
+    ):
+        super().__init__(config_values)
+        self.name = str(name)
+        self.doc = doc
+
+    def getdoc(self) -> str:
+        if callable(self.doc):
+            try:
+                return self.doc()
+            except Exception:
+                return "No description"
+        return self.doc
+
+    @property
+    def _config_values(self) -> tuple[ConfigValue, ...]:
+        return tuple(self)
+
+
 def _get_members(
     mod: Module,
     ending: str,
-    attribute: typing.Optional[str] = None,
+    attribute: str | None = None,
     strict: bool = False,
 ) -> dict:
     """Get method of module, which end with ending"""

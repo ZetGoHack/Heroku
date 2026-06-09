@@ -1,4 +1,54 @@
 # Heroku Changelog
+## 🪐 Heroku 2.1.0
+- fix security check in help
+- fix blockquote in config and info
+- add pip packages backup to backupall
+- fix placeholders in help
+- fix placeholders caption in UwU language
+- fix loader.tag's
+- add dlmall command
+- add banner to .dlm
+- add banner to help
+- fix double prefixes
+- fix RCE in web (add password and user to initializating client)
+- fix bot creation
+- fix chat creation
+- add category in config
+- fix addacc self reply logic
+- add -w and --wipe argument for python3 -m heroku for wipe session, databases, loaded modules
+- add duplicate alias warning with target command name
+- add -f and --force argument to owneradd
+- add -n and --nonick argument to owneradd
+- add ubstop inline confirmation
+- add -f and --force argument to ubstop
+- fix restoreall response when backup contains pip-backup
+- add dependencies restore from pip-backup files
+- skip failed backup dependencies during restore
+- fix pip-backup handling inside mods.zip
+- migrate inline bot from aiogram to HerokuTL
+- add support for receiving Bot API update types in the inline bot
+- add inline terminal input continuation
+- add terminate support for inline terminal sessions
+- add configurable terminal protection boolean
+- fix query_gallery calls when the bot is not mounted
+- remove the web stack, web resources and related Docker/runtime pieces
+- add Rust and Go eval commands
+- add multi addalias and multi alias delete support
+- add -c / --clear for delalias
+- add -f flag for logs
+- add --type-proxy startup option
+- add packurl translation fallback cache
+- add missing language packs
+- add fuzzy suggestions for unload typos
+- improve unknown string handling
+- add loader.download_and_install logging
+- replace direct database access with _get_raw
+- catch AuthKeyUnregisteredError on startup
+- remove custom_emojis handling from inline/config paths
+- simplify config option formatting and category parameter display
+- remove HerokuPluginSecurity
+- fix requirements installation on startup
+
 ## 🪐 Heroku 2.0.0
 - rework utils
 - add prefix to start message
@@ -90,8 +140,8 @@
 - fix permission denied in info 
 - add hiding the phone in htl
 - add more protection for official telegram account (777000)
-- add button styles support for aiogram 3.25.0+ (danger, primary, success)
-- add premium emoji support in buttons via icon_custom_emoji_id (aiogram 3.25.0+)
+- add button styles support for the inline bot stack (danger, primary, success)
+- add premium emoji support in buttons via icon_custom_emoji_id
 - add aliases export/import
 - add folders
 - restrict inline queries for not allowed users
@@ -165,7 +215,7 @@
 - update dockerfile
 - update heroku-tl to 1.1.3
 - fixed error with "method not mounted"
-- added log "aiogram sleep" to ignore filter
+- added bot polling sleep log to ignore filter
 
 ## 🪐 Heroku 1.7.0
 
@@ -188,7 +238,7 @@
 - fix close btn
 - fix native imports
 - added converting Hikka backups to Heroku
-- updated to aiogram 3.20.0
+- updated inline bot stack
 - fix some bugs with buttons in inline
 
 ## 🪐 Heroku 1.6.8
@@ -233,7 +283,7 @@
 ## 🌑 Heroku 1.6.6 beta
 
 - formatting ruff
-- add webapp support in InlineKeyboardButton
+- add webapp support in inline buttons
 - add random version name
 - fix UnicodeDecodeError in windows
 - add a new language Ukrainian
@@ -560,7 +610,7 @@
 - Add `@loader.command`, `@loader.watcher`, `@loader.inline_handler`, `@loader.callback_handler`
 - Add support for multiple watchers
 - Add support for command translate directly in decorator (`@loader.command(ru_doc="Привет")`)
-- Add support for :obj:`aiogram.types.Message` in `utils.get_chat_id`
+- Add support for bot messages in `utils.get_chat_id`
 - Add human-readable error message when trying to unload core module
 - Replace `print` with `logging.info` in main script to make url visible in logs
 - Automatically react to module post in developer's channel if possible
@@ -596,7 +646,7 @@
 - New `.e` error format
 - Ignore folder creation error
 - Fix unload error in module without commands
-- Rework aiogram media processing on edit
+- Rework inline media processing on edit
 
 ## 🌑 Heroku 1.2.10
 
@@ -873,7 +923,7 @@
 - Add additional foolchecks
 - Migrate to walrus operator where necessary
 - Remove redundant code block
-- Add default aiogram parse mode
+- Add default inline bot parse mode
 - Rename some core stuff which was not supposed to be used by external developers
 
 ## 🌑 Heroku 1.1.15

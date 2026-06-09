@@ -19,16 +19,8 @@ import time
 import traceback
 import typing
 
-from aiogram.types import (
-    CallbackQuery,
-    InlineKeyboardMarkup,
-    InlineQuery,
-    InlineQueryResultArticle,
-    InputTextMessageContent,
-)
-from aiogram.exceptions import TelegramRetryAfter
+from herokutl.errors.rpcerrorlist import FloodWaitError
 from herokutl.errors.rpcerrorlist import ChatSendInlineForbiddenError
-from herokutl.extensions.html import CUSTOM_EMOJIS
 from herokutl.tl.types import Message
 
 from .. import main, utils
@@ -44,18 +36,18 @@ logger = logging.getLogger(__name__)
 class List(InlineUnit):
     async def list(
         self: "InlineManager",
-        message: typing.Union[Message, int],
-        strings: typing.List[str],
+        message: Message | int,
+        strings: list[str],
         *,
         force_me: bool = False,
-        always_allow: typing.Optional[typing.List[int]] = None,
+        always_allow: list[int] | None = None,
         manual_security: bool = False,
         disable_security: bool = False,
-        ttl: typing.Union[int, bool] = False,
-        on_unload: typing.Optional[typing.Callable[[], typing.Any]] = None,
+        ttl: int | bool = False,
+        on_unload: typing.Callable[[], typing.Any] | None = None,
         silent: bool = False,
-        custom_buttons: typing.Optional[HerokuReplyMarkup] = None,
-    ) -> typing.Union[bool, InlineMessage]:
+        custom_buttons: HerokuReplyMarkup | None = None,
+    ) -> bool | InlineMessage:
         """
         Send inline list to chat
         :param message: Where to send list. Can be either `Message` or `int`
@@ -146,6 +138,9 @@ class List(InlineUnit):
             )
             return False
 
+        first_page_needs_premium_emoji_pre_edit = self._needs_premium_emoji_pre_edit(
+            self.sanitise_text(strings[0])
+        )
         unit_id = utils.rand(16)
 
         perms_map = None if manual_security else self._find_caller_sec_map()
@@ -159,6 +154,7 @@ class List(InlineUnit):
             "uid": unit_id,
             "current_index": 0,
             "strings": strings,
+            "premium_emoji_pre_edit": first_page_needs_premium_emoji_pre_edit,
             "future": asyncio.Event(),
             **({"ttl": round(time.time()) + ttl} if ttl else {}),
             **({"force_me": force_me} if force_me else {}),
@@ -196,7 +192,7 @@ class List(InlineUnit):
                 )(
                     (
                         utils.get_platform_emoji()
-                        if self._client.heroku_me.premium and CUSTOM_EMOJIS
+                        if self._client.heroku_me.premium
                         else "🪐"
                     )
                     + self.translator.getkey("inline.opening_list"),
@@ -244,17 +240,27 @@ class List(InlineUnit):
         self._units[unit_id]["message_id"] = m.id
 
         if isinstance(message, Message) and message.out:
-            await message.delete()
+            with contextlib.suppress(Exception):
+                await message.delete()
 
         if status_message and not message.out:
-            await status_message.delete()
+            with contextlib.suppress(Exception):
+                await status_message.delete()
+
+        if first_page_needs_premium_emoji_pre_edit:
+            await self._bot_client.edit_message(
+                self._units[unit_id]["inline_message_id"],
+                self.sanitise_text(self._units[unit_id]["strings"][0]),
+                parse_mode="HTML",
+                buttons=self._list_markup(unit_id),
+            )
 
         return InlineMessage(self, unit_id, self._units[unit_id]["inline_message_id"])
 
     async def _list_page(
         self: "InlineManager",
-        call: CallbackQuery,
-        page: typing.Union[int, str],
+        call,
+        page: int | str,
         unit_id: str = None,
     ):
         match True:
@@ -270,19 +276,20 @@ class List(InlineUnit):
         self._units[unit_id]["current_index"] = page
 
         try:
-            await self.bot.edit_message_text(
-                inline_message_id=call.inline_message_id,
-                text=self.sanitise_text(
+            await self._bot_client.edit_message(
+                call.inline_message_id,
+                self.sanitise_text(
                     self._units[unit_id]["strings"][
                         self._units[unit_id]["current_index"]
                     ]
                 ),
-                reply_markup=self._list_markup(unit_id),
+                parse_mode="HTML",
+                buttons=self._list_markup(unit_id),
             )
             await call.answer()
-        except TelegramRetryAfter as e:
+        except FloodWaitError as e:
             await call.answer(
-                f"Got FloodWait. Wait for {e.retry_after} seconds",
+                f"Got FloodWait. Wait for {e.seconds} seconds",
                 show_alert=True,
             )
         except Exception:
@@ -290,8 +297,8 @@ class List(InlineUnit):
             await call.answer("Error occurred", show_alert=True)
             return
 
-    def _list_markup(self: "InlineManager", unit_id: str) -> InlineKeyboardMarkup:
-        """Generates aiogram markup for `list`"""
+    def _list_markup(self: "InlineManager", unit_id: str):
+        """Generates Telethon markup for `list`"""
         callback = functools.partial(self._list_page, unit_id=unit_id)
         return self.generate_markup(
             self._units[unit_id].get("custom_buttons", [])
@@ -303,7 +310,7 @@ class List(InlineUnit):
             + [[{"text": "🔻 Close", "callback": callback, "args": ("close",)}]],
         )
 
-    async def _list_inline_handler(self: "InlineManager", inline_query: InlineQuery):
+    async def _list_inline_handler(self: "InlineManager", inline_query):
         for unit in self._units.copy().values():
             if (
                 inline_query.from_user.id == self._me
@@ -313,15 +320,17 @@ class List(InlineUnit):
                 try:
                     await inline_query.answer(
                         [
-                            InlineQueryResultArticle(
-                                id=utils.rand(20),
+                            await inline_query.builder.article(
                                 title="Heroku",
-                                input_message_content=InputTextMessageContent(
-                                    message_text=self.sanitise_text(unit["strings"][0]),
-                                    parse_mode="HTML",
-                                    disable_web_page_preview=True,
+                                text=(
+                                    "🪐"
+                                    if unit.get("premium_emoji_pre_edit")
+                                    else self.sanitise_text(unit["strings"][0])
                                 ),
-                                reply_markup=self._list_markup(inline_query.query),
+                                parse_mode="HTML",
+                                link_preview=False,
+                                buttons=self._list_markup(inline_query.query),
+                                id=utils.rand(20),
                             )
                         ],
                         cache_time=60,

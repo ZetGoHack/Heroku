@@ -17,126 +17,107 @@ import random
 import re
 import typing
 
-import aiohttp
+from herokutl.errors.rpcerrorlist import YouBlockedUserError
+from herokutl.tl.functions.contacts import UnblockRequest
 
-from .. import main, utils
+from .. import utils
 from .._internal import fw_protect
-from . import utils as inutils
 from .types import InlineUnit
 
 if typing.TYPE_CHECKING:
     from ..inline.core import InlineManager
 
 logger = logging.getLogger(__name__)
+BOT_BASE_PATTERN = re.compile(r"(\w*)_[0-9a-zA-Z]{6}_bot")
 
 
 class TokenObtainment(InlineUnit):
-    async def _create_bot(
-        self: "InlineManager", session: aiohttp.ClientSession, url: str, _hash: str
-    ):
+    async def _create_bot(self: "InlineManager"):
         logger.info("User doesn't have bot, attempting creating new one")
+        async with self._client.conversation("@BotFather", exclusive=False) as conv:
+            await fw_protect()
+            m = await conv.send_message("/newbot")
+            r = await conv.get_response()
 
-        if self._db.get("heroku.inline", "custom_bot", False):
-            username = self._db.get("heroku.inline", "custom_bot").strip("@")
-            username = f"@{username}"
-            try:
-                await self._client.get_entity(username)
-            except ValueError:
-                pass
+            logger.debug(">> %s", m.raw_text)
+            logger.debug("<< %s", r.raw_text)
+
+            if "20" in r.raw_text:
+                return False
+
+            await fw_protect()
+
+            await m.delete()
+            await r.delete()
+
+            from .. import main
+
+            if self._db.get("heroku.inline", "custom_bot", False):
+                username = self._db.get("heroku.inline", "custom_bot").strip("@")
+                username = f"@{username}"
+                try:
+                    await self._client.get_entity(username)
+                except ValueError:
+                    pass
+                else:
+                    uid = utils.rand(6)
+                    genran = "".join(random.choice(main.LATIN_MOCK))
+                    username = f"@{genran}_{uid}_bot"
             else:
                 uid = utils.rand(6)
                 genran = "".join(random.choice(main.LATIN_MOCK))
                 username = f"@{genran}_{uid}_bot"
-        else:
-            uid = utils.rand(6)
-            genran = "".join(random.choice(main.LATIN_MOCK))
-            username = f"@{genran}_{uid}_bot"
 
-        for _ in range(5):
-            data = {"username": username, "method": "checkBotUsername"}
+            for msg in [
+                "🪐 Heroku userbot"[:64],
+                username,
+                "/setuserpic",
+                username,
+            ]:
+                await fw_protect()
+                m = await conv.send_message(msg)
+                r = await conv.get_response()
+
+                logger.debug(">> %s", m.raw_text)
+                logger.debug("<< %s", r.raw_text)
+
+                await fw_protect()
+                await m.delete()
+                await r.delete()
+
+            try:
+                await fw_protect()
+                from .. import main
+
+                if "DOCKER" in os.environ:
+                    m = await conv.send_file(
+                        "https://raw.githubusercontent.com/coddrago/Heroku/refs/heads/master/assets/heroku-ava.png"
+                    )
+                else:
+                    m = await conv.send_file(
+                        main.BASE_PATH / "assets" / "heroku-ava.png"
+                    )
+                r = await conv.get_response()
+
+                logger.debug(">> <Photo>")
+                logger.debug("<< %s", r.raw_text)
+            except Exception:
+                await fw_protect()
+                m = await conv.send_message("/cancel")
+                r = await conv.get_response()
+
+                logger.debug(">> %s", m.raw_text)
+                logger.debug("<< %s", r.raw_text)
+
             await fw_protect()
 
-            async with session.post(
-                url + f"/api?hash={_hash}", data=data, headers=inutils.headers
-            ) as resp:
-                if resp.status != 200:
-                    logger.error("Error while username check: resp%s", resp.status)
-                    return False
+            await m.delete()
+            await r.delete()
 
-                content = await resp.json()
-            result = content.get("ok", False)
-
-            if result:
-                break
-
-            uid = utils.rand(6)
-            genran = "".join(random.choice(main.LATIN_MOCK))
-            username = f"@{genran}_{uid}_bot"
-        else:
-            logger.error("You've got reached limit of tries while checking username")
-            return False
-
-        try:
-            form = aiohttp.FormData()
-            form.add_field(
-                "file",
-                open(f"{os.getcwd()}/assets/heroku.png", "rb"),
-                filename="heroku.png",
-                content_type="image/png",
-            )
-            form.add_field("method", "uploadMedia")
-            form.add_field("target", "bot_userpic")
-            async with session.post(
-                url + f"/api?hash={_hash}", data=form, headers=inutils.headers
-            ) as resp:
-                if resp.status != 200:
-                    logger.error(
-                        "Error while uploading bot userpic: resp%s", resp.status
-                    )
-                    raise RuntimeError("Upload failed")
-                content = await resp.json()
-                photo_id = content["media"]["photo_id"]
-        except (RuntimeError, KeyError):
-            photo_id = ""
-
-        data = {
-            "title": f"🪐 Heroku {utils.get_version_raw()}"[:64],
-            "username": username,
-            "about": "",
-            "userpic": photo_id,
-            "method": "createBot",
-        }
-        await fw_protect()
-        async with session.post(
-            url + f"/api?hash={_hash}", data=data, headers=inutils.headers
-        ) as resp:
-            if resp.status != 200:
-                logger.error("Error while creating the bot: resp%s", resp.status)
-                return False
-
-            content = await resp.json()
-            if content.get("error", False) == "NEWBOT_LIMIT_EXCEEDED":
-                logger.error(
-                    "Error while creating the bot. You've reached the limit of bots per account. "
-                    "Please, remove some of your bots or use one of yours by setting its username with "
-                    "command ch_heroku_bot @username"
-                )
-                return False
-            if not content.get("ok", False):
-                logger.error(
-                    "Error while creating the bot. Maybe you've been banned: %s",
-                    content,
-                )
-                return False
-            # bot_id = content["bot_id"]
-
-        return await self._assert_token(session, url, _hash, create_new_if_needed=False)
+        return await self._assert_token(create_new_if_needed=False)
 
     async def _assert_token(
         self: "InlineManager",
-        session: aiohttp.ClientSession,
-        url: str,
-        _hash: str,
         create_new_if_needed: bool = True,
         revoke_token: bool = False,
     ) -> bool:
@@ -145,130 +126,158 @@ class TokenObtainment(InlineUnit):
 
         logger.info("Bot token not found in db, attempting search in BotFather")
 
-        async with session.get(url, headers=inutils.headers) as resp:
-            if resp.status != 200:
-                logger.error("Error while getting bot list: resp%s", resp.status)
-                return False
-            content = await resp.text()
+        if not self._db.get(__name__, "no_mute", False):
+            await utils.dnd(
+                self._client,
+                await self._client.get_entity("@BotFather"),
+                True,
+            )
+            self._db.set(__name__, "no_mute", True)
 
-        ids = None
-        bot_id = None
-
-        username = self._db.get("heroku.inline", "custom_bot", False)
-        if username:
-            ids = re.search(inutils.BOT_ID_PATTERN.format(username.strip("@")), content)
-
-        else:
-            ids = inutils.BOT_BASE_PATTERN.search(content)
-
-        if ids:
-            bot_id = ids.group(1)
-
-        if bot_id:
-            if revoke_token:
-                async with session.post(
-                    url + f"/api?hash={_hash}",
-                    data={"bid": bot_id, "method": "revokeAccessToken"},
-                    headers=inutils.headers,
-                ) as resp:
-                    if resp.status != 200:
-                        logger.error("Error while revoking token: resp%s", resp.status)
-                        return False
-
-                    token = (await resp.json())["token"]
-            else:
-                hdrs = inutils.headers.copy()
-                hdrs.update(
-                    {
-                        "x-aj-referer": "https://webappinternal.telegram.org/botfather",
-                        "x-requested-with": "XMLHttpRequest",
-                    }
-                )
-                async with session.get(url + f"/bot/{bot_id}", headers=hdrs) as resp:
-                    if resp.status != 200:
-                        logger.error("Error while getting token: resp%s", resp.status)
-                        return False
-
-                    text = (await resp.json())["h"]
-                    token = re.search(r"(\d+:[A-Za-z0-9\-_]{35})", text)
-                    token = token.group(1)
-
-            self._db.set("heroku.inline", "bot_token", token)
-            self._token = token
-
-            for method, value in {
-                "settings[inline]": "true",
-                "settings[inph]": "user@heroku:~$",
-                "settings[infdb]": "1",
-            }.items():
+        async with self._client.conversation("@BotFather", exclusive=False) as conv:
+            try:
                 await fw_protect()
+                m = await conv.send_message("/token")
+            except YouBlockedUserError:
+                await self._client(UnblockRequest(id="@BotFather"))
+                await fw_protect()
+                m = await conv.send_message("/token")
 
-                async with session.post(
-                    url + f"/api?hash={_hash}",
-                    data={method: value, "bid": bot_id, "method": "changeSettings"},
-                    headers=inutils.headers,
-                ) as resp:
-                    if resp.status != 200:
-                        logger.error(
-                            "Error while changing bot inline settings: resp%s",
-                            resp.status,
+            r = await conv.get_response()
+
+            logger.debug(">> %s", m.raw_text)
+            logger.debug("<< %s", r.raw_text)
+
+            await fw_protect()
+
+            await m.delete()
+            await r.delete()
+
+            if not hasattr(r, "reply_markup") or not hasattr(r.reply_markup, "rows"):
+                await conv.cancel_all()
+
+                return await self._create_bot() if create_new_if_needed else False
+
+            from .. import main
+
+            for row in r.reply_markup.rows:
+                for button in row.buttons:
+                    btn_text = button.text.strip("@")
+
+                    if self._db.get("heroku.inline", "custom_bot", False) and (
+                        self._db.get("heroku.inline", "custom_bot", False) != btn_text
+                    ):
+                        continue
+
+                    if not self._db.get("heroku.inline", "custom_bot", False) and not (
+                        (match := BOT_BASE_PATTERN.fullmatch(btn_text))
+                        and match.group(1) in main.LATIN_MOCK
+                    ):
+                        continue
+
+                    await fw_protect()
+
+                    m = await conv.send_message(button.text)
+                    r = await conv.get_response()
+
+                    logger.debug(">> %s", m.raw_text)
+                    logger.debug("<< %s", r.raw_text)
+
+                    if revoke_token:
+                        await fw_protect()
+                        await m.delete()
+                        await r.delete()
+
+                        await fw_protect()
+
+                        m = await conv.send_message("/revoke")
+                        r = await conv.get_response()
+
+                        logger.debug(">> %s", m.raw_text)
+                        logger.debug("<< %s", r.raw_text)
+
+                        await fw_protect()
+
+                        await m.delete()
+                        await r.delete()
+
+                        await fw_protect()
+
+                        m = await conv.send_message(button.text)
+                        r = await conv.get_response()
+
+                        logger.debug(">> %s", m.raw_text)
+                        logger.debug("<< %s", r.raw_text)
+
+                    token = r.raw_text.splitlines()[1]
+
+                    self._db.set("heroku.inline", "bot_token", token)
+                    self._token = token
+
+                    await fw_protect()
+
+                    await m.delete()
+                    await r.delete()
+
+                    for msg in [
+                        "/setinline",
+                        button.text,
+                        "user@heroku:~$",
+                        "/setinlinefeedback",
+                        button.text,
+                        "Enabled",
+                        "/setuserpic",
+                        button.text,
+                    ]:
+                        await fw_protect()
+                        m = await conv.send_message(msg)
+                        r = await conv.get_response()
+
+                        logger.debug(">> %s", m.raw_text)
+                        logger.debug("<< %s", r.raw_text)
+
+                        await fw_protect()
+
+                        await m.delete()
+                        await r.delete()
+
+                    try:
+                        await fw_protect()
+                        from .. import main
+
+                        m = await conv.send_file(
+                            main.BASE_PATH / "assets" / "heroku-ava.png"
                         )
-                        return False
+                        r = await conv.get_response()
 
-            self.bot_id = bot_id
+                        logger.debug(">> <Photo>")
+                        logger.debug("<< %s", r.raw_text)
+                    except Exception:
+                        await fw_protect()
+                        m = await conv.send_message("/cancel")
+                        r = await conv.get_response()
 
-            commands = {
-                "start": "Welcome message",
-                "profile": "Get main information about bot",
-            }
+                        logger.debug(">> %s", m.raw_text)
+                        logger.debug("<< %s", r.raw_text)
 
-            def get_cmds(x) -> dict[str, str]:
-                return dict(inutils.BOT_COMMANDS_PATTERN.findall(x))
+                    await fw_protect()
 
-            async with session.get(
-                url + f"/bot/{bot_id}/commands", headers=hdrs
-            ) as resp:
-                if resp.status != 200:
-                    logger.warning("Unable to get bot commands list")
+                    await m.delete()
+                    await r.delete()
 
-                else:
-                    _cmds = get_cmds((await resp.json())["h"])
-                    has_commands = False
+                    # TODO: add bot commands setup
+                    return True
 
-                    for cmd in _cmds:
-                        if cmd in commands:
-                            has_commands = True
-                            break
+        return await self._create_bot() if create_new_if_needed else False
 
-                    if not has_commands:
-                        await self._set_commands(session, url, _hash, commands)
-
-            return True
-
-        return (
-            await self._create_bot(session, url, _hash)
-            if create_new_if_needed
-            else False
-        )
-
-    async def _reassert_token(
-        self: "InlineManager", session: aiohttp.ClientSession, url: str, _hash: str
-    ):
-        is_token_asserted = await self._assert_token(
-            session, url, _hash, revoke_token=True
-        )
+    async def _reassert_token(self: "InlineManager"):
+        is_token_asserted = await self._assert_token(revoke_token=True)
         if not is_token_asserted:
             self.init_complete = False
         else:
             await self.register_manager(ignore_token_checks=True)
 
-    async def _dp_revoke_token(
-        self: "InlineManager",
-        session: aiohttp.ClientSession,
-        url: str,
-        _hash: str,
-        already_initialised: bool = True,
-    ):
+    async def _dp_revoke_token(self: "InlineManager", already_initialised: bool = True):
         if already_initialised:
             await self._stop()
             logger.error("Got polling conflict. Attempting token revocation...")
@@ -276,103 +285,36 @@ class TokenObtainment(InlineUnit):
         self._db.set("heroku.inline", "bot_token", None)
         self._token = None
         if already_initialised:
-            asyncio.ensure_future(self.reassert_token())
+            asyncio.ensure_future(self._reassert_token())
         else:
-            return await self._reassert_token(session, url, _hash)
+            return await self._reassert_token()
 
-    async def _check_bot(
-        self: "InlineManager",
-        session: aiohttp.ClientSession,
-        url: str,
-        _hash: str,
-        username: str,
-    ):
-        async with session.get(url, headers=inutils.headers) as resp:
-            if resp.status != 200:
-                logger.error("Error while getting bot list: resp%s", resp.status)
+    async def _check_bot(self: "InlineManager", username: str):
+        username = username.strip("@")
+        async with self._client.conversation("@BotFather", exclusive=False) as conv:
+            try:
+                m = await conv.send_message("/token")
+            except YouBlockedUserError:
+                await self._client(UnblockRequest(id="@BotFather"))
+                m = await conv.send_message("/token")
+
+            r = await conv.get_response()
+
+            await m.delete()
+            await r.delete()
+
+            if not hasattr(r, "reply_markup") or not hasattr(r.reply_markup, "rows"):
                 return False
-            content = await resp.text()
-        result = re.search(inutils.BOT_ID_PATTERN.format(username), content)
 
-        if not result:
-            data = {"username": username, "method": "checkBotUsername"}
-            await fw_protect()
+            for row in r.reply_markup.rows:
+                for button in row.buttons:
+                    if username != button.text.strip("@"):
+                        continue
 
-            async with session.post(
-                url + f"/api?hash={_hash}", data=data, headers=inutils.headers
-            ) as resp:
-                if resp.status != 200:
-                    logger.error("Error while username check: resp%s", resp.status)
-                    return False
+                    m = await conv.send_message("/cancel")
+                    r = await conv.get_response()
 
-                content = await resp.json()
-            result = content.get("ok", False)
-        return result
+                    await m.delete()
+                    await r.delete()
 
-    async def _set_commands(
-        self: "InlineManager",
-        session: aiohttp.ClientSession,
-        url: str,
-        _hash: str,
-        commands: dict[str, str],
-    ):
-        bid = self.bot_id
-        if not bid:
-            raise RuntimeError("Bot is not initialized")
-
-        for command, desc in commands.items():
-            data = {
-                "bid": bid,
-                "lang_code": "",
-                "scopes[]": ["users", "chats", "chatadmins"],
-                "command": command,
-                "description": desc,
-                "replace": "",
-                "method": "setCommand",
-            }
-
-            logger.debug("Setting bot command %s: %s", command, desc)
-
-            async with session.post(
-                url + f"/api?hash={_hash}", data=data, headers=inutils.headers
-            ) as resp:
-                if resp.status != 200 or not (await resp.json()).get("ok", False):
-                    logger.error(
-                        "Error while setting command: resp%s: %s",
-                        resp.status,
-                        await resp.json(),
-                    )
-                    continue
-
-            await asyncio.sleep(random.randint(1, 3))
-
-    async def assert_token(
-        self: "InlineManager",
-        create_new_if_needed: bool = True,
-        revoke_token: bool = False,
-    ):
-        return await self._main_token_manager(
-            1, create_new_if_needed=create_new_if_needed, revoke_token=revoke_token
-        )
-
-    async def create_bot(self: "InlineManager"):
-        return await self._main_token_manager(2)
-
-    async def dp_revoke_token(self: "InlineManager", already_initialised: bool = True):
-        return await self._main_token_manager(
-            3, already_initialised=already_initialised
-        )
-
-    async def reassert_token(self: "InlineManager"):
-        return await self._main_token_manager(4)
-
-    async def check_bot(self: "InlineManager", username: str):
-        return await self._main_token_manager(5, username=username)
-
-    async def set_commands(self: "InlineManager", commands: dict[str, str]):
-        """
-        Sets bot's commands in the menu
-
-        :param commands: dict of commands and their descriptions
-        """
-        return await self._main_token_manager(6, commands=commands)
+                    return True

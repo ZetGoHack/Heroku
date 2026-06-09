@@ -15,6 +15,7 @@
 import logging
 import time
 import typing
+from collections.abc import Callable
 
 from herokutl.hints import EntityLike
 from herokutl.tl.functions.messages import GetFullChatRequest
@@ -78,15 +79,15 @@ class SecurityGroup(typing.NamedTuple):
     """Represents a security group"""
 
     name: str
-    users: typing.List[int]
-    permissions: typing.List[dict]
+    users: list[int]
+    permissions: list[dict]
 
 
 def owner(func: Command) -> Command:
     return _sec(func, OWNER)
 
 
-def _deprecated(name: str) -> callable:
+def _deprecated(name: str) -> Callable:
     def decorator(func: Command) -> Command:
         logger.debug("Using deprecated decorator `%s`, which will have no effect", name)
         return func
@@ -158,9 +159,11 @@ class SecurityManager:
     def __init__(self, client: CustomTelegramClient, db: Database):
         self._client = client
         self._db = db
-        self._cache: typing.Dict[int, dict] = {}
+        self._cache: dict[int, dict] = {}
         self._last_warning: int = 0
-        self._sgroups: typing.Dict[str, SecurityGroup] = {}
+        self._sgroups: dict[str, SecurityGroup] = {}
+        self._rights_last_reload: float = 0.0
+        self._rights_reload_interval: float = 1.0
 
         self._any_admin = self.any_admin = db.get(__name__, "any_admin", False)
         self._default = self.default = db.get(__name__, "default", DEFAULT_PERMISSIONS)
@@ -169,29 +172,38 @@ class SecurityManager:
         self._owner = self.owner = db.pointer(__name__, "owner", [])
         self._all_users = self.all_users = db.pointer(__name__, "all_users", [])
 
-        self._reload_rights()
+        self._reload_rights(force=True)
 
-    def apply_sgroups(self, sgroups: typing.Dict[str, SecurityGroup]):
+    def apply_sgroups(self, sgroups: dict[str, SecurityGroup]):
         """Apply security groups"""
         self._sgroups = sgroups
 
-    def _reload_rights(self):
+    def _reload_rights(self, *, force: bool = False):
         """
         Internal method to ensure that account owner is always in the owner list,
         to clear out outdated tsec rules and to remove prefixes of users, that is
         not in any security group
         """
+        now = time.monotonic()
+        if not force and now - self._rights_last_reload < self._rights_reload_interval:
+            return
+
+        self._rights_last_reload = now
+        dirty = False
 
         if self._client.tg_id not in self._owner:
             self._owner.append(self._client.tg_id)
+            dirty = True
 
         for info in self._tsec_user.copy():
             if info["expires"] and info["expires"] < time.time():
                 self._tsec_user.remove(info)
+                dirty = True
 
         for info in self._tsec_chat.copy():
             if info["expires"] and info["expires"] < time.time():
                 self._tsec_chat.remove(info)
+                dirty = True
 
         sgroup_users = []
         for g in self._sgroups.values():
@@ -201,18 +213,32 @@ class SecurityManager:
         tsec_users = [rule["target"] for rule in self._tsec_user]
         ub_owners = self.owner.copy()
 
-        all_users = sgroup_users + tsec_users + ub_owners
+        all_users = set(sgroup_users + tsec_users + ub_owners)
 
-        self._all_users.clear()
-        self._all_users.extend(set(all_users))
+        if set(self._all_users) != all_users:
+            self._all_users.clear()
+            self._all_users.extend(all_users)
+            dirty = True
 
         prefixes = self._db.get(main.__name__, "command_prefixes", {})
+        valid_prefixes = prefixes.copy()
 
-        for id in prefixes.copy():
-            if int(id) not in all_users:
-                del prefixes[id]
+        for id_ in prefixes.copy():
+            try:
+                allowed = int(id_) in all_users
+            except (TypeError, ValueError):
+                allowed = False
 
-        self._db.set(main.__name__, "command_prefixes", prefixes)
+            if not allowed:
+                del valid_prefixes[id_]
+
+        if valid_prefixes != prefixes:
+            prefixes.clear()
+            prefixes.update(valid_prefixes)
+            dirty = True
+
+        if dirty:
+            self._db.set(main.__name__, "command_prefixes", prefixes)
 
     def add_rule(
         self,
@@ -257,6 +283,7 @@ class SecurityManager:
                 "entity_url": utils.get_entity_url(target),
             }
         )
+        self._reload_rights(force=True)
 
     def remove_rules(self, target_type: str, target_id: int) -> bool:
         """
@@ -279,6 +306,9 @@ class SecurityManager:
             if rule["target"] == target_id:
                 target_list.remove(rule)
                 any_ = True
+
+        if any_:
+            self._reload_rights(force=True)
 
         return any_
 
@@ -305,9 +335,12 @@ class SecurityManager:
                 target_list.remove(rule)
                 any_ = True
 
+        if any_:
+            self._reload_rights(force=True)
+
         return any_
 
-    def get_flags(self, func: typing.Union[Command, int]) -> int:
+    def get_flags(self, func: Command | int) -> int:
         """
         Gets the security flags for the given function
 
@@ -378,12 +411,12 @@ class SecurityManager:
 
     async def check(
         self,
-        message: typing.Optional[Message],
-        func: typing.Union[Command, int],
-        user_id: typing.Optional[int] = None,
-        inline_cmd: typing.Optional[str] = None,
+        message: Message | None,
+        func: Command | int,
+        user_id: int | None = None,
+        inline_cmd: str | None = None,
         *,
-        usernames: typing.Optional[typing.Set[str]] = None,
+        usernames: set[str] | None = None,
     ) -> bool:
         """
         Checks if message sender is permitted to execute certain function

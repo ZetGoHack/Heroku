@@ -15,8 +15,6 @@ import logging
 import time
 import typing
 
-from aiogram.types import InlineQuery, InlineQueryResultArticle, InputTextMessageContent
-
 from .. import utils
 from .types import InlineUnit
 
@@ -29,12 +27,12 @@ logger = logging.getLogger(__name__)
 class QueryGallery(InlineUnit):
     async def query_gallery(
         self: "InlineManager",
-        query: InlineQuery,
-        items: typing.List[typing.Dict[str, typing.Any]],
+        query,
+        items: list[dict[str, typing.Any]],
         *,
         force_me: bool = False,
         disable_security: bool = False,
-        always_allow: typing.Optional[typing.List[int]] = None,
+        always_allow: list[int] | None = None,
     ) -> bool:
         """
         Answer inline query with a bunch of inline galleries
@@ -141,18 +139,14 @@ class QueryGallery(InlineUnit):
             }
 
             result += [
-                InlineQueryResultArticle(
-                    id=utils.rand(20),
+                await query.builder.article(
                     title=i["title"],
                     description=i["description"],
-                    input_message_content=InputTextMessageContent(
-                        message_text=f"🪐 <b>Opening gallery...</b>\n<i>#id: {id_}</i>",
-                        parse_mode="HTML",
-                        disable_web_page_preview=True,
-                    ),
-                    thumbnail_url=photo_url,
-                    thumb_width=128,
-                    thumb_height=128,
+                    text=f"🪐 <b>Opening gallery...</b>\n<i>#id: {id_}</i>",
+                    parse_mode="HTML",
+                    link_preview=False,
+                    thumb=self._web_document(photo_url),
+                    id=utils.rand(20),
                 )
             ]
 

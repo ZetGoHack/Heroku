@@ -18,17 +18,16 @@ import contextlib
 import copy
 import inspect
 import logging
+from collections.abc import Callable
 import re
 import sys
 import traceback
-import typing
 
-import requests
 from herokutl import events
 from herokutl.errors import FloodWaitError, RPCError
 from herokutl.tl.types import Message
 
-from . import loader, main, security, utils
+from . import main, security, utils
 from .database import Database
 from .loader import Modules
 from .tl_cache import CustomTelegramClient
@@ -132,7 +131,7 @@ class CommandDispatcher:
 
         self.raw_handlers = []
 
-    async def _handle_ratelimit(self, message: Message, func: callable) -> bool:
+    async def _handle_ratelimit(self, message: Message, func: Callable) -> bool:
         if await self.security.check(message, security.OWNER):
             return True
 
@@ -264,9 +263,9 @@ class CommandDispatcher:
 
     async def _handle_command(
         self,
-        event: typing.Union[events.NewMessage, events.MessageDeleted],
+        event: events.NewMessage | events.MessageDeleted,
         watcher: bool = False,
-    ) -> typing.Union[bool, typing.Tuple[Message, str, str, callable]]:
+    ) -> bool | tuple[Message, str, str, callable]:
         if not hasattr(event, "message") or not hasattr(event.message, "message"):
             return False
 
@@ -287,29 +286,29 @@ class CommandDispatcher:
         if (
             message.out
             and len(message.message) > len(prefix) * 2
-            and (
-                message.message.startswith(prefix * 2)
-                and any(s != prefix for s in message.message)
-                or message.message.startswith(
-                    str.translate(prefix * 2, _LAYOUT_TRANSLATION)
-                )
-                and any(
-                    s != str.translate(prefix, _LAYOUT_TRANSLATION)
-                    for s in message.message
-                )
-            )
+            and message.message.startswith(prefix * 2)
+            and any(s != prefix for s in message.message)
         ):
-            # Allow escaping commands using .'s
-            if not watcher:
-                await message.edit(
-                    message.message[len(prefix) :],
-                    parse_mode=lambda s: (
-                        s,
-                        utils.relocate_entities(message.entities, -1, message.message)
-                        or (),
-                    ),
-                )
-            return False
+            possible_cmd_str = message.message[len(prefix) * 2 :]
+            possible_cmd = (
+                possible_cmd_str.strip().split(maxsplit=1)[0].split("@", maxsplit=1)[0]
+            )
+
+            _, func = self._modules.dispatch(possible_cmd)
+
+            if func:
+                if not watcher:
+                    await message.edit(
+                        message.message[len(prefix) :],
+                        parse_mode=lambda s: (
+                            s,
+                            utils.relocate_entities(
+                                message.entities, -1, message.message
+                            )
+                            or (),
+                        ),
+                    )
+                return False
 
         match True:
             case _ if (
@@ -427,13 +426,13 @@ class CommandDispatcher:
         for handler in self.raw_handlers:
             if isinstance(event, tuple(handler.updates)):
                 try:
-                    await loader._call_with_external_context(handler, event)
+                    await handler(event)
                 except Exception as e:
                     logger.exception("Error in raw handler %s: %s", handler.id, e)
 
     async def handle_command(
         self,
-        event: typing.Union[events.NewMessage, events.MessageDeleted],
+        event: events.NewMessage | events.MessageDeleted,
     ):
         """Handle all commands"""
         message = await self._handle_command(event)
@@ -511,15 +510,15 @@ class CommandDispatcher:
 
     async def _handle_tags(
         self,
-        event: typing.Union[events.NewMessage, events.MessageDeleted],
-        func: callable,
+        event: events.NewMessage | events.MessageDeleted,
+        func: Callable,
     ) -> bool:
         return bool(await self._handle_tags_ext(event, func))
 
     async def _handle_tags_ext(
         self,
-        event: typing.Union[events.NewMessage, events.MessageDeleted],
-        func: callable,
+        event: events.NewMessage | events.MessageDeleted,
+        func: Callable,
     ) -> str:
         """
         Handle tags.
@@ -555,16 +554,16 @@ class CommandDispatcher:
             "no_channels": lambda: not getattr(m, "is_channel", False),
             "no_groups": (
                 lambda: not getattr(m, "is_group", False)
-                or getattr(m, "private", False)
+                or getattr(m, "is_private", False)
                 or getattr(m, "is_channel", False)
             ),
             "only_groups": (
                 lambda: getattr(m, "is_group", False)
-                or not getattr(m, "private", False)
+                or not getattr(m, "is_private", False)
                 and not getattr(m, "is_channel", False)
             ),
-            "no_pm": lambda: not getattr(m, "private", False),
-            "only_pm": lambda: getattr(m, "private", False),
+            "no_pm": lambda: not getattr(m, "is_private", False),
+            "only_pm": lambda: getattr(m, "is_private", False),
             "no_inline": lambda: not getattr(m, "via_bot_id", False),
             "no_stickers": lambda: not getattr(m, "sticker", False),
             "no_docs": lambda: not getattr(m, "document", False),
@@ -620,7 +619,7 @@ class CommandDispatcher:
 
     async def handle_incoming(
         self,
-        event: typing.Union[events.NewMessage, events.MessageDeleted],
+        event: events.NewMessage | events.MessageDeleted,
     ):
         """Handle all incoming messages"""
         message = utils.censor(getattr(event, "message", event))
@@ -682,15 +681,15 @@ class CommandDispatcher:
 
     async def future_dispatcher(
         self,
-        func: callable,
+        func: Callable,
         message: Message,
-        exception_handler: callable,
+        exception_handler: Callable,
         *args,
     ):
         # Will be used to determine, which client caused logging messages
         # parsed via inspect.stack()
         _heroku_client_id_logging_tag = copy.copy(self.client.tg_id)  # noqa: F841
         try:
-            await loader._call_with_external_context(func, message)
+            await func(message)
         except Exception as e:
             await exception_handler(e, message, *args)

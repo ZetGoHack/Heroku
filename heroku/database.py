@@ -12,7 +12,7 @@
 
 import asyncio
 import collections
-import inspect
+import copy
 import json
 import logging
 import os
@@ -53,8 +53,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-_DB_PROTECTED_OWNERS = {"HerokuPluginSecurity"}
-_DB_ALLOWED_WRITERS = {f"{__package__}.modules.heroku_plugin_security"}
 
 
 class NoAssetsChannel(Exception):
@@ -70,7 +68,7 @@ class Database(dict):
         super().__init__()
         self._client: CustomTelegramClient = client
         self._next_revision_call: int = 0
-        self._revisions: typing.List[dict] = []
+        self._revisions: list[dict] = []
         self._me: User = None
         self._redis: redis.Redis = None
         self._saving_task: asyncio.Future = None
@@ -122,6 +120,52 @@ class Database(dict):
 
         self._db_file = main.BASE_PATH / f"config-{self._client.tg_id}.json"
         self.read()
+
+    async def ensure_content_channel(self):
+        content_channel = None
+        existing_channel_id = self.get("heroku.forums", "channel_id", None)
+
+        if existing_channel_id:
+            try:
+                content_channel = await self._client.get_entity(existing_channel_id)
+                logger.debug(
+                    "Found existing content channel with ID %s in database",
+                    existing_channel_id,
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Saved channel ID {existing_channel_id} not found or inaccessible: {e}"
+                )
+                content_channel = None
+                self.set("heroku.forums", "forums_cache", {"heroku-userbot": {}})
+
+        if not content_channel:
+            async for dialog in self._client.iter_dialogs():
+                if dialog.title and "heroku-userbot" in dialog.title.lower():
+                    content_channel = dialog.entity
+                    logger.debug(
+                        "Found existing channel '%s' with ID %s",
+                        dialog.title,
+                        dialog.entity.id,
+                    )
+                    self.set("heroku.forums", "channel_id", int(dialog.entity.id))
+                    break
+
+        if not content_channel:
+            content_channel, _ = await utils.asset_channel(
+                client=self._client,
+                title="heroku-userbot",
+                description="🪐 Content related to Heroku will be here",
+                silent=True,
+                invite_bot=True,
+                avatar="https://raw.githubusercontent.com/coddrago/assets/main/heroku/heroku.png",
+                forum=True,
+                hide_general=True,
+                _folder="heroku",
+            )
+            self.set("heroku.forums", "channel_id", int(content_channel.id))
+
+        return content_channel
 
     def read(self):
         """Read database and stores it in self"""
@@ -270,7 +314,7 @@ class Database(dict):
             ).id
         )
 
-    async def fetch_asset(self, asset_id: int) -> typing.Optional[Message]:
+    async def fetch_asset(self, asset_id: int) -> Message | None:
         """Fetch previously saved asset by its asset_id"""
 
         if not (_content_channel_id := self.get("heroku.forums", "channel_id", None)):
@@ -295,7 +339,16 @@ class Database(dict):
         self,
         owner: str,
         key: str,
-        default: typing.Optional[JSONSerializable] = None,
+        default: JSONSerializable | None = None,
+    ) -> JSONSerializable:
+        """Get database key snapshot"""
+        return copy.deepcopy(self._get_raw(owner, key, default))
+
+    def _get_raw(
+        self,
+        owner: str,
+        key: str,
+        default: JSONSerializable | None = None,
     ) -> JSONSerializable:
         """Get database key"""
         try:
@@ -305,11 +358,6 @@ class Database(dict):
 
     def set(self, owner: str, key: str, value: JSONSerializable) -> bool:
         """Set database key"""
-        if owner in _DB_PROTECTED_OWNERS:
-            caller = self._get_write_caller()
-            if caller not in _DB_ALLOWED_WRITERS:
-                self._reject_write(owner, key, caller)
-
         if not utils.is_serializable(owner):
             raise RuntimeError(
                 "Attempted to write object to "
@@ -335,11 +383,6 @@ class Database(dict):
         return self.save()
 
     def __setitem__(self, owner: str, value: JSONSerializable) -> None:
-        if owner in _DB_PROTECTED_OWNERS:
-            caller = self._get_write_caller()
-            if caller not in _DB_ALLOWED_WRITERS:
-                self._reject_write(owner, "<dict>", caller)
-
         if not utils.is_serializable(owner):
             raise RuntimeError(
                 "Attempted to write object to "
@@ -358,41 +401,17 @@ class Database(dict):
 
     def update(self, *args, **kwargs) -> None:
         items = dict(*args, **kwargs)
-        for owner in items.keys():
-            if owner in _DB_PROTECTED_OWNERS:
-                caller = self._get_write_caller()
-                if caller not in _DB_ALLOWED_WRITERS:
-                    self._reject_write(owner, "<dict>", caller)
         return super().update(items)
-
-    @staticmethod
-    def _get_write_caller() -> typing.Optional[str]:
-        for frame_info in inspect.stack():
-            mod = frame_info.frame.f_globals.get("__name__", None)
-            if not mod or mod == __name__ or mod == f"{__package__}.pointers":
-                continue
-            return mod
-        return None
-
-    @staticmethod
-    def _reject_write(owner: str, key: str, caller: typing.Optional[str]):
-        logger.warning(
-            "Blocked db write to protected owner=%s key=%s from %s",
-            owner,
-            key,
-            caller or "<unknown>",
-        )
-        # raise PermissionError("Database write to protected owner is restricted")
 
     def pointer(
         self,
         owner: str,
         key: str,
-        default: typing.Optional[JSONSerializable] = None,
-        item_type: typing.Optional[typing.Any] = None,
-    ) -> typing.Union[JSONSerializable, PointerList, PointerDict]:
+        default: JSONSerializable | None = None,
+        item_type: typing.Any | None = None,
+    ) -> JSONSerializable | PointerList | PointerDict:
         """Get a pointer to database key"""
-        value = self.get(owner, key, default)
+        value = self._get_raw(owner, key, default)
         mapping = {
             list: PointerList,
             dict: PointerDict,
@@ -404,7 +423,7 @@ class Database(dict):
             None,
         )
 
-        if (current_value := self.get(owner, key, None)) and type(
+        if (current_value := self._get_raw(owner, key, None)) and type(
             current_value
         ) is not type(default):
             raise ValueError(
@@ -418,7 +437,7 @@ class Database(dict):
 
         if item_type is not None:
             if isinstance(value, list):
-                for item in self.get(owner, key, default):
+                for item in self._get_raw(owner, key, default):
                     if not isinstance(item, dict):
                         raise ValueError(
                             "Item type can only be specified for dedicated keys and"
@@ -430,7 +449,7 @@ class Database(dict):
                     item_type,
                 )
             if isinstance(value, dict):
-                for item in self.get(owner, key, default).values():
+                for item in self._get_raw(owner, key, default).values():
                     if not isinstance(item, dict):
                         raise ValueError(
                             "Item type can only be specified for dedicated keys and"

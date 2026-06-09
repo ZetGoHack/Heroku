@@ -10,21 +10,11 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-import git
 import time
-import git
 import psutil
-import os
-import glob
-import requests
-import re
 import logging
-import emoji
 import herokutl
 
-from typing import Optional
-from pathlib import Path
-from io import BytesIO
 from herokutl.errors import WebpageMediaEmptyError
 from herokutl.types import InputMediaWebPage
 from herokutl.tl.types import Message
@@ -47,17 +37,22 @@ class HerokuInfoMod(loader.Module):
             loader.ConfigValue(
                 "custom_message",
                 doc=lambda: (
-                    "<blockquote expandable>"
-                    + self.strings("_cfg_cst_msg")
+                    self.strings["_cfg_cst_msg"]
                     + "\n"
-                    + ("\n" + self.strings("_cfg_cst_ph").format("\n"+utils.config_placeholders()) if utils.config_placeholders() else "")
-                    + "</blockquote>"
+                    + (
+                        "\n"
+                        + self.strings["_cfg_cst_ph"].format(
+                            "\n" + utils.config_placeholders()
+                        )
+                        if utils.config_placeholders()
+                        else ""
+                    )
                 ),
             ),
             loader.ConfigValue(
                 "banner_url",
                 "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_info.png",
-                lambda: self.strings("_cfg_banner"),
+                lambda: self.strings["_cfg_banner"],
                 validator=loader.validators.RandomLink(),
             ),
             loader.ConfigValue(
@@ -82,7 +77,7 @@ class HerokuInfoMod(loader.Module):
 
     def _get_os_name(self):
         try:
-            with open("/etc/os-release", "r") as f:
+            with open("/etc/os-release") as f:
                 for line in f:
                     if line.startswith("PRETTY_NAME"):
                         return line.split("=")[1].strip().strip('"')
@@ -152,7 +147,7 @@ class HerokuInfoMod(loader.Module):
             "branch": version.branch,
             "hostname": lib_platform.node(),
             "user": getpass.getuser(),
-            "os": self._get_os_name() or self.strings("non_detectable"),
+            "os": self._get_os_name() or self.strings["non_detectable"],
             "kernel": lib_platform.release(),
             "cpu": f"{psutil.cpu_count(logical=False)} ({psutil.cpu_count()}) core(-s); {psutil.cpu_percent()}% total",
             "ping": round((time.perf_counter_ns() - start) / 10**6, 3),
@@ -187,7 +182,7 @@ class HerokuInfoMod(loader.Module):
                 ping=round((time.perf_counter_ns() - start) / 10**6, 3),
                 upd=upd,
                 platform=platform,
-                os=self._get_os_name() or self.strings("non_detectable"),
+                os=self._get_os_name() or self.strings["non_detectable"],
                 python_ver=lib_platform.python_version(),
             )
         )
@@ -234,4 +229,4 @@ class HerokuInfoMod(loader.Module):
 
     @loader.command()
     async def ubinfo(self, message: Message):
-        await utils.answer(message, self.strings("desc"))
+        await utils.answer(message, self.strings["desc"])

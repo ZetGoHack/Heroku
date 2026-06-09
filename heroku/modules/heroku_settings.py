@@ -11,18 +11,11 @@
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
 import logging
-import random
 
-import herokutl
-from herokutl.tl.functions.messages import (
-    GetDialogFiltersRequest,
-    UpdateDialogFilterRequest,
-)
 from herokutl.tl.types import Message
 from herokutl.utils import get_display_name
 
-from .. import loader, log, main, utils
-from .._internal import fw_protect, restart
+from .. import loader, main, utils
 from ..inline.types import InlineCall
 
 logger = logging.getLogger(__name__)
@@ -63,19 +56,19 @@ class HerokuSettingsMod(loader.Module):
         ]
         watchers += [f"💢 {k} {v}" for k, v in disabled_watchers.items()]
         await utils.answer(
-            message, self.strings("watchers").format("\n".join(watchers))
+            message, self.strings["watchers"].format("\n".join(watchers))
         )
 
     @loader.command()
     async def watcherbl(self, message: Message):
         if not (args := utils.get_args_raw(message)):
-            await utils.answer(message, self.strings("args"))
+            await utils.answer(message, self.strings["args"])
             return
 
         watchers, disabled_watchers = self.get_watchers()
 
         if args.lower() not in map(lambda x: x.lower(), watchers):
-            await utils.answer(message, self.strings("mod404").format(args))
+            await utils.answer(message, self.strings["mod404"].format(args))
             return
 
         args = next((x for x in watchers if x.lower() == args.lower()), args)
@@ -97,7 +90,7 @@ class HerokuSettingsMod(loader.Module):
 
             await utils.answer(
                 message,
-                self.strings("disabled").format(args) + " <b>in current chat</b>",
+                self.strings["disabled"].format(args) + " <b>in current chat</b>",
             )
         else:
             for k in disabled_watchers.copy():
@@ -109,7 +102,7 @@ class HerokuSettingsMod(loader.Module):
 
             await utils.answer(
                 message,
-                self.strings("enabled").format(args) + " <b>in current chat</b>",
+                self.strings["enabled"].format(args) + " <b>in current chat</b>",
             )
 
         self._db.set(main.__name__, "disabled_watchers", disabled_watchers)
@@ -117,7 +110,7 @@ class HerokuSettingsMod(loader.Module):
     @loader.command()
     async def watchercmd(self, message: Message):
         if not (args := utils.get_args_raw(message)):
-            return await utils.answer(message, self.strings("args"))
+            return await utils.answer(message, self.strings["args"])
 
         chats, pm, out, incoming = False, False, False, False
 
@@ -145,7 +138,7 @@ class HerokuSettingsMod(loader.Module):
         watchers, disabled_watchers = self.get_watchers()
 
         if args.lower() not in [watcher.lower() for watcher in watchers]:
-            return await utils.answer(message, self.strings("mod404").format(args))
+            return await utils.answer(message, self.strings["mod404"].format(args))
 
         args = [watcher for watcher in watchers if watcher.lower() == args.lower()][0]
 
@@ -159,25 +152,25 @@ class HerokuSettingsMod(loader.Module):
             self._db.set(main.__name__, "disabled_watchers", disabled_watchers)
             await utils.answer(
                 message,
-                self.strings("enabled").format(args)
+                self.strings["enabled"].format(args)
                 + f" (<code>{disabled_watchers[args]}</code>)",
             )
             return
 
         if args in disabled_watchers and "*" in disabled_watchers[args]:
-            await utils.answer(message, self.strings("enabled").format(args))
+            await utils.answer(message, self.strings["enabled"].format(args))
             del disabled_watchers[args]
             self._db.set(main.__name__, "disabled_watchers", disabled_watchers)
             return
 
         disabled_watchers[args] = ["*"]
         self._db.set(main.__name__, "disabled_watchers", disabled_watchers)
-        await utils.answer(message, self.strings("disabled").format(args))
+        await utils.answer(message, self.strings["disabled"].format(args))
 
     @loader.command()
     async def nonickuser(self, message: Message):
         if not (reply := await message.get_reply_message()):
-            await utils.answer(message, self.strings("reply_required"))
+            await utils.answer(message, self.strings["reply_required"])
             return
 
         u = reply.sender_id
@@ -188,17 +181,17 @@ class HerokuSettingsMod(loader.Module):
         if u not in nn:
             nn += [u]
             nn = list(set(nn))  # skipcq: PTC-W0018
-            await utils.answer(message, self.strings("user_nn").format("on"))
+            await utils.answer(message, self.strings["user_nn"].format("on"))
         else:
             nn = list(set(nn) - {u})
-            await utils.answer(message, self.strings("user_nn").format("off"))
+            await utils.answer(message, self.strings["user_nn"].format("off"))
 
         self._db.set(main.__name__, "nonickusers", nn)
 
     @loader.command()
     async def nonickchat(self, message: Message):
         if message.is_private:
-            await utils.answer(message, self.strings("private_not_allowed"))
+            await utils.answer(message, self.strings["private_not_allowed"])
             return
 
         chat = utils.get_chat_id(message)
@@ -209,7 +202,7 @@ class HerokuSettingsMod(loader.Module):
             nn = list(set(nn))  # skipcq: PTC-W0018
             await utils.answer(
                 message,
-                self.strings("cmd_nn").format(
+                self.strings["cmd_nn"].format(
                     utils.escape_html((await message.get_chat()).title),
                     "on",
                 ),
@@ -218,7 +211,7 @@ class HerokuSettingsMod(loader.Module):
             nn = list(set(nn) - {chat})
             await utils.answer(
                 message,
-                self.strings("cmd_nn").format(
+                self.strings["cmd_nn"].format(
                     utils.escape_html((await message.get_chat()).title),
                     "off",
                 ),
@@ -229,11 +222,11 @@ class HerokuSettingsMod(loader.Module):
     @loader.command()
     async def nonickcmdcmd(self, message: Message):
         if not (args := utils.get_args_raw(message)):
-            await utils.answer(message, self.strings("no_cmd"))
+            await utils.answer(message, self.strings["no_cmd"])
             return
 
         if args not in self.allmodules.commands:
-            await utils.answer(message, self.strings("cmd404"))
+            await utils.answer(message, self.strings["cmd404"])
             return
 
         nn = self._db.get(main.__name__, "nonickcmds", [])
@@ -242,7 +235,7 @@ class HerokuSettingsMod(loader.Module):
             nn = list(set(nn))
             await utils.answer(
                 message,
-                self.strings("cmd_nn").format(
+                self.strings["cmd_nn"].format(
                     utils.escape_html(self.get_prefix() + args),
                     "on",
                 ),
@@ -251,7 +244,7 @@ class HerokuSettingsMod(loader.Module):
             nn = list(set(nn) - {args})
             await utils.answer(
                 message,
-                self.strings("cmd_nn").format(
+                self.strings["cmd_nn"].format(
                     utils.escape_html(self.get_prefix() + args),
                     "off",
                 ),
@@ -262,12 +255,12 @@ class HerokuSettingsMod(loader.Module):
     @loader.command()
     async def nonickcmds(self, message: Message):
         if not self._db.get(main.__name__, "nonickcmds", []):
-            await utils.answer(message, self.strings("nothing"))
+            await utils.answer(message, self.strings["nothing"])
             return
 
         await utils.answer(
             message,
-            self.strings("cmd_nn_list").format(
+            self.strings["cmd_nn_list"].format(
                 "\n".join(
                     [
                         f"▫️ <code>{utils.escape_html(self.get_prefix() + cmd)}</code>"
@@ -288,10 +281,7 @@ class HerokuSettingsMod(loader.Module):
                     main.__name__,
                     "nonickusers",
                     list(
-                        (
-                            set(self._db.get(main.__name__, "nonickusers", []))
-                            - {user_id}
-                        )
+                        set(self._db.get(main.__name__, "nonickusers", [])) - {user_id}
                     ),
                 )
 
@@ -306,12 +296,12 @@ class HerokuSettingsMod(loader.Module):
             ]
 
         if not users:
-            await utils.answer(message, self.strings("nothing"))
+            await utils.answer(message, self.strings["nothing"])
             return
 
         await utils.answer(
             message,
-            self.strings("user_nn_list").format("\n".join(users)),
+            self.strings["user_nn_list"].format("\n".join(users)),
         )
 
     @loader.command()
@@ -324,9 +314,7 @@ class HerokuSettingsMod(loader.Module):
                 self._db.set(
                     main.__name__,
                     "nonickchats",
-                    list(
-                        (set(self._db.get(main.__name__, "nonickchats", [])) - {chat})
-                    ),
+                    list(set(self._db.get(main.__name__, "nonickchats", [])) - {chat}),
                 )
 
                 logger.warning("Chat %s removed from nonickchats list", chat)
@@ -340,12 +328,12 @@ class HerokuSettingsMod(loader.Module):
             ]
 
         if not chats:
-            await utils.answer(message, self.strings("nothing"))
+            await utils.answer(message, self.strings["nothing"])
             return
 
         await utils.answer(
             message,
-            self.strings("user_nn_list").format("\n".join(chats)),
+            self.strings["user_nn_list"].format("\n".join(chats)),
         )
 
     async def inline__setting(self, call: InlineCall, key: str, state: bool = False):
@@ -354,14 +342,14 @@ class HerokuSettingsMod(loader.Module):
 
         if key == "no_nickname" and state and self.get_prefix() == ".":
             await call.answer(
-                self.strings("nonick_warning"),
+                self.strings["nonick_warning"],
                 show_alert=True,
             )
         else:
             await call.answer("Configuration value saved!")
 
         await call.edit(
-            self.strings("inline_settings"),
+            self.strings["inline_settings"],
             reply_markup=self._get_settings_markup(),
         )
 
@@ -372,7 +360,7 @@ class HerokuSettingsMod(loader.Module):
     ):
         if confirm_required:
             await call.edit(
-                self.strings("confirm_update"),
+                self.strings["confirm_update"],
                 reply_markup=[
                     {
                         "text": "🪂 Update",
@@ -392,60 +380,6 @@ class HerokuSettingsMod(loader.Module):
         await call.delete()
         await self.invoke("update", "-f", peer="me")
 
-    async def _remove_core_protection(self, call: InlineCall):
-        self._db.set(main.__name__, "remove_core_protection", True)
-        await call.edit(self.strings("core_protection_removed"))
-
-    @loader.command()
-    async def remove_core_protection(self, message: Message):
-        """| Removes core protection"""
-
-        if self._db.get(main.__name__, "remove_core_protection") == True:
-            await utils.answer(message, self.strings("core_protection_already_removed"))
-            return
-        else:
-            await self.inline.form(
-                message=message,
-                text=self.strings("core_protection_confirm"),
-                reply_markup=[
-                    {
-                        "text": self.strings("core_protection_btn"),
-                        "callback": self._remove_core_protection,
-                    },
-                    {
-                        "text": self.strings("btn_no"),
-                        "action": "close",
-                    },
-                ],
-            )
-
-    async def _enable_core_protection(self, call: InlineCall):
-        self._db.set(main.__name__, "remove_core_protection", False)
-        await call.edit(self.strings("core_protection_enabled"))
-
-    @loader.command()
-    async def enable_core_protection(self, message: Message):
-        """| Enables core protection"""
-
-        if self._db.get(main.__name__, "remove_core_protection") == False:
-            await utils.answer(message, self.strings("core_protection_already_enabled"))
-            return
-        else:
-            await self.inline.form(
-                message=message,
-                text=self.strings("core_protection_confirm_e"),
-                reply_markup=[
-                    {
-                        "text": self.strings("core_protection_e_btn"),
-                        "callback": self._enable_core_protection,
-                    },
-                    {
-                        "text": self.strings("btn_no"),
-                        "action": "close",
-                    },
-                ],
-            )
-
     async def inline__restart(
         self,
         call: InlineCall,
@@ -453,7 +387,7 @@ class HerokuSettingsMod(loader.Module):
     ):
         if confirm_required:
             await call.edit(
-                self.strings("confirm_restart"),
+                self.strings["confirm_restart"],
                 reply_markup=[
                     {
                         "text": "🔄 Restart",
@@ -533,7 +467,7 @@ class HerokuSettingsMod(loader.Module):
             [
                 (
                     {
-                        "text": self.strings("suggest_subscribe"),
+                        "text": self.strings["suggest_subscribe"],
                         "callback": self.inline__setting,
                         "args": (
                             "suggest_subscribe",
@@ -542,7 +476,7 @@ class HerokuSettingsMod(loader.Module):
                     }
                     if self._db.get(main.__name__, "suggest_subscribe", True)
                     else {
-                        "text": self.strings("do_not_suggest_subscribe"),
+                        "text": self.strings["do_not_suggest_subscribe"],
                         "callback": self.inline__setting,
                         "args": (
                             "suggest_subscribe",
@@ -553,13 +487,13 @@ class HerokuSettingsMod(loader.Module):
             ],
             [
                 {
-                    "text": self.strings("btn_restart"),
+                    "text": self.strings["btn_restart"],
                     "callback": self.inline__restart,
                     "style": "primary",
                     "args": (True,),
                 },
                 {
-                    "text": self.strings("btn_update"),
+                    "text": self.strings["btn_update"],
                     "callback": self.inline__update,
                     "style": "primary",
                     "args": (True,),
@@ -567,7 +501,7 @@ class HerokuSettingsMod(loader.Module):
             ],
             [
                 {
-                    "text": self.strings("close_menu"),
+                    "text": self.strings["close_menu"],
                     "action": "close",
                     "style": "danger",
                 }
@@ -577,7 +511,7 @@ class HerokuSettingsMod(loader.Module):
     @loader.command()
     async def settings(self, message: Message):
         await self.inline.form(
-            self.strings("inline_settings"),
+            self.strings["inline_settings"],
             message=message,
             reply_markup=self._get_settings_markup(),
         )

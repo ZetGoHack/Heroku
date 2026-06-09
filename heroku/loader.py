@@ -17,7 +17,6 @@ import builtins
 import contextlib
 import contextvars
 import copy
-import hashlib
 import importlib
 import importlib.machinery
 import importlib.util
@@ -40,6 +39,7 @@ from .inline.core import InlineManager
 from .translations import Strings, Translator
 from .types import (
     Command,
+    ConfigCategory,
     ConfigValue,
     CoreOverwriteError,
     CoreUnloadError,
@@ -50,10 +50,6 @@ from .types import (
     LoadError,
     Module,
     ModuleConfig,
-    SafeAllModulesProxy,
-    SafeClientProxy,
-    SafeDatabaseProxy,
-    SafeInlineProxy,
     SelfSuspend,
     SelfUnload,
     StopLoop,
@@ -85,12 +81,12 @@ __all__ = [
     "get_commands",
     "get_inline_handlers",
     "get_callback_handlers",
-    "get_module_hash",
     "validators",
     "Database",
     "InlineManager",
     "Strings",
     "Translator",
+    "ConfigCategory",
     "ConfigValue",
     "ModuleConfig",
     "owner",
@@ -107,324 +103,10 @@ __all__ = [
     "unrestricted",
     "inline_everyone",
     "loop",
-    "set_session_access_hashes",
+    "need_update",
 ]
 
 logger = logging.getLogger(__name__)
-
-_EXTERNAL_ORIGIN_PREFIXES = ("<external", "<file", "<string")
-_external_context = contextvars.ContextVar(
-    "heroku_external_module_origin", default=None
-)
-_SESSION_AUDIT_INSTALLED = False
-_EXTERNAL_GUARDS_INSTALLED = False
-_MODULE_NAME_BY_HASH: typing.Dict[str, str] = {}
-
-
-def _calc_module_hash(source: str) -> str:
-    return hashlib.sha256(source.encode("utf-8", errors="ignore")).hexdigest()
-
-
-def _make_session_allowlist():
-    data: typing.FrozenSet[str] = frozenset()
-    allowed_callers = frozenset({f"{__package__}.modules.heroku_plugin_security"})
-
-    def _caller_module() -> typing.Optional[str]:
-        for frame_info in inspect.stack():
-            mod = frame_info.frame.f_globals.get("__name__", None)
-            if not mod or mod == __name__:
-                continue
-            return mod
-        return None
-
-    def is_allowed(value: typing.Optional[str]) -> bool:
-        if not value:
-            return False
-        return value in data
-
-    def set_hashes(hashes: typing.Iterable[str]):
-        nonlocal data
-        caller = _caller_module()
-        if caller not in allowed_callers:
-            logger.warning(
-                "Blocked set_session_access_hashes from %s (allowed: %s)",
-                caller or "<unknown>",
-                ", ".join(sorted(allowed_callers)),
-            )
-            raise PermissionError("set_session_access_hashes is restricted")
-        data = frozenset(hashes)
-
-    return is_allowed, set_hashes
-
-
-_is_session_hash_allowed, _set_session_access_hashes = _make_session_allowlist()
-
-
-def set_session_access_hashes(hashes: typing.Iterable[str]):
-    _set_session_access_hashes(hashes)
-
-
-def get_module_hash(module: "Module") -> typing.Optional[str]:
-    mod_hash = getattr(module, "__module_hash__", None)
-    if mod_hash:
-        return mod_hash
-    source = getattr(module, "__source__", None)
-    if source:
-        return _calc_module_hash(source)
-    return None
-
-
-def _format_audit_args(args: typing.Any, limit: int = 400) -> str:
-    try:
-        rendered = repr(args)
-    except Exception:
-        return "<unreprable>"
-    if len(rendered) <= limit:
-        return rendered
-    return rendered[: limit - 3] + "..."
-
-
-def _is_external_origin(origin: str) -> bool:
-    if not origin:
-        return False
-    if not isinstance(origin, str):
-        return False
-    if origin.startswith("<core"):
-        return False
-    if origin.startswith(_EXTERNAL_ORIGIN_PREFIXES):
-        return True
-    return "loaded_modules" in origin
-
-
-def _is_external_frame(frame) -> bool:
-    if frame is None:
-        return False
-    spec = frame.f_globals.get("__spec__", None)
-    if spec and getattr(spec, "origin", None):
-        origin = spec.origin
-        if origin and isinstance(origin, str):
-            return _is_external_origin(origin)
-    filename = frame.f_globals.get("__file__", "")
-    if not filename:
-        return False
-    if isinstance(filename, str):
-        return _is_external_origin(filename) or "loaded_modules" in filename
-    return False
-
-
-def _external_stack_info() -> (
-    typing.Tuple[bool, typing.Optional[str], typing.Optional[str]]
-):
-    frame = sys._getframe()
-    if frame:
-        frame = frame.f_back
-    max_frames = 50
-    frame_count = 0
-    while frame and frame_count < max_frames:
-        if _is_external_frame(frame):
-            spec = frame.f_globals.get("__spec__", None)
-            origin = getattr(spec, "origin", None) if spec else None
-            if not origin:
-                origin = frame.f_globals.get("__file__", "")
-
-            if origin and not isinstance(origin, str):
-                origin = str(origin)
-
-            mod_name = frame.f_globals.get("__name__", None)
-            return True, origin or None, mod_name
-        frame = frame.f_back
-        frame_count += 1
-    return False, None, None
-
-
-def _session_audit_hook(event, args):
-    if not args:
-        return
-    if event.startswith("import") or event.startswith("importlib."):
-        return
-
-    def _is_session_path(value) -> bool:
-        try:
-            path = os.fspath(value)
-        except Exception:
-            return False
-        if isinstance(path, bytes):
-            try:
-                path = path.decode(errors="ignore")
-            except Exception:
-                return False
-        return isinstance(path, str) and (
-            path.endswith(".session") or path.endswith(".session-journal")
-        )
-
-    def _has_session_path(values) -> bool:
-        for value in values:
-            if isinstance(value, (list, tuple, set)):
-                if _has_session_path(value):
-                    return True
-                continue
-            if _is_session_path(value):
-                return True
-        return False
-
-    def _has_session_hint(values) -> bool:
-        for value in values:
-            if isinstance(value, (list, tuple, set)):
-                if _has_session_hint(value):
-                    return True
-                continue
-            if isinstance(value, str) and any(
-                value.endswith(ext) for ext in (".session", ".session-journal")
-            ):
-                return True
-        return False
-
-    if not _has_session_path(args):
-        if event.startswith("subprocess.") and _has_session_hint(args):
-            pass
-        else:
-            return
-
-    ctx = _external_context.get()
-    origin = None
-    mod_hash = None
-
-    if isinstance(ctx, tuple):
-        origin, mod_hash = ctx
-    elif isinstance(ctx, str):
-        origin = ctx
-
-    if _is_session_hash_allowed(mod_hash):
-        return
-
-    has_external_stack, stack_origin, stack_mod_name = _external_stack_info()
-
-    if _external_context.get() or has_external_stack:
-        mod_name = _MODULE_NAME_BY_HASH.get(mod_hash, None) if mod_hash else None
-        if not origin:
-            origin = stack_origin
-        if not mod_name:
-            mod_name = stack_mod_name
-        logger.warning(
-            "Blocked .session file access from external module: name=%s origin=%s event=%s args=%s",
-            mod_name or "<unknown>",
-            origin or "<unknown>",
-            event,
-            _format_audit_args(args),
-        )
-        raise PermissionError(
-            "Access to .session files is blocked for external modules: "
-            f"name={mod_name or '<unknown>'} origin={origin or '<unknown>'} event={event} args={_format_audit_args(args)}"
-        )
-
-
-async def _call_with_external_context(func: callable, *args, **kwargs):
-    origin = getattr(getattr(func, "__self__", None), "__origin__", "")
-    token = None
-    if origin and _is_external_origin(origin):
-        mod = getattr(func, "__self__", None)
-        mod_hash = getattr(mod, "__module_hash__", None)
-        if not mod_hash and hasattr(mod, "__source__"):
-            mod_hash = _calc_module_hash(mod.__source__)
-        token = _external_context.set((origin, mod_hash))
-    try:
-        return await func(*args, **kwargs)
-    finally:
-        if token is not None:
-            _external_context.reset(token)
-
-
-def _install_session_audit_hook():
-    global _SESSION_AUDIT_INSTALLED
-    if _SESSION_AUDIT_INSTALLED:
-        return
-    sys.addaudithook(_session_audit_hook)
-    _SESSION_AUDIT_INSTALLED = True
-
-
-def _is_external_context_active() -> bool:
-    if _external_context.get():
-        return True
-    has_external_stack, _, _ = _external_stack_info()
-    return has_external_stack
-
-
-def _deny_external(reason: str):
-    if _is_external_context_active():
-        logger.warning("Blocked external module call: %s", reason)
-        raise PermissionError(f"External module access is blocked: {reason}")
-
-
-def _wrap_external(func, reason: str):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        _deny_external(reason)
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
-def _noop_external(reason: str, return_value=None):
-    def wrapper(*args, **kwargs):
-        if _is_external_context_active():
-            logger.warning(
-                "Skipped external module call: %s args=%s",
-                reason,
-                _format_audit_args(args),
-            )
-            return return_value
-        return None
-
-    return wrapper
-
-
-class _NoopPopen:
-    def __init__(self):
-        self.returncode = 126
-        self.stdout = b""
-        self.stderr = b""
-
-    def communicate(self, *args, **kwargs):
-        return (self.stdout, self.stderr)
-
-    def wait(self, *args, **kwargs):
-        return self.returncode
-
-    def poll(self):
-        return self.returncode
-
-
-def _install_external_guards():
-    global _EXTERNAL_GUARDS_INSTALLED
-    if _EXTERNAL_GUARDS_INSTALLED:
-        return
-
-    import gc
-
-    gc.get_objects = _wrap_external(gc.get_objects, "gc.get_objects")
-    if hasattr(gc, "get_referrers"):
-        gc.get_referrers = _wrap_external(gc.get_referrers, "gc.get_referrers")
-    if hasattr(gc, "get_referents"):
-        gc.get_referents = _wrap_external(gc.get_referents, "gc.get_referents")
-
-    try:
-        import ctypes
-
-        ctypes.CDLL = _wrap_external(ctypes.CDLL, "ctypes.CDLL")
-        ctypes.PyDLL = _wrap_external(ctypes.PyDLL, "ctypes.PyDLL")
-        if hasattr(ctypes, "cdll") and hasattr(ctypes.cdll, "LoadLibrary"):
-            ctypes.cdll.LoadLibrary = _wrap_external(
-                ctypes.cdll.LoadLibrary, "ctypes.cdll.LoadLibrary"
-            )
-        if hasattr(ctypes, "windll") and hasattr(ctypes.windll, "LoadLibrary"):
-            ctypes.windll.LoadLibrary = _wrap_external(
-                ctypes.windll.LoadLibrary, "ctypes.windll.LoadLibrary"
-            )
-    except Exception:
-        pass
-
-    _EXTERNAL_GUARDS_INSTALLED = True
-
 
 owner = security.owner
 
@@ -469,6 +151,13 @@ VALID_APT_PACKAGES = re.compile(
     re.MULTILINE,
 )
 
+IMPORT_PIP_ALIASES = {
+    "sklearn": "scikit-learn",
+    "pil": "Pillow",
+    "herokutl": "Heroku-TL-New",
+    "markdown_it": "markdown-it-py",
+}
+
 USER_INSTALL = "PIP_TARGET" not in os.environ and "VIRTUAL_ENV" not in os.environ
 
 native_import = builtins.__import__
@@ -511,7 +200,7 @@ class InfiniteLoop:
         interval: int,
         autostart: bool,
         wait_before: bool,
-        stop_clause: typing.Union[str, None],
+        stop_clause: str | None,
     ):
         self.func = func
         self.interval = interval
@@ -592,9 +281,9 @@ class InfiniteLoop:
 
 def loop(
     interval: int = 5,
-    autostart: typing.Optional[bool] = False,
-    wait_before: typing.Optional[bool] = False,
-    stop_clause: typing.Optional[str] = None,
+    autostart: bool | None = False,
+    wait_before: bool | None = False,
+    stop_clause: str | None = None,
 ) -> FunctionType:
     """
     Create new infinite loop from class method
@@ -624,8 +313,28 @@ BASE_DIR = (
 )
 
 LOADED_MODULES_DIR = os.path.join(BASE_DIR, "loaded_modules")
+MODULES_LANGPACKS_DIR = os.path.join(LOADED_MODULES_DIR, "langpacks")
 LOADED_MODULES_PATH = Path(LOADED_MODULES_DIR)
+MODULES_LANGPACKS_PATH = Path(MODULES_LANGPACKS_DIR)
 LOADED_MODULES_PATH.mkdir(parents=True, exist_ok=True)
+MODULES_LANGPACKS_PATH.mkdir(parents=True, exist_ok=True)
+
+
+def _iter_module_files(
+    directory: str | Path,
+    *,
+    suffix: str = ".py",
+    include: typing.Callable[[str], bool] | None = None,
+) -> list[str]:
+    with os.scandir(directory) as entries:
+        return [
+            entry.path
+            for entry in entries
+            if entry.is_file()
+            and entry.name.endswith(suffix)
+            and not entry.name.startswith("_")
+            and (include(entry.name) if include else True)
+        ]
 
 
 def translatable_docstring(cls):
@@ -834,6 +543,21 @@ def raw_handler(*updates: TLObject):
     return inner
 
 
+def need_update(*update_types: str):
+    """
+    Decorator that marks a method as a handler for Telegram Bot API update types
+    The method will be registered in the inline bot's dispatcher when the module loads, and unregistered when the module unloads.
+    """
+
+    def inner(func: Command) -> Command:
+        func.is_bot_update_handler = True
+        func.bot_update_types = list(update_types)
+        func.id = uuid4().hex
+        return func
+
+    return inner
+
+
 class Modules:
     """Stores all registered modules"""
 
@@ -844,14 +568,12 @@ class Modules:
         allclients: list,
         translator: Translator,
     ):
-        _install_session_audit_hook()
-        _install_external_guards()
         self._initial_registration = True
         self.commands = {}
         self.inline_handlers = {}
         self.callback_handlers = {}
         self.aliases = {}
-        self.modules: typing.List[typing.Optional["Module"]] = []  # skipcq: PTC-W0052
+        self.modules: list["Module" | None] = []  # skipcq: PTC-W0052
         self.libraries = []
         self.watchers = []
         self._log_handlers = []
@@ -904,20 +626,14 @@ class Modules:
 
     async def register_all(
         self,
-        mods: typing.Optional[typing.List[str]] = None,
+        mods: list[str] | None = None,
         no_external: bool = False,
-    ) -> typing.List[Module]:
+    ) -> list[Module]:
         """Load all modules in the module directory"""
         external_mods = []
 
         if not mods:
-            mods = [
-                os.path.join(utils.get_base_dir(), MODULES_NAME, mod)
-                for mod in filter(
-                    lambda x: (x.endswith(".py") and not x.startswith("_")),
-                    os.listdir(os.path.join(utils.get_base_dir(), MODULES_NAME)),
-                )
-            ]
+            mods = _iter_module_files(os.path.join(utils.get_base_dir(), MODULES_NAME))
 
             self.secure_boot = self._db.get(__name__, "secure_boot", False)
 
@@ -925,13 +641,10 @@ class Modules:
                 []
                 if self.secure_boot
                 else [
-                    (LOADED_MODULES_PATH / mod).resolve()
-                    for mod in filter(
-                        lambda x: (
-                            x.endswith(f"{self.client.tg_id}.py")
-                            and not x.startswith("_")
-                        ),
-                        os.listdir(LOADED_MODULES_DIR),
+                    Path(mod).resolve()
+                    for mod in _iter_module_files(
+                        LOADED_MODULES_DIR,
+                        include=lambda name: name.endswith(f"{self.client.tg_id}.py"),
                     )
                 ]
             )
@@ -948,7 +661,7 @@ class Modules:
         self,
         modules: list,
         origin: str = "<core>",
-    ) -> typing.List[Module]:
+    ) -> list[Module]:
         with contextlib.suppress(AttributeError):
             _heroku_client_id_logging_tag = copy.copy(self.client.tg_id)  # noqa: F841
 
@@ -973,6 +686,8 @@ class Modules:
                 )
 
                 loaded += [await self.register_module(spec, module_name, origin)]
+
+                logger.debug("Successfully loaded %s from filesystem", module_name)
             except Exception as e:
                 logger.exception("Failed to load module %s due to %s:", mod, e)
 
@@ -992,18 +707,17 @@ class Modules:
         module = importlib.util.module_from_spec(spec)
         sys.modules[module_name] = module
 
+        source_data = (
+            spec.loader.data.decode()
+            if hasattr(spec.loader, "data") and spec.loader.data
+            else None
+        )
+
         async def _exec_module():
             attempted = False
             while True:
                 try:
-                    token = None
-                    if _is_external_origin(origin):
-                        token = _external_context.set(origin)
-                    try:
-                        spec.loader.exec_module(module)
-                    finally:
-                        if token is not None:
-                            _external_context.reset(token)
+                    spec.loader.exec_module(module)
                     break
                 except ImportError as e:
                     if not spec.loader.data or attempted:
@@ -1030,16 +744,10 @@ class Modules:
                     exc_name = (getattr(e, "name", None) or "").lower()
 
                     requirements.extend(
-                        [
-                            {
-                                "sklearn": "scikit-learn",
-                                "pil": "Pillow",
-                                "herokutl": "Heroku-TL-New",
-                            }.get(exc_name, exc_name or e.name or "")
-                        ]
+                        [IMPORT_PIP_ALIASES.get(exc_name, exc_name or e.name or "")]
                     )
 
-                    result = await self.lookup("loader").install_requirements(
+                    result = await self.lookup("LoaderMod").install_requirements(
                         requirements
                     )
 
@@ -1072,6 +780,11 @@ class Modules:
                 raise TypeError(f"Instance is not a Module, it is {type(ret)}")
 
         ret.__origin__ = origin
+
+        ret.__source__ = (
+            source_data if source_data else inspect.getsource(ret.__class__)
+        )
+
         await self.complete_registration(ret)
 
         cls_name = ret.__class__.__name__
@@ -1086,14 +799,6 @@ class Modules:
                 Path(path).write_text(spec.loader.data.decode(), encoding="utf-8")
 
                 logger.debug("Saved class %s to path %s", cls_name, path)
-
-        ret.__source__ = (
-            spec.loader.data.decode()
-            if hasattr(spec.loader, "data")
-            else inspect.getsource(ret.__class__)
-        )
-        ret.__module_hash__ = _calc_module_hash(ret.__source__)
-        _MODULE_NAME_BY_HASH[ret.__module_hash__] = ret.__class__.__name__
 
         return ret
 
@@ -1113,6 +818,41 @@ class Modules:
                     name,
                     instance.__class__.__name__,
                     handler.id,
+                )
+
+    def register_bot_update_handlers(self, instance: Module):
+        """Register bot update handlers for a module"""
+        for name, handler in utils.iter_attrs(instance):
+            if not getattr(handler, "is_bot_update_handler", False):
+                continue
+
+            for update_type in getattr(handler, "bot_update_types", []):
+                self.inline.register_bot_update_handler(
+                    f"{handler.id}_{update_type}",
+                    update_type,
+                    handler,
+                )
+                logger.debug(
+                    "Registered bot update handler %s (%s) for module %s, update type %s",
+                    name,
+                    handler.id,
+                    instance.__class__.__name__,
+                    update_type,
+                )
+
+    def unregister_bot_update_handlers(self, instance: Module, purpose: str):
+        """Unregister bot update handlers for a module"""
+        for name, handler in utils.iter_attrs(instance):
+            if not getattr(handler, "is_bot_update_handler", False):
+                continue
+
+            for update_type in getattr(handler, "bot_update_types", []):
+                self.inline.unregister_bot_update_handler(f"{handler.id}_{update_type}")
+                logger.debug(
+                    "Unregistered bot update handler %s of module %s for %s",
+                    name,
+                    instance.__class__.__name__,
+                    purpose,
                 )
 
     @property
@@ -1239,7 +979,7 @@ class Modules:
     def lookup(
         self,
         modname: str,
-    ) -> typing.Union[bool, Module, Library]:
+    ) -> bool | Module | Library:
         return next(
             (lib for lib in self.libraries if lib.name.lower() == modname.lower()),
             False,
@@ -1265,7 +1005,7 @@ class Modules:
         default = "."
 
         if ent_id:
-            prefixes = self._db.get(key, f"command_prefixes", {})
+            prefixes = self._db.get(key, "command_prefixes", {})
             result = prefixes.get(str(ent_id), default)
         else:
             result = self._db.get(key, "command_prefix", default)
@@ -1279,7 +1019,7 @@ class Modules:
         default = "."
 
         prefixes = ()
-        prefixes += tuple(self._db.get(key, f"command_prefixes", {}).values())
+        prefixes += tuple(self._db.get(key, "command_prefixes", {}).values())
         prefixes += tuple(self._db.get(key, "command_prefix", default))
 
         return set(prefixes)
@@ -1289,55 +1029,8 @@ class Modules:
         with contextlib.suppress(AttributeError):
             _heroku_client_id_logging_tag = copy.copy(self.client.tg_id)  # noqa: F841
 
-        internalized = []
-        try:
-            internalized = self._db.get("HerokuPluginSecurity", "internalized", [])
-        except Exception:
-            internalized = []
-        name_l = instance.__class__.__name__.lower()
-        module_hash = get_module_hash(instance)
-        is_internalized = isinstance(internalized, (list, tuple, set)) and (
-            any(
-                isinstance(item, str) and item.lower() == name_l
-                for item in internalized
-            )
-            or (
-                module_hash
-                and any(
-                    isinstance(item, str) and item == module_hash
-                    for item in internalized
-                )
-            )
-        )
-        if is_internalized:
-            instance.__force_internal__ = True
-
         instance.allmodules = self
         instance.internal_init()
-        if is_internalized and hasattr(instance, "__force_internal__"):
-            delattr(instance, "__force_internal__")
-        origin = getattr(instance, "__origin__", "")
-        if (
-            _is_external_origin(origin)
-            and not is_internalized
-            and not isinstance(getattr(instance, "_client", None), SafeClientProxy)
-        ):
-            safe_client = SafeClientProxy(self.client, origin)
-            safe_allclients = [SafeClientProxy(c, origin) for c in self.allclients]
-            safe_db = SafeDatabaseProxy(self._db, origin)
-            safe_inline = SafeInlineProxy(self.inline, origin)
-            instance.allmodules = SafeAllModulesProxy(
-                self,
-                safe_client,
-                safe_allclients,
-                safe_db,
-                safe_inline,
-            )
-            instance.client = safe_client
-            instance._client = safe_client
-            instance.allclients = safe_allclients
-            instance.db = safe_db
-            instance._db = safe_db
 
         for module in self.modules:
             if module.__class__.__name__ == instance.__class__.__name__:
@@ -1371,7 +1064,7 @@ class Modules:
         self,
         alias: str,
         include_legacy: bool = False,
-    ) -> typing.Optional[str]:
+    ) -> str | None:
         if not alias:
             return None
 
@@ -1397,7 +1090,7 @@ class Modules:
 
         return None
 
-    def dispatch(self, _command: str) -> typing.Tuple[str, typing.Optional[str]]:
+    def dispatch(self, _command: str) -> tuple[str, str | None]:
         """Dispatch command to appropriate module"""
 
         resolved = next(
@@ -1504,7 +1197,6 @@ class Modules:
 
     async def send_ready(self):
         """Send all data to all modules"""
-        await self.inline.register_manager()
         await asyncio.gather(
             *[self.send_ready_one_wrapper(mod) for mod in self.modules]
         )
@@ -1517,28 +1209,11 @@ class Modules:
     ):
         with contextlib.suppress(AttributeError):
             _heroku_client_id_logging_tag = copy.copy(self.client.tg_id)  # noqa: F841
-        origin = getattr(mod, "__origin__", "")
-        safe_client = (
-            mod.client
-            if _is_external_origin(origin)
-            and isinstance(getattr(mod, "client", None), SafeClientProxy)
-            else (
-                SafeClientProxy(self.client, origin)
-                if _is_external_origin(origin)
-                else self.client
-            )
-        )
-        safe_db = (
-            mod.db
-            if _is_external_origin(origin)
-            and isinstance(getattr(mod, "db", None), SafeDatabaseProxy)
-            else self._db
-        )
 
         if from_dlmod:
             try:
                 if len(inspect.signature(mod.on_dlmod).parameters) == 2:
-                    await mod.on_dlmod(safe_client, safe_db)
+                    await mod.on_dlmod(self.client, self._db)
                 else:
                     await mod.on_dlmod()
             except Exception:
@@ -1546,7 +1221,7 @@ class Modules:
 
         try:
             if len(inspect.signature(mod.client_ready).parameters) == 2:
-                await mod.client_ready(safe_client, safe_db)
+                await mod.client_ready(self.client, self._db)
             else:
                 await mod.client_ready()
         except SelfUnload as e:
@@ -1555,6 +1230,7 @@ class Modules:
 
             logger.debug("Unloading %s, because it raised SelfUnload", mod)
             self.modules.remove(mod)
+            return
         except SelfSuspend as e:
             if no_self_unload:
                 raise e
@@ -1585,7 +1261,11 @@ class Modules:
             )
 
             if pack_url and (
-                transations := await self.translator.load_module_translations(pack_url)
+                transations := await self.translator.load_module_translations(
+                    pack_url,
+                    MODULES_LANGPACKS_PATH
+                    / f"{self.client.tg_id}_{mod.__class__.__name__}.yml",
+                )
             ):
                 mod.strings.external_strings = transations
 
@@ -1600,10 +1280,12 @@ class Modules:
 
         self.unregister_commands(mod, "update")
         self.unregister_raw_handlers(mod, "update")
+        self.unregister_bot_update_handlers(mod, "update")
 
         self.register_commands(mod)
         self.register_watchers(mod)
         self.register_raw_handlers(mod)
+        self.register_bot_update_handlers(mod)
 
     def get_classname(self, name: str) -> str:
         return next(
@@ -1615,7 +1297,7 @@ class Modules:
             name,
         )
 
-    async def unload_module(self, classname: str) -> typing.List[str]:
+    async def unload_module(self, classname: str) -> list[str]:
         """Remove module and all stuff from it"""
         worked = []
 
@@ -1650,6 +1332,7 @@ class Modules:
                 await module.on_unload()
 
                 self.unregister_raw_handlers(module, "unload")
+                self.unregister_bot_update_handlers(module, "unload")
                 self.unregister_loops(module, "unload")
                 self.unregister_commands(module, "unload")
                 self.unregister_watchers(module, "unload")

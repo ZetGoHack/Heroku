@@ -14,6 +14,7 @@
 import ast
 import asyncio
 import contextlib
+import json
 import logging
 import os
 import subprocess
@@ -24,19 +25,27 @@ import typing
 import aiohttp
 import git
 from git import GitCommandError, Repo
-from herokutl.extensions.html import CUSTOM_EMOJIS
 from herokutl.tl.functions.messages import (
     GetDialogFiltersRequest,
     UpdateDialogFilterRequest,
 )
-from herokutl.tl.types import DialogFilter, Message, TextWithEntities
+from herokutl.tl.types import (
+    DialogFilter,
+    InputBotInlineMessageID,
+    InputBotInlineMessageID64,
+    Message,
+    TextWithEntities,
+)
 
-from .. import loader, main, utils, version
+from .. import loader, utils, version
 from .._internal import restart
 from ..inline.types import BotInlineCall, InlineCall
 
 logger = logging.getLogger(__name__)
 NO_GIT = os.environ.get("HEROKU_NO_GIT") == "1"
+
+os.environ["GIT_TERMINAL_PROMPT"] = "0"
+os.environ["GIT_ASKPASS"] = "echo"
 
 
 @loader.tds
@@ -51,48 +60,48 @@ class UpdaterMod(loader.Module):
             loader.ConfigValue(
                 "GIT_ORIGIN_URL",
                 "https://github.com/coddrago/Heroku",
-                lambda: self.strings("origin_cfg_doc"),
+                lambda: self.strings["origin_cfg_doc"],
                 validator=loader.validators.Link(),
             ),
             loader.ConfigValue(
                 "disable_notifications",
-                doc=lambda: self.strings("_cfg_doc_disable_notifications"),
+                doc=lambda: self.strings["_cfg_doc_disable_notifications"],
                 validator=loader.validators.Boolean(),
             ),
             loader.ConfigValue(
                 "autoupdate",
                 False,
-                doc=lambda: self.strings("_cfg_doc_autoupdate"),
+                doc=lambda: self.strings["_cfg_doc_autoupdate"],
                 validator=loader.validators.Boolean(),
             ),
         )
 
     async def _set_autoupdate_state(self, call: BotInlineCall, state: bool):
-        self.set("autoupdate", True)
-        if not state:
-            self.config["autoupdate"] = False
-            await self.inline.bot(
-                call.answer(
-                    self.strings("autoupdate_off").format(prefix=self.get_prefix())
-                )
-            )
-            return
+        self.set("autoupdate_answered", True)
+        self.config["autoupdate"] = state
 
-        self.config["autoupdate"] = True
+        text = (
+            self.strings["autoupdate_on"]
+            if state
+            else self.strings["autoupdate_off"].format(prefix=self.get_prefix())
+        )
 
-        await self.inline.bot(call.answer(self.strings("autoupdate_on")))
+        await self.inline.bot(call.answer(text, show_alert=True))
+        await call.delete()
 
     def get_changelog(self) -> str:
         if NO_GIT:
             return False
         try:
             with git.Repo() as repo:
-                for remote in repo.remotes:
-                    remote.fetch()
+                origin = repo.remote("origin")
+                logger.debug("Fetching changelog from %s", origin.url)
+                origin.fetch()
 
                 if not (diff := [*repo.iter_commits(f"HEAD..origin/{version.branch}")]):
                     return False
         except Exception:
+            logger.exception("Failed to build changelog")
             return False
 
         res = "\n".join(
@@ -102,7 +111,7 @@ class UpdaterMod(loader.Module):
         )
 
         if diff.count("\n") >= 10:
-            res += self.strings("more").format(len(diff) - 10)
+            res += self.strings["more"].format(len(diff) - 10)
 
         return res
 
@@ -135,7 +144,7 @@ class UpdaterMod(loader.Module):
                         if announcement and announcement != previous:
                             await self.inline.bot.send_message(
                                 self.tg_id,
-                                self.strings("announcement").format(announcement),
+                                self.strings["announcement"].format(announcement),
                             )
                             self.set("announcement", announcement)
                     case _:
@@ -183,14 +192,14 @@ class UpdaterMod(loader.Module):
                     else:
                         logger.info("Got a major update, updating manually")
                         manual_update = True
-                except:
+                except Exception:
                     manual_update = True
 
             if manual_update:
                 m = await self.inline.bot.send_photo(
                     self.tg_id,
                     "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/updated.png",
-                    caption=self.strings("update_required").format(
+                    caption=self.strings["update_required"].format(
                         utils.get_git_hash()[:6],
                         '<a href="https://github.com/coddrago/Heroku/compare/{}...{}">{}</a>'.format(
                             utils.get_git_hash()[:12],
@@ -213,7 +222,7 @@ class UpdaterMod(loader.Module):
                 m = await self.inline.bot.send_photo(
                     self.tg_id,
                     "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/updated.png",
-                    caption=self.strings("autoupdate_notifier").format(
+                    caption=self.strings["autoupdate_notifier"].format(
                         self.get_latest()[:6],
                         self.get_changelog(),
                         '<a href="https://github.com/coddrago/Heroku/compare/{}...{}">{}</a>'.format(
@@ -244,7 +253,7 @@ class UpdaterMod(loader.Module):
 
         if call.data == "heroku/ignore_upd":
             self.set("ignore_permanent", self.get_latest())
-            await self.inline.bot(call.answer(self.strings("latest_disabled")))
+            await self.inline.bot(call.answer(self.strings["latest_disabled"]))
             return
 
         await self._delete_all_upd_messages()
@@ -257,7 +266,7 @@ class UpdaterMod(loader.Module):
     @loader.command()
     async def changelog(self, message: Message):
         """Shows the changelog of the last major update"""
-        with open("CHANGELOG.md", mode="r", encoding="utf-8") as f:
+        with open("CHANGELOG.md", encoding="utf-8") as f:
             changelog = f.read().split("##")[1].strip()
         if (await self._client.get_me()).premium:
             changelog.replace(
@@ -265,7 +274,7 @@ class UpdaterMod(loader.Module):
                 "<tg-emoji emoji-id=5192765204898783881>🌘</tg-emoji><tg-emoji emoji-id=5195311729663286630>🌘</tg-emoji><tg-emoji emoji-id=5195045669324201904>🌘</tg-emoji>",
             )
 
-        await utils.answer(message, self.strings("changelog").format(changelog))
+        await utils.answer(message, self.strings["changelog"].format(changelog))
 
     @loader.command()
     async def restart(self, message: Message):
@@ -277,18 +286,18 @@ class UpdaterMod(loader.Module):
                 or not self.inline.init_complete
                 or not await self.inline.form(
                     message=message,
-                    text=self.strings(
+                    text=self.strings[
                         "secure_boot_confirm" if secure_boot else "restart_confirm"
-                    ),
+                    ],
                     reply_markup=[
                         {
-                            "text": self.strings("btn_restart"),
+                            "text": self.strings["btn_restart"],
                             "callback": self.inline_restart,
                             "args": (secure_boot,),
                             "style": "primary",
                         },
                         {
-                            "text": self.strings("cancel"),
+                            "text": self.strings["cancel"],
                             "action": "close",
                             "style": "danger",
                         },
@@ -302,19 +311,77 @@ class UpdaterMod(loader.Module):
     async def inline_restart(self, call: InlineCall, secure_boot: bool = False):
         await self.restart_common(call, secure_boot=secure_boot)
 
-    async def process_restart_message(self, msg_obj: typing.Union[InlineCall, Message]):
+    @staticmethod
+    def _serialize_inline_message_id(
+        inline_message_id: str | InputBotInlineMessageID | InputBotInlineMessageID64,
+    ) -> str:
+        if isinstance(
+            inline_message_id,
+            (InputBotInlineMessageID, InputBotInlineMessageID64),
+        ):
+            return typing.cast(str, inline_message_id.to_json())
+
+        return inline_message_id
+
+    @staticmethod
+    def _deserialize_inline_message_id(
+        inline_message_id: str,
+    ) -> str | InputBotInlineMessageID | InputBotInlineMessageID64:
+        try:
+            data = json.loads(inline_message_id)
+        except (TypeError, ValueError):
+            return inline_message_id
+
+        if not isinstance(data, dict):
+            return inline_message_id
+
+        if data.get("_") == "InputBotInlineMessageID":
+            return InputBotInlineMessageID(
+                dc_id=data["dc_id"],
+                id=data["id"],
+                access_hash=data["access_hash"],
+            )
+
+        if data.get("_") == "InputBotInlineMessageID64":
+            return InputBotInlineMessageID64(
+                dc_id=data["dc_id"],
+                owner_id=data["owner_id"],
+                id=data["id"],
+                access_hash=data["access_hash"],
+            )
+
+        return inline_message_id
+
+    @staticmethod
+    def _parse_legacy_update_message_ref(
+        message_ref: typing.Any,
+    ) -> tuple[int, int] | None:
+        if not isinstance(message_ref, str):
+            return None
+
+        parts = message_ref.split(":")
+        if len(parts) != 2:
+            return None
+
+        try:
+            return int(parts[0]), int(parts[1])
+        except ValueError:
+            return None
+
+    async def process_restart_message(self, msg_obj: InlineCall | Message):
+        inline_message_id = getattr(msg_obj, "inline_message_id", None)
         self.set(
             "selfupdatemsg",
             (
-                msg_obj.inline_message_id
-                if hasattr(msg_obj, "inline_message_id")
+                self._serialize_inline_message_id(inline_message_id)
+                if inline_message_id is not None
                 else f"{utils.get_chat_id(msg_obj)}:{msg_obj.id}"
             ),
         )
 
     async def restart_common(
         self,
-        msg_obj: typing.Union[InlineCall, Message],
+        msg_obj: InlineCall | Message,
         secure_boot: bool = False,
     ):
         if (
@@ -333,7 +400,7 @@ class UpdaterMod(loader.Module):
 
         msg_obj = await utils.answer(
             msg_obj,
-            self.strings("restarting_caption").format(
+            self.strings["restarting_caption"].format(
                 utils.get_platform_emoji()
                 if self._client.heroku_me.premium
                 else "Heroku"
@@ -345,9 +412,6 @@ class UpdaterMod(loader.Module):
         self.db.set("Updater", "modules_count", len(self.allmodules.modules))
 
         self.set("restart_ts", time.time())
-
-        with contextlib.suppress(Exception):
-            await main.heroku.web.stop()
 
         handler = logging.getLogger().handlers[0]
         handler.setLevel(logging.CRITICAL)
@@ -366,26 +430,34 @@ class UpdaterMod(loader.Module):
         restart()
 
     async def download_common(self):
-        try:
-            with Repo(os.path.dirname(utils.get_base_dir())) as repo:
-                origin = repo.remote("origin")
-                r = origin.pull()
-                new_commit = repo.head.commit
-                for info in r:
-                    if info.old_commit:
-                        for d in new_commit.diff(info.old_commit):
-                            if d.b_path == "requirements.txt":
-                                return True
-            return False
-        except git.exc.InvalidGitRepositoryError:
-            repo = Repo.init(os.path.dirname(utils.get_base_dir()))
-            with repo:
-                origin = repo.create_remote("origin", self.config["GIT_ORIGIN_URL"])
-                origin.fetch()
-                repo.create_head("master", origin.refs.master)
-                repo.heads.master.set_tracking_branch(origin.refs.master)
-                repo.heads.master.checkout(True)
-            return False
+        def _sync():
+            try:
+                with Repo(os.path.dirname(utils.get_base_dir())) as repo:
+                    origin = repo.remote("origin")
+                    logger.debug("Fetching updates from %s", origin.url)
+                    r = origin.pull()
+                    new_commit = repo.head.commit
+                    for info in r:
+                        if info.old_commit:
+                            for d in new_commit.diff(info.old_commit):
+                                if d.b_path == "requirements.txt":
+                                    return True
+                return False
+            except git.exc.InvalidGitRepositoryError:
+                repo = Repo.init(os.path.dirname(utils.get_base_dir()))
+                with repo:
+                    origin = repo.create_remote("origin", self.config["GIT_ORIGIN_URL"])
+                    logger.debug("Fetching initial updates from %s", origin.url)
+                    origin.fetch()
+                    repo.create_head("master", origin.refs.master)
+                    repo.heads.master.set_tracking_branch(origin.refs.master)
+                    repo.heads.master.checkout(True)
+                return False
+
+        return await asyncio.wait_for(
+            asyncio.to_thread(_sync),
+            timeout=120,
+        )
 
     @staticmethod
     def req_common():
@@ -433,20 +505,20 @@ class UpdaterMod(loader.Module):
                 or not await self.inline.form(
                     message=message,
                     text=(
-                        self.strings("update_confirm").format(
+                        self.strings["update_confirm"].format(
                             current, current[:8], upcoming, upcoming[:8]
                         )
                         if upcoming != current
-                        else self.strings("no_update")
+                        else self.strings["no_update"]
                     ),
                     reply_markup=[
                         {
-                            "text": self.strings("btn_update"),
+                            "text": self.strings["btn_update"],
                             "callback": self.inline_update,
                             "style": "primary",
                         },
                         {
-                            "text": self.strings("cancel"),
+                            "text": self.strings["cancel"],
                             "action": "close",
                             "style": "danger",
                         },
@@ -470,7 +542,7 @@ class UpdaterMod(loader.Module):
 
     async def inline_update(
         self,
-        msg_obj: typing.Union[InlineCall, Message],
+        msg_obj: InlineCall | Message,
         hard: bool = False,
     ):
         # We don't really care about asyncio at this point, as we are shutting down
@@ -481,7 +553,7 @@ class UpdaterMod(loader.Module):
             if "LAVHOST" in os.environ:
                 msg_obj = await utils.answer(
                     msg_obj,
-                    self.strings("restarting_caption").format(
+                    self.strings["restarting_caption"].format(
                         utils.get_platform_emoji()
                         if self._client.heroku_me.premium
                         else "Heroku"
@@ -493,12 +565,16 @@ class UpdaterMod(loader.Module):
                 return
 
             with contextlib.suppress(Exception):
-                msg_obj = await utils.answer(msg_obj, self.strings("downloading"))
+                msg_obj = await utils.answer(msg_obj, self.strings["downloading"])
 
-            req_update = await self.download_common()
+            try:
+                req_update = await self.download_common()
+            except TimeoutError:
+                logger.exception("Timed out while fetching updates from git remote")
+                return
 
             with contextlib.suppress(Exception):
-                msg_obj = await utils.answer(msg_obj, self.strings("installing"))
+                msg_obj = await utils.answer(msg_obj, self.strings["installing"])
 
             if req_update:
                 self.req_common()
@@ -515,7 +591,7 @@ class UpdaterMod(loader.Module):
     async def source(self, message: Message):
         await utils.answer(
             message,
-            self.strings("source").format(self.config["GIT_ORIGIN_URL"]),
+            self.strings["source"].format(self.config["GIT_ORIGIN_URL"]),
         )
 
     async def client_ready(self):
@@ -525,15 +601,18 @@ class UpdaterMod(loader.Module):
         except Exception as e:
             raise loader.LoadError("Can't load due to repo init error") from e
 
+        if not self.get("autoupdate_answered"):
+            self.set("autoupdate_answered", self.get("autoupdate", False))
+
         self._markup = lambda: self.inline.generate_markup(
             [
                 {
-                    "text": self.strings("update"),
+                    "text": self.strings["update"],
                     "data": "heroku/update",
                     "style": "primary",
                 },
                 {
-                    "text": self.strings("ignore"),
+                    "text": self.strings["ignore"],
                     "data": "heroku/ignore_upd",
                     "style": "danger",
                 },
@@ -556,16 +635,16 @@ class UpdaterMod(loader.Module):
 
             self.set("do_not_create", True)
 
-        if not self.config["autoupdate"] and not self.get("autoupdate", False):
+        if not self.config["autoupdate"] and not self.get("autoupdate_answered", False):
             await self.inline.bot.send_photo(
                 self.tg_id,
                 photo="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/unit_alpha.png",
-                caption=self.strings("autoupdate"),
+                caption=self.strings["autoupdate"],
                 reply_markup=self.inline.generate_markup(
                     [
                         [
                             {
-                                "text": f"✅ Turn on",
+                                "text": "✅ Turn on",
                                 "callback": self._set_autoupdate_state,
                                 "args": (True,),
                                 "style": "success",
@@ -682,17 +761,16 @@ class UpdaterMod(loader.Module):
         except Exception:
             took = "n/a"
 
-        msg = self.strings("success").format(utils.ascii_face(), took)
+        msg = self.strings["success"].format(utils.ascii_face(), took)
         ms = self.get("selfupdatemsg")
 
-        if ":" in str(ms):
-            chat_id, message_id = ms.split(":")
-            chat_id, message_id = int(chat_id), int(message_id)
+        if legacy_message_ref := self._parse_legacy_update_message_ref(ms):
+            chat_id, message_id = legacy_message_ref
             await self._client.edit_message(chat_id, message_id, msg)
             return
 
         await self.inline.bot.edit_message_text(
-            inline_message_id=ms,
+            inline_message_id=self._deserialize_inline_message_id(str(ms)),
             text=self.inline.sanitise_text(msg),
         )
 
@@ -714,44 +792,43 @@ class UpdaterMod(loader.Module):
             modules_count = len(self.allmodules.modules)
 
         if modules_count <= len(self.allmodules.modules):
-            msg = self.strings(
+            msg = self.strings[
                 "secure_boot_complete" if secure_boot else "full_success"
-            ).format(utils.ascii_face(), took)
+            ].format(utils.ascii_face(), took)
         else:
             fails = modules_count - len(self.allmodules.modules)
-            msg = self.strings(
+            msg = self.strings[
                 "secure_boot_fail" if secure_boot else "full_fail"
-            ).format(utils.ascii_face(), took, fails)
+            ].format(utils.ascii_face(), took, fails)
 
         if ms is None:
             return
 
         self.set("selfupdatemsg", None)
 
-        if ":" in str(ms):
-            chat_id, message_id = ms.split(":")
-            chat_id, message_id = int(chat_id), int(message_id)
+        if legacy_message_ref := self._parse_legacy_update_message_ref(ms):
+            chat_id, message_id = legacy_message_ref
             await self._client.edit_message(chat_id, message_id, msg)
             await asyncio.sleep(60)
             await self._client.delete_messages(chat_id, message_id)
             return
 
         await self.inline.bot.edit_message_text(
-            inline_message_id=ms,
+            inline_message_id=self._deserialize_inline_message_id(str(ms)),
             text=self.inline.sanitise_text(msg),
         )
 
     @loader.command()
     async def rollback(self, message: Message):
         if not (args := utils.get_args_raw(message)).isdigit():
-            await utils.answer(message, self.strings("invalid_args"))
+            await utils.answer(message, self.strings["invalid_args"])
             return
         if int(args) > 10:
-            await utils.answer(message, self.strings("rollback_too_far"))
+            await utils.answer(message, self.strings["rollback_too_far"])
             return
-        form = await self.inline.form(
+        await self.inline.form(
             message=message,
-            text=self.strings("rollback_confirm").format(num=args),
+            text=self.strings["rollback_confirm"].format(num=args),
             reply_markup=[
                 [
                     {
@@ -772,25 +849,48 @@ class UpdaterMod(loader.Module):
         )
 
     async def rollback_confirm(self, call: InlineCall, number: int):
-        await utils.answer(call, self.strings("rollback_process").format(num=number))
+        await utils.answer(call, self.strings["rollback_process"].format(num=number))
         await asyncio.create_subprocess_shell(
             f"git reset --hard HEAD~{number}", stdout=asyncio.subprocess.PIPE
         )
         await self.restart_common(call)
 
+    async def ubstop_func(self, call: Message | InlineCall):
+        await utils.answer(
+            call,
+            self.strings["ub_stop"].format(emoji=utils.get_platform_emoji()),
+        )
+
+        if "LAVHOST" in os.environ:
+            await self.client.send_message("lavhostbot", "⏹️ Stop")
+        else:
+            exit()
+
     @loader.command()
     async def ubstop(self, message: Message):
         """| stops your userbot"""
 
-        if "LAVHOST" in os.environ:
-            await utils.answer(
-                message,
-                self.strings["ub_stop"].format(emoji=utils.get_platform_emoji()),
-            )
-            await self.client.send_message("lavhostbot", "⏹ Stop")
-        else:
-            await utils.answer(
-                message,
-                self.strings["ub_stop"].format(emoji=utils.get_platform_emoji()),
-            )
-            exit()
+        args = utils.get_args(message)
+        if "-f" in args or "--force" in args:
+            await self.ubstop_func(message)
+            return
+
+        await self.inline.form(
+            message=message,
+            text=self.strings["stop_ub_confirm"].format(
+                utils.get_platform_emoji()
+                if self.client.heroku_me.premium
+                else "Heroku"
+            ),
+            reply_markup=[
+                [
+                    {
+                        "text": "✅",
+                        "callback": self.ubstop_func,
+                        "style": "primary",
+                    },
+                ],
+                [{"text": "❌", "action": "close", "style": "primary"}],
+            ],
+            silent=True,
+        )

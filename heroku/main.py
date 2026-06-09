@@ -17,14 +17,12 @@ import asyncio
 import base64
 import binascii
 import collections
-import contextlib
 import importlib
 import json
 import logging
 import os
 import random
 import signal
-import socket
 import sqlite3
 import string
 import sys
@@ -34,7 +32,6 @@ from getpass import getpass
 from pathlib import Path
 
 import aiohttp
-import herokutl
 from herokutl import events
 from herokutl.errors import (
     ApiIdInvalidError,
@@ -43,6 +40,10 @@ from herokutl.errors import (
     PasswordHashInvalidError,
     PhoneNumberInvalidError,
     SessionPasswordNeededError,
+)
+from herokutl.errors.rpcerrorlist import (
+    AuthKeyUnregisteredError,
+    YouBlockedUserError,
 )
 from herokutl.network.connection import (
     ConnectionTcpFull,
@@ -57,21 +58,11 @@ from herokutl.tl.functions.contacts import UnblockRequest
 from . import database, loader, utils, version
 from ._internal import print_banner, restart
 from .dispatcher import CommandDispatcher
-from .inline.token_obtainment import TokenObtainment
-from .inline.utils import Utils as inutils
 from .qr import QRCode
 from .secure import patcher
 from .tl_cache import CustomTelegramClient
 from .translations import Translator
 from .version import __version__
-
-try:
-    from .web import core
-except ImportError:
-    web_available = False
-    logging.exception("Unable to import web")
-else:
-    web_available = True
 
 BASE_DIR = (
     "/data"
@@ -81,6 +72,8 @@ BASE_DIR = (
 
 BASE_PATH = Path(BASE_DIR)
 CONFIG_PATH = BASE_PATH / "config.json"
+_CONFIG_CACHE: dict | None = None
+_CONFIG_MTIME_NS: int | None = None
 
 # fmt: off
 LATIN_MOCK = [
@@ -302,14 +295,32 @@ def run_config():
     return configurator.api_config(None)
 
 
-def get_config_key(key: str) -> typing.Union[str, bool]:
+def _read_config() -> dict:
+    global _CONFIG_CACHE, _CONFIG_MTIME_NS
+
+    try:
+        stat = CONFIG_PATH.stat()
+    except FileNotFoundError:
+        _CONFIG_CACHE = {}
+        _CONFIG_MTIME_NS = None
+        return {}
+
+    if _CONFIG_CACHE is not None and _CONFIG_MTIME_NS == stat.st_mtime_ns:
+        return _CONFIG_CACHE
+
+    _CONFIG_CACHE = json.loads(CONFIG_PATH.read_text())
+    _CONFIG_MTIME_NS = stat.st_mtime_ns
+    return _CONFIG_CACHE
+
+
+def get_config_key(key: str) -> str | bool:
     """
     Parse and return key from config
     :param key: Key name in config
     :return: Value of config key or `False`, if it doesn't exist
     """
     try:
-        return json.loads(CONFIG_PATH.read_text()).get(key, False)
+        return _read_config().get(key, False)
     except FileNotFoundError:
         return False
 
@@ -321,9 +332,11 @@ def save_config_key(key: str, value: str) -> bool:
     :param value: Desired value in config
     :return: `True` on success, otherwise `False`
     """
+    global _CONFIG_CACHE, _CONFIG_MTIME_NS
+
     try:
         # Try to open our newly created json config
-        config = json.loads(CONFIG_PATH.read_text())
+        config = _read_config().copy()
     except FileNotFoundError:
         # If it doesn't exist, just default config to none
         # It won't cause problems, bc after new save
@@ -334,31 +347,9 @@ def save_config_key(key: str, value: str) -> bool:
     config[key] = value
     # And save config
     CONFIG_PATH.write_text(json.dumps(config, indent=4))
+    _CONFIG_CACHE = config
+    _CONFIG_MTIME_NS = CONFIG_PATH.stat().st_mtime_ns
     return True
-
-
-def gen_port(cfg: str = "port", no8080: bool = False) -> int:
-    """
-    Generates random free port in case of VDS.
-    In case of Docker, also return 8080, as it's already exposed by default.
-    :returns: Integer value of generated port
-    """
-    if "DOCKER" in os.environ and not no8080:
-        return 8080
-
-    # But for own server we generate new free port, and assign to it
-    if port := get_config_key(cfg):
-        return port
-
-    # If we didn't get port from config, generate new one
-    # First, try to randomly get port
-    while port := random.randint(1024, 65536):
-        if socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect_ex(
-            ("localhost", port)
-        ):
-            break
-
-    return port
 
 
 def parse_arguments() -> dict:
@@ -367,15 +358,7 @@ def parse_arguments() -> dict:
     :returns: Dictionary with arguments
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--port",
-        dest="port",
-        action="store",
-        default=gen_port(),
-        type=int,
-    )
     parser.add_argument("--phone", "-p", action="append")
-    parser.add_argument("--no-web", dest="disable_web", action="store_true")
     parser.add_argument(
         "--qr-login",
         dest="qr_login",
@@ -401,20 +384,28 @@ def parse_arguments() -> dict:
         "--proxy-host",
         dest="proxy_host",
         action="store",
-        help="MTProto proxy host, without port",
+        help="Proxy host, without port",
     )
     parser.add_argument(
         "--proxy-port",
         dest="proxy_port",
         action="store",
         type=int,
-        help="MTProto proxy port",
+        help="Proxy port",
+    )
+    parser.add_argument(
+        "--type-proxy",
+        dest="proxy_type",
+        action="store",
+        default="mtproxy",
+        choices=("mtproxy", "socks5", "http"),
+        help="Proxy type: mtproxy, socks5 or http",
     )
     parser.add_argument(
         "--proxy-secret",
         dest="proxy_secret",
         action="store",
-        help="MTProto proxy secret",
+        help="MTProto proxy secret; required for --type-proxy mtproxy",
     )
     parser.add_argument(
         "--root",
@@ -429,12 +420,6 @@ def parse_arguments() -> dict:
         help="Die instead of restart",
     )
     parser.add_argument(
-        "--proxy-pass",
-        dest="proxy_pass",
-        action="store_true",
-        help="Open proxy pass tunnel on start (not needed on setup)",
-    )
-    parser.add_argument(
         "--no-tty",
         dest="tty",
         action="store_false",
@@ -446,6 +431,19 @@ def parse_arguments() -> dict:
         dest="no_git",
         action="store_true",
         help="Disable git checks and updates",
+    )
+    parser.add_argument(
+        "--no-web",
+        dest="no_web",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--wipe",
+        "-w",
+        dest="wipe",
+        action="store_true",
+        help="Remove saved sessions and config, then exit",
     )
     arguments = parser.parse_args()
     logging.debug(arguments)
@@ -514,36 +512,55 @@ class Heroku:
 
     def _get_proxy(self):
         """
-        Get proxy tuple from --proxy-host, --proxy-port and --proxy-secret
+        Get proxy settings from --type-proxy, --proxy-host, --proxy-port
+        and --proxy-secret
         and connection to use (depends on proxy - provided or not)
         """
-        match (
-            self.arguments.proxy_host,
-            self.arguments.proxy_port,
-            self.arguments.proxy_secret,
-        ):
-            case (host, port, secret) if host and port and secret:
-                logging.debug("Using proxy: %s:%s", host, port)
-                self.proxy = (host, port, secret)
-                self.conn = ConnectionTcpMTProxyRandomizedIntermediate
-            case _:
-                self.proxy, self.conn = None, ConnectionTcpFull
+        host = self.arguments.proxy_host
+        port = self.arguments.proxy_port
+        secret = self.arguments.proxy_secret
+        proxy_type = (self.arguments.proxy_type or "mtproxy").lower()
+
+        if not host and not port and not secret:
+            self.proxy, self.conn = None, ConnectionTcpFull
+            return
+
+        if not host or not port:
+            raise ValueError("--proxy-host and --proxy-port must be passed together")
+
+        if proxy_type == "mtproxy":
+            if not secret:
+                raise ValueError("--proxy-secret is required for --type-proxy mtproxy")
+
+            logging.debug("Using MTProxy: %s:%s", host, port)
+            self.proxy = (host, port, secret)
+            self.conn = ConnectionTcpMTProxyRandomizedIntermediate
+            return
+
+        if secret:
+            raise ValueError(
+                "--proxy-secret can only be used with --type-proxy mtproxy"
+            )
+
+        logging.debug("Using %s proxy: %s:%s", proxy_type, host, port)
+        self.proxy = {
+            "proxy_type": proxy_type,
+            "addr": host,
+            "port": port,
+        }
+        self.conn = ConnectionTcpFull
 
     def _read_sessions(self):
         """Gets sessions from environment and data directory"""
-        self.sessions = [
-            SQLiteSession(
-                os.path.join(
-                    BASE_DIR,
-                    session.rsplit(".session", maxsplit=1)[0],
-                )
-            )
-            for session in os.listdir(BASE_DIR)
-            if (
-                session.startswith("heroku-") or 
-                session.startswith("hikka-")
-            ) and session.endswith(".session")
-        ]
+        self.sessions = []
+        with os.scandir(BASE_DIR) as entries:
+            self.sessions += [
+                SQLiteSession(entry.path.rsplit(".session", maxsplit=1)[0])
+                for entry in entries
+                if entry.is_file()
+                and entry.name.startswith("heroku-")
+                and entry.name.endswith(".session")
+            ]
 
     def _get_api_token(self):
         """Get API Token from disk or environment"""
@@ -582,33 +599,14 @@ class Heroku:
 
         self.api_token = api_token
 
-    def _init_web(self):
-        """Initialize web"""
-        if not web_available or getattr(self.arguments, "disable_web", False):
-            self.web = None
-            return
-
-        self.web = core.Web(
-            data_root=BASE_DIR,
-            api_token=self.api_token,
-            proxy=self.proxy,
-            connection=self.conn,
-        )
-
     async def _get_token(self):
         """Reads or waits for user to enter API credentials"""
         while self.api_token is None:
             if self.arguments.no_auth:
                 return
-            if self.web:
-                await self.web.start(self.arguments.port, proxy_pass=True)
-                await self._web_banner()
-                await self.web.wait_for_api_token_setup()
-                self.api_token = self.web.api_token
-            else:
-                run_config()
-                importlib.invalidate_caches()
-                self._get_api_token()
+            run_config()
+            importlib.invalidate_caches()
+            self._get_api_token()
 
     async def save_client_session(
         self,
@@ -646,12 +644,10 @@ class Heroku:
         session.save()
 
         if not delay_restart:
-            client.disconnect()
+            await client.disconnect()
             restart()
 
         client.session = session
-        # Set db attribute to this client in order to save
-        # custom bot nickname from web
         client.heroku_db = database.Database(client)
         await client.heroku_db.init()
 
@@ -693,30 +689,8 @@ class Heroku:
                     print("Something went wrong")
 
         if delay_restart:
-            client.disconnect()
-            await asyncio.sleep(3600)  # Will be restarted from web anyway
-
-    async def _web_banner(self):
-        """Shows web banner"""
-        logging.info("🔎 Web mode ready for configuration")
-        logging.info("🔗 Please visit %s", self.web.url)
-
-    async def wait_for_web_auth(self, token: str) -> bool:
-        """
-        Waits for web auth confirmation in Telegram
-        :param token: Token to wait for
-        :return: True if auth was successful, False otherwise
-        """
-        timeout = 5 * 60
-        polling_interval = 1
-        for _ in range(timeout * polling_interval):
-            await asyncio.sleep(polling_interval)
-
-            for client in self.clients:
-                if client.loader.inline.pop_web_auth_token(token):
-                    return True
-
-        return False
+            await client.disconnect()
+            await asyncio.sleep(3600)
 
     async def _phone_login(self, client: CustomTelegramClient) -> bool:
         phone = input(
@@ -758,37 +732,35 @@ class Heroku:
         client: CustomTelegramClient,
         username: str,
     ) -> bool:
-        url: str = (
-            await client(
-                herokutl.functions.messages.RequestWebViewRequest(
-                    peer="@botfather",
-                    bot="@botfather",
-                    platform="android",
-                    from_bot_menu=False,
-                    url="https://webappinternal.telegram.org/botfather?",
-                )
-            )
-        ).url
-        for _ in range(5):
-            await asyncio.sleep(1.5)
+        username = username.strip("@")
+        async with client.conversation("@BotFather", exclusive=False) as conv:
             try:
-                result = await inutils._get_webapp_session(url)
-            except:
-                continue
-            break
-        else:
-            print("Can't check bot. WebApp is not available now")
-            return False
+                m = await conv.send_message("/token")
+            except YouBlockedUserError:
+                await client(UnblockRequest(id="@BotFather"))
+                m = await conv.send_message("/token")
+            r = await conv.get_response()
 
-        session, _hash = result
-        main_url = url.split("?")[0]
+            await m.delete()
+            await r.delete()
 
-        if await TokenObtainment._check_bot(None, session, main_url, _hash, username):
-            return True
+            if hasattr(r, "reply_markup") and hasattr(r.reply_markup, "rows"):
+                for row in r.reply_markup.rows:
+                    for button in row.buttons:
+                        if username != button.text.strip("@"):
+                            continue
+
+                        m = await conv.send_message("/cancel")
+                        r = await conv.get_response()
+
+                        await m.delete()
+                        await r.delete()
+
+                        return True
 
         try:
             await client.get_entity(f"{username}")
-        except:
+        except Exception:
             return True
 
     async def _initial_setup(self) -> bool:
@@ -796,131 +768,120 @@ class Heroku:
         if self.arguments.no_auth:
             return False
 
-        if not self.web:
-            client = CustomTelegramClient(
-                MemorySession(),
-                self.api_token.ID,
-                self.api_token.HASH,
-                connection=self.conn,
-                proxy=self.proxy,
-                connection_retries=None,
-                device_model=get_app_name(),
-                system_version=generate_random_system_version(),
-                app_version=".".join(map(str, __version__)) + " x64",
-                lang_code="en",
-                system_lang_code="en-US",
+        client = CustomTelegramClient(
+            MemorySession(),
+            self.api_token.ID,
+            self.api_token.HASH,
+            connection=self.conn,
+            proxy=self.proxy,
+            connection_retries=None,
+            device_model=get_app_name(),
+            system_version=generate_random_system_version(),
+            app_version=".".join(map(str, __version__)) + " x64",
+            lang_code="en",
+            system_lang_code="en-US",
+        )
+        await client.connect()
+
+        print(
+            ("\033[0;96m{}\033[0m" if self.arguments.tty else "{}").format(
+                "You can use QR-code to login from another device (your friend's"
+                " phone, for example)."
             )
-            await client.connect()
+        )
 
-            print(
-                ("\033[0;96m{}\033[0m" if self.arguments.tty else "{}").format(
-                    "You can use QR-code to login from another device (your friend's"
-                    " phone, for example)."
-                )
-            )
+        user_choice = input(
+            "\033[0;96mUse QR code? [y/N]: \033[0m"
+            if self.arguments.tty
+            else "Use QR code? [y/N]: "
+        ).lower()
 
-            user_choice = input(
-                "\033[0;96mUse QR code? [y/N]: \033[0m"
-                if self.arguments.tty
-                else "Use QR code? [y/N]: "
-            ).lower()
+        match user_choice:
+            case "y":
+                pass
+            case _:
+                return await self._phone_login(client)
 
-            match user_choice:
-                case "y":
-                    pass
-                case _:
-                    return await self._phone_login(client)
+        print("\033[0;96mLoading QR code...\033[0m")
+        qr_login = await client.qr_login()
 
-            print("\033[0;96mLoading QR code...\033[0m")
-            qr_login = await client.qr_login()
+        def print_qr():
+            qr = QRCode()
+            qr.add_data(qr_login.url)
+            print("\033[2J\033[3;1f")
+            qr.print_ascii(invert=True)
+            print("\033[0;96mScan the QR code above to log in.\033[0m")
+            print("\033[0;96mPress Ctrl+C to cancel.\033[0m")
 
-            def print_qr():
-                qr = QRCode()
-                qr.add_data(qr_login.url)
-                print("\033[2J\033[3;1f")
-                qr.print_ascii(invert=True)
-                print("\033[0;96mScan the QR code above to log in.\033[0m")
-                print("\033[0;96mPress Ctrl+C to cancel.\033[0m")
-
-            async def qr_login_poll() -> bool:
-                logged_in = False
-                while not logged_in:
+        async def qr_login_poll() -> bool:
+            logged_in = False
+            while not logged_in:
+                try:
+                    logged_in = await qr_login.wait(10)
+                except asyncio.TimeoutError:
                     try:
-                        logged_in = await qr_login.wait(10)
-                    except asyncio.TimeoutError:
-                        try:
-                            await qr_login.recreate()
-                            print_qr()
-                        except SessionPasswordNeededError:
-                            return True
+                        await qr_login.recreate()
+                        print_qr()
                     except SessionPasswordNeededError:
                         return True
-                    except KeyboardInterrupt:
-                        print("\033[2J\033[3;1f")
-                        return None
+                except SessionPasswordNeededError:
+                    return True
+                except KeyboardInterrupt:
+                    print("\033[2J\033[3;1f")
+                    return None
 
-                return False
+            return False
 
-            match await qr_login_poll():
-                case None:
-                    return await self._phone_login(client)
+        match await qr_login_poll():
+            case None:
+                return await self._phone_login(client)
 
-                case True:
-                    print_banner("2fa.txt")
-                    password = await client(GetPasswordRequest())
-                    while True:
-                        _2fa = getpass(
-                            f"\033[0;96mEnter 2FA password ({password.hint}): \033[0m"
-                            if self.arguments.tty
-                            else f"Enter 2FA password ({password.hint}): "
-                        )
-                        try:
-                            await client._on_login(
-                                (
-                                    await client(
-                                        CheckPasswordRequest(
-                                            compute_check(password, _2fa.strip())
-                                        )
+            case True:
+                print_banner("2fa.txt")
+                password = await client(GetPasswordRequest())
+                while True:
+                    _2fa = getpass(
+                        f"\033[0;96mEnter 2FA password ({password.hint}): \033[0m"
+                        if self.arguments.tty
+                        else f"Enter 2FA password ({password.hint}): "
+                    )
+                    try:
+                        await client._on_login(
+                            (
+                                await client(
+                                    CheckPasswordRequest(
+                                        compute_check(password, _2fa.strip())
                                     )
-                                ).user
-                            )
-                        except PasswordHashInvalidError:
-                            print("\033[0;91mInvalid 2FA password!\033[0m")
-                        except FloodWaitError as e:
-                            seconds, minutes, hours = (
-                                e.seconds % 3600 % 60,
-                                e.seconds % 3600 // 60,
-                                e.seconds // 3600,
-                            )
-                            seconds, minutes, hours = (
-                                f"{seconds} second(-s)",
-                                f"{minutes} minute(-s) " if minutes else "",
-                                f"{hours} hour(-s) " if hours else "",
-                            )
-                            print(
-                                "\033[0;91mYou got FloodWait error! Please wait"
-                                f" {hours}{minutes}{seconds}\033[0m"
-                            )
-                            return False
-                        else:
-                            break
-                case False:
-                    pass
+                                )
+                            ).user
+                        )
+                    except PasswordHashInvalidError:
+                        print("\033[0;91mInvalid 2FA password!\033[0m")
+                    except FloodWaitError as e:
+                        seconds, minutes, hours = (
+                            e.seconds % 3600 % 60,
+                            e.seconds % 3600 // 60,
+                            e.seconds // 3600,
+                        )
+                        seconds, minutes, hours = (
+                            f"{seconds} second(-s)",
+                            f"{minutes} minute(-s) " if minutes else "",
+                            f"{hours} hour(-s) " if hours else "",
+                        )
+                        print(
+                            "\033[0;91mYou got FloodWait error! Please wait"
+                            f" {hours}{minutes}{seconds}\033[0m"
+                        )
+                        return False
+                    else:
+                        break
+            case False:
+                pass
 
-            print_banner("success.txt")
-            print("\033[0;92mLogged in successfully!\033[0m")
-            await self.save_client_session(client)
-            self.clients += [client]
-            return True
-
-        if not self.web.running.is_set():
-            await self.web.start(
-                self.arguments.port,
-                proxy_pass=True,
-            )
-            await self._web_banner()
-
-        await self.web.wait_for_clients_setup()
+        print_banner("success.txt")
+        print("\033[0;92mLogged in successfully!\033[0m")
+        await self.save_client_session(client)
+        self.clients += [client]
 
         return True
 
@@ -971,7 +932,7 @@ class Heroku:
                     "and don't put spaces in it."
                 )
                 self.sessions.remove(session)
-            except InteractiveAuthRequired:
+            except (AuthKeyUnregisteredError, InteractiveAuthRequired):
                 logging.error(
                     "Session %s was terminated and re-auth is required",
                     session.filename,
@@ -990,7 +951,7 @@ class Heroku:
             client.hikka_me = me
             client.heroku_me = me
 
-            #await version.check_branch(me.id, a_i, self)
+            await version.check_branch(me.id, a_i, self)
 
             while await self.amain(first, client):
                 first = False
@@ -1024,19 +985,15 @@ class Heroku:
                 f"• Version: {'.'.join(list(map(str, list(__version__))))}\n"
                 f"• {upd}\n"
             )
-            web_url = ""
             if not self.omit_log:
                 print(logo)
-                if self.web and hasattr(self.web, "url"):
-                    web_url = f"🔗 Web url: {self.web.url}"
-                    logging.debug(
-                        "\n🪐 Heroku %s #%s (%s) started\n%s",
-                        ".".join(list(map(str, list(__version__)))),
-                        build[:7],
-                        upd,
-                        web_url,
-                    )
-                    self.omit_log = True
+                logging.debug(
+                    "\n🪐 Heroku %s #%s (%s) started",
+                    ".".join(list(map(str, list(__version__)))),
+                    build[:7],
+                    upd,
+                )
+                self.omit_log = True
 
             try:
                 log_chat_id = (
@@ -1054,7 +1011,7 @@ class Heroku:
                     caption=(
                         "{} <b>{} started!</b>\n\n<tg-emoji emoji-id=5231065262228250587>⚙</tg-emoji> <b>GitHub commit SHA: <a"
                         ' href="https://github.com/coddrago/Heroku/commit/{}">{}</a></b>\n<tg-emoji emoji-id=5873225338984599714>🔎</tg-emoji>'
-                        " <b>Update status: {}</b>\n<b>{}</b>\n<tg-emoji emoji-id=5870903672937911120>🕶</tg-emoji> <b>Prefix:</b> <code>{}</code>"
+                        " <b>Update status: {}</b>\n<tg-emoji emoji-id=5870903672937911120>🕶</tg-emoji> <b>Prefix:</b> <code>{}</code>"
                     ).format(
                         (
                             utils.get_platform_emoji()
@@ -1065,7 +1022,6 @@ class Heroku:
                         build,
                         build[:7],
                         upd,
-                        web_url,
                         "." if pref is None else pref,
                     ),
                     message_thread_id=message_thread_id,
@@ -1124,7 +1080,6 @@ class Heroku:
         db = database.Database(client)
         client.heroku_db = db
         await db.init()
-
         logging.debug("Got DB")
         logging.debug("Loading logging config...")
 
@@ -1134,18 +1089,12 @@ class Heroku:
         modules = loader.Modules(client, db, self.clients, translator)
         client.loader = modules
 
-        if self.web:
-            await self.web.add_loader(client, modules, db)
-            await self.web.start_if_ready(
-                len(self.clients),
-                self.arguments.port,
-                proxy_pass=self.arguments.proxy_pass,
-            )
-
         await self._add_dispatcher(client, modules, db)
 
         await modules.register_all(None)
         modules.send_config()
+        await modules.inline.register_manager()
+        await db.ensure_content_channel()
         await modules.send_ready()
 
         if first:
@@ -1155,24 +1104,13 @@ class Heroku:
 
     async def _main(self):
         """Main entrypoint"""
-        self._init_web()
-        inital_web = False
         _s = "485633554d534b53475a4c454336444b4e5a43474357424c4b4e5957495a43494b5a5558555a52514e4a4744435a4c43475649464d5753484b524b5649525a554a465a45555332584e493246453332574e5a58544d325a4c4734344553534c514f4a4358473332514d5252574f5642574e4242484b595a5a47524d544f34535a4d464655533333424a4e4e47324e33594d55595649524c45494a4755435133584a4e43554b364b574f3546474b3d3d3d"
-        save_config_key("port", self.arguments.port)
         await self._get_token()
 
         if (
             not self.clients and not self.sessions or not await self._init_clients()
-        ) and not (inital_web := await self._initial_setup()):
+        ) and not await self._initial_setup():
             return
-        if inital_web:
-
-            async def scheduled_web_stop():
-                await asyncio.sleep(delay=120)
-                await self.web.stop()
-                logging.debug("inital web was stopped for security reasons")
-
-            asyncio.create_task(scheduled_web_stop())
 
         self.loop.set_exception_handler(
             lambda _, x: logging.error(
@@ -1223,7 +1161,7 @@ class Heroku:
                 try:
                     await inline._dp.stop_polling()
                     await inline.bot.session.close()
-                except:
+                except Exception:
                     pass
         for c in self.clients:
             await c.disconnect()
@@ -1255,10 +1193,8 @@ class Heroku:
             logging.info("Bye!")
             try:
                 self.loop.run_until_complete(self._shutdown_handler())
-            except:
+            except Exception:
                 pass
 
-
-herokutl.extensions.html.CUSTOM_EMOJIS = not get_config_key("disable_custom_emojis")
 
 heroku = Heroku()

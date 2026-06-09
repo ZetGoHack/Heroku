@@ -18,24 +18,13 @@ import random
 import time
 import traceback
 import typing
+from collections.abc import Callable
 from asyncio import Event
 from urllib.parse import urlparse
 
 import grapheme
-from aiogram.types import (
-    InlineQuery,
-    InlineQueryResultArticle,
-    InlineQueryResultAudio,
-    InlineQueryResultDocument,
-    InlineQueryResultGif,
-    InlineQueryResultLocation,
-    InlineQueryResultPhoto,
-    InlineQueryResultVideo,
-    InputTextMessageContent,
-)
 from herokutl.errors.rpcerrorlist import ChatSendInlineForbiddenError
-from herokutl.extensions.html import CUSTOM_EMOJIS
-from herokutl.tl.types import Message
+from herokutl.tl.types import InputGeoPoint, Message
 
 from .. import main, utils
 from ..types import HerokuReplyMarkup
@@ -70,24 +59,24 @@ class Form(InlineUnit):
     async def form(
         self: "InlineManager",
         text: str,
-        message: typing.Union[Message, int],
-        reply_markup: typing.Optional[HerokuReplyMarkup] = None,
+        message: Message | int,
+        reply_markup: HerokuReplyMarkup | None = None,
         *,
         force_me: bool = False,
-        always_allow: typing.Optional[typing.List[int]] = None,
+        always_allow: list[int] | None = None,
         manual_security: bool = False,
         disable_security: bool = False,
-        ttl: typing.Optional[int] = None,
-        on_unload: typing.Optional[callable] = None,
-        photo: typing.Optional[str] = None,
-        gif: typing.Optional[str] = None,
-        file: typing.Optional[str] = None,
-        mime_type: typing.Optional[str] = None,
-        video: typing.Optional[str] = None,
-        location: typing.Optional[str] = None,
-        audio: typing.Optional[typing.Union[dict, str]] = None,
+        ttl: int | None = None,
+        on_unload: Callable | None = None,
+        photo: str | None = None,
+        gif: str | None = None,
+        file: str | None = None,
+        mime_type: str | None = None,
+        video: str | None = None,
+        location: str | None = None,
+        audio: dict | str | None = None,
         silent: bool = False,
-    ) -> typing.Union[InlineMessage, bool]:
+    ) -> InlineMessage | bool:
         """
         Send inline form to chat
         :param text: Content of inline form. HTML markdown supported
@@ -134,6 +123,7 @@ class Form(InlineUnit):
             return False
 
         text = self.sanitise_text(text)
+        needs_premium_emoji_pre_edit = self._needs_premium_emoji_pre_edit(text)
 
         if not isinstance(silent, bool):
             logger.error(
@@ -281,7 +271,7 @@ class Form(InlineUnit):
                 )(
                     (
                         utils.get_platform_emoji()
-                        if self._client.heroku_me.premium and CUSTOM_EMOJIS
+                        if self._client.heroku_me.premium
                         else "🪐"
                     )
                     + self.translator.getkey("inline.opening_form"),
@@ -320,6 +310,7 @@ class Form(InlineUnit):
             "type": "form",
             "text": text,
             "buttons": reply_markup,
+            "premium_emoji_pre_edit": needs_premium_emoji_pre_edit,
             "caller": message,
             "chat": None,
             "message_id": None,
@@ -387,10 +378,12 @@ class Form(InlineUnit):
         self._units[unit_id]["message_id"] = m.id
 
         if isinstance(message, Message) and message.out:
-            await message.delete()
+            with contextlib.suppress(Exception):
+                await message.delete()
 
         if status_message and not message.out:
-            await status_message.delete()
+            with contextlib.suppress(Exception):
+                await status_message.delete()
 
         inline_message_id = self._units[unit_id]["inline_message_id"]
 
@@ -398,12 +391,21 @@ class Form(InlineUnit):
             inline_manager=self, unit_id=unit_id, inline_message_id=inline_message_id
         )
 
-        if not isinstance(base_reply_markup, Placeholder):
-            await msg.edit(text, reply_markup=base_reply_markup)
+        if needs_premium_emoji_pre_edit or not isinstance(
+            base_reply_markup, Placeholder
+        ):
+            await msg.edit(
+                text,
+                reply_markup=(
+                    base_reply_markup
+                    if not isinstance(base_reply_markup, Placeholder)
+                    else reply_markup
+                ),
+            )
 
         return msg
 
-    async def _form_inline_handler(self: "InlineManager", inline_query: InlineQuery):
+    async def _form_inline_handler(self: "InlineManager", inline_query):
         try:
             query = inline_query.query.split()[0]
         except IndexError:
@@ -422,25 +424,23 @@ class Form(InlineUnit):
                 ):
                     await inline_query.answer(
                         [
-                            InlineQueryResultArticle(
-                                id=utils.rand(20),
+                            await inline_query.builder.article(
                                 title=button["input"],
                                 description=(
                                     self.translator.getkey("inline.keep_id").format(
                                         random.choice(VERIFICATION_EMOJIES)
                                     )
                                 ),
-                                input_message_content=InputTextMessageContent(
-                                    message_text=(
-                                        "🔄 <b>Transferring value to"
-                                        " userbot...</b>\n<i>This message will be"
-                                        " deleted automatically</i>"
-                                        if inline_query.from_user.id == self._me
-                                        else "🔄 <b>Transferring value to userbot...</b>"
-                                    ),
-                                    parse_mode="HTML",
-                                    disable_web_page_preview=True,
+                                text=(
+                                    "🔄 <b>Transferring value to"
+                                    " userbot...</b>\n<i>This message will be"
+                                    " deleted automatically</i>"
+                                    if inline_query.from_user.id == self._me
+                                    else "🔄 <b>Transferring value to userbot...</b>"
                                 ),
+                                parse_mode="HTML",
+                                link_preview=False,
+                                id=utils.rand(20),
                             )
                         ],
                         cache_time=60,
@@ -454,22 +454,18 @@ class Form(InlineUnit):
             return
 
         form = self._units[inline_query.query]
+        form_text = "🪐" if form.get("premium_emoji_pre_edit") else form.get("text")
         try:
             match True:
                 case _ if "photo" in form:
                     await inline_query.answer(
                         [
-                            InlineQueryResultPhoto(
+                            await inline_query.builder.photo(
+                                form["photo"],
                                 id=utils.rand(20),
-                                title="Heroku",
-                                description="Heroku",
-                                caption=form.get("text"),
+                                text=form_text,
                                 parse_mode="HTML",
-                                photo_url=form["photo"],
-                                thumbnail_url=(
-                                    "https://img.icons8.com/cotton/452/moon-satellite.png"
-                                ),
-                                reply_markup=self.generate_markup(
+                                buttons=self.generate_markup(
                                     form["uid"],
                                 ),
                             )
@@ -479,16 +475,14 @@ class Form(InlineUnit):
                 case _ if "gif" in form:
                     await inline_query.answer(
                         [
-                            InlineQueryResultGif(
-                                id=utils.rand(20),
+                            await inline_query.builder.document(
+                                form["gif"],
                                 title="Heroku",
-                                caption=form.get("text"),
+                                type="gif",
+                                id=utils.rand(20),
+                                text=form_text,
                                 parse_mode="HTML",
-                                gif_url=form["gif"],
-                                thumbnail_url=(
-                                    "https://img.icons8.com/cotton/452/moon-satellite.png"
-                                ),
-                                reply_markup=self.generate_markup(
+                                buttons=self.generate_markup(
                                     form["uid"],
                                 ),
                             )
@@ -498,18 +492,16 @@ class Form(InlineUnit):
                 case _ if "video" in form:
                     await inline_query.answer(
                         [
-                            InlineQueryResultVideo(
-                                id=utils.rand(20),
+                            await inline_query.builder.document(
+                                form["video"],
                                 title="Heroku",
                                 description="Heroku",
-                                caption=form.get("text"),
+                                type="video",
+                                id=utils.rand(20),
+                                text=form_text,
                                 parse_mode="HTML",
-                                video_url=form["video"],
-                                thumbnail_url=(
-                                    "https://img.icons8.com/cotton/452/moon-satellite.png"
-                                ),
                                 mime_type="video/mp4",
-                                reply_markup=self.generate_markup(
+                                buttons=self.generate_markup(
                                     form["uid"],
                                 ),
                             )
@@ -519,15 +511,15 @@ class Form(InlineUnit):
                 case _ if "file" in form:
                     await inline_query.answer(
                         [
-                            InlineQueryResultDocument(
-                                id=utils.rand(20),
+                            await inline_query.builder.document(
+                                form["file"],
                                 title="Heroku",
                                 description="Heroku",
-                                caption=form.get("text"),
+                                id=utils.rand(20),
+                                text=form_text,
                                 parse_mode="HTML",
-                                document_url=form["file"],
                                 mime_type=form["mime_type"],
-                                reply_markup=self.generate_markup(
+                                buttons=self.generate_markup(
                                     form["uid"],
                                 ),
                             )
@@ -537,12 +529,15 @@ class Form(InlineUnit):
                 case _ if "location" in form:
                     await inline_query.answer(
                         [
-                            InlineQueryResultLocation(
-                                id=utils.rand(20),
-                                latitude=form["location"][0],
-                                longitude=form["location"][1],
+                            await inline_query.builder.article(
                                 title="Heroku",
-                                reply_markup=self.generate_markup(
+                                geo=InputGeoPoint(
+                                    lat=form["location"][0],
+                                    long=form["location"][1],
+                                ),
+                                period=60,
+                                id=utils.rand(20),
+                                buttons=self.generate_markup(
                                     form["uid"],
                                 ),
                             )
@@ -552,15 +547,14 @@ class Form(InlineUnit):
                 case _ if "audio" in form:
                     await inline_query.answer(
                         [
-                            InlineQueryResultAudio(
-                                id=utils.rand(20),
-                                audio_url=form["audio"]["url"],
-                                caption=form.get("text"),
-                                parse_mode="HTML",
+                            await inline_query.builder.document(
+                                form["audio"]["url"],
                                 title=form["audio"].get("title", "Heroku"),
-                                performer=form["audio"].get("performer"),
-                                audio_duration=form["audio"].get("duration"),
-                                reply_markup=self.generate_markup(
+                                type="audio",
+                                id=utils.rand(20),
+                                text=form_text,
+                                parse_mode="HTML",
+                                buttons=self.generate_markup(
                                     form["uid"],
                                 ),
                             )
@@ -570,15 +564,13 @@ class Form(InlineUnit):
                 case _:
                     await inline_query.answer(
                         [
-                            InlineQueryResultArticle(
-                                id=utils.rand(20),
+                            await inline_query.builder.article(
                                 title="Heroku",
-                                input_message_content=InputTextMessageContent(
-                                    message_text=form["text"],
-                                    parse_mode="HTML",
-                                    disable_web_page_preview=True,
-                                ),
-                                reply_markup=self.generate_markup(inline_query.query),
+                                text=form_text,
+                                parse_mode="HTML",
+                                link_preview=False,
+                                buttons=self.generate_markup(inline_query.query),
+                                id=utils.rand(20),
                             )
                         ],
                         cache_time=0,

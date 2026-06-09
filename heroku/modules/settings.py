@@ -12,7 +12,6 @@
 
 import contextlib
 import herokutl
-from herokutl.extensions.html import CUSTOM_EMOJIS
 from herokutl.tl.types import Message, User
 
 from .. import loader, main, utils, version
@@ -44,7 +43,7 @@ class CoreMod(loader.Module):
         self._markup = utils.chunks(
             [
                 {
-                    "text": self.strings(platform),
+                    "text": self.strings[platform],
                     "callback": self._inline__choose__installation,
                     "args": (platform,),
                 }
@@ -52,7 +51,6 @@ class CoreMod(loader.Module):
                     "vds",
                     "wsl",
                     "userland",
-                    "jamhost",
                     "hikkahost",
                     "lavhost",
                 ]
@@ -64,7 +62,7 @@ class CoreMod(loader.Module):
         args = utils.get_args(message)
 
         if len(args) > 2:
-            await utils.answer(message, self.strings("too_many_args"))
+            await utils.answer(message, self.strings["too_many_args"])
             return
 
         chatid = None
@@ -92,23 +90,32 @@ class CoreMod(loader.Module):
         de_doc="Informationen über Heroku",
     )
     async def herokucmd(self, message: Message):
+
+        branch_text = ""
+        if version.branch == "master":
+            branch_text = ""
+        elif version.branch == "beta" or self.tg_id in [
+            1714120111,
+            1226061708,
+            5717135725,
+        ]:
+            branch_text = self.strings["happy_beta"].format(version.branch)
+        else:
+            branch_text = self.strings["unstable"].format(version.branch)
+
         await utils.answer(
             message,
-            self.strings("heroku").format(
+            self.strings["heroku"].format(
                 (
                     utils.get_platform_emoji()
-                    if self._client.heroku_me.premium and CUSTOM_EMOJIS
+                    if self._client.heroku_me.premium
                     else "🪐 <b>Heroku userbot</b>"
                 ),
                 *version.__version__,
                 utils.get_commit_url(),
                 f"{herokutl.__version__} #{herokutl.tl.alltlobjects.LAYER}",
             )
-            + (
-                ""
-                if version.branch == "master"
-                else self.strings("unstable").format(version.branch)
-            ),
+            + (branch_text),
             file="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_cmd.png",
             reply_to=getattr(message, "reply_to_msg_id", None),
         )
@@ -127,7 +134,7 @@ class CoreMod(loader.Module):
             self._db.get(main.__name__, "blacklist_chats", []) + [chatid],
         )
 
-        await utils.answer(message, self.strings("blacklisted").format(chatid))
+        await utils.answer(message, self.strings["blacklisted"].format(chatid))
 
     @loader.command()
     async def unblacklist(self, message: Message):
@@ -143,7 +150,7 @@ class CoreMod(loader.Module):
             list(set(self._db.get(main.__name__, "blacklist_chats", [])) - {chatid}),
         )
 
-        await utils.answer(message, self.strings("unblacklisted").format(chatid))
+        await utils.answer(message, self.strings["unblacklisted"].format(chatid))
 
     async def getuser(self, message: Message):
         try:
@@ -157,7 +164,7 @@ class CoreMod(loader.Module):
     @loader.command()
     async def blacklistuser(self, message: Message):
         if not (user := await self.getuser(message)):
-            await utils.answer(message, self.strings("who_to_blacklist"))
+            await utils.answer(message, self.strings["who_to_blacklist"])
             return
 
         self._db.set(
@@ -166,12 +173,12 @@ class CoreMod(loader.Module):
             self._db.get(main.__name__, "blacklist_users", []) + [user],
         )
 
-        await utils.answer(message, self.strings("user_blacklisted").format(user))
+        await utils.answer(message, self.strings["user_blacklisted"].format(user))
 
     @loader.command()
     async def unblacklistuser(self, message: Message):
         if not (user := await self.getuser(message)):
-            await utils.answer(message, self.strings("who_to_unblacklist"))
+            await utils.answer(message, self.strings["who_to_unblacklist"])
             return
 
         self._db.set(
@@ -182,21 +189,21 @@ class CoreMod(loader.Module):
 
         await utils.answer(
             message,
-            self.strings("user_unblacklisted").format(user),
+            self.strings["user_unblacklisted"].format(user),
         )
 
     @loader.command()
     async def setprefix(self, message: Message):
         if not (args := utils.get_args(message)):
-            await utils.answer(message, self.strings("what_prefix"))
+            await utils.answer(message, self.strings["what_prefix"])
             return
 
         if len(args[0]) != 1 and self.config.get("allow_nonstandart_prefixes") is False:
-            await utils.answer(message, self.strings("prefix_incorrect"))
+            await utils.answer(message, self.strings["prefix_incorrect"])
             return
 
         if args[0] == "s":
-            await utils.answer(message, self.strings("prefix_incorrect"))
+            await utils.answer(message, self.strings["prefix_incorrect"])
             return
 
         if len(args) == 2:
@@ -204,14 +211,14 @@ class CoreMod(loader.Module):
                 args[1] = int(args[1])
             try:
                 entity = await self.client.get_entity(args[1])
-            except:
+            except Exception:
                 return await utils.answer(
                     message, self.strings["invalid_id_or_username"]
                 )
 
             if not isinstance(entity, User):
                 return await utils.answer(
-                    message, f"The entity {args[1]} is not a User"
+                    message, self.strings["not_a_user"].format(args[1])
                 )
 
             if entity.id != self.tg_id:
@@ -249,7 +256,7 @@ class CoreMod(loader.Module):
                 )
                 return await utils.answer(
                     message,
-                    self.strings("entity_prefix_set").format(
+                    self.strings["entity_prefix_set"].format(
                         "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji>",
                         entity_name=utils.escape_html(entity.first_name),
                         newprefix=utils.escape_html(args[0]),
@@ -267,7 +274,7 @@ class CoreMod(loader.Module):
         )
         await utils.answer(
             message,
-            self.strings("prefix_set").format(
+            self.strings["prefix_set"].format(
                 "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji>",
                 newprefix=utils.escape_html(args[0]),
                 oldprefix=utils.escape_html(oldprefix),
@@ -278,7 +285,7 @@ class CoreMod(loader.Module):
     async def aliases(self, message: Message):
         await utils.answer(
             message,
-            self.strings("aliases")
+            self.strings["aliases"]
             + "<blockquote expandable>"
             + "\n".join(
                 [
@@ -292,67 +299,210 @@ class CoreMod(loader.Module):
     @loader.command()
     async def addalias(self, message: Message):
 
-        if len(args := utils.get_args_raw(message).split()) < 2:
-            await utils.answer(message, self.strings("alias_args"))
+        args_raw = utils.get_args_raw(message)
+        if not args_raw:
+            await utils.answer(message, self.strings["alias_args"])
             return
 
-        alias, cmd, *rest = args
-        rest = " ".join(rest) if rest else None
-        if self.allmodules.add_alias(alias, cmd, rest):
-            self.set(
-                "aliases",
-                {
-                    **self.get("aliases", {}),
-                    alias: f"{cmd} {rest}" if rest else cmd,
-                },
-            )
+        alias_lines = []
+        for line in args_raw.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+
+            if "," in line:
+                parts = [part.strip() for part in line.split(",")]
+                last = parts[-1].split(maxsplit=1)
+                if len(last) < 2:
+                    await utils.answer(message, self.strings["alias_args"])
+                    return
+
+                aliases = [part.lower() for part in parts[:-1] if part]
+                aliases.append(last[0].lower())
+                command = last[1]
+            else:
+                args = line.split(maxsplit=1)
+                if len(args) < 2:
+                    await utils.answer(message, self.strings["alias_args"])
+                    return
+
+                aliases = [args[0].lower()]
+                command = args[1]
+
+            command_parts = command.split(maxsplit=1)
+            cmd = command_parts[0]
+            rest = command_parts[1] if len(command_parts) > 1 else None
+
+            if cmd not in self.allmodules.commands:
+                await utils.answer(
+                    message,
+                    self.strings["no_command"].format(utils.escape_html(cmd)),
+                )
+                return
+
+            alias_lines.append((aliases, cmd, rest))
+
+        if not alias_lines:
+            await utils.answer(message, self.strings["alias_args"])
+            return
+
+        added_lines = []
+        skipped_lines = []
+        planned_aliases = {}
+        stored_aliases = {**self.get("aliases", {})}
+
+        for aliases, cmd, rest in alias_lines:
+            target = f"{cmd} {rest}" if rest else cmd
+            added_aliases = []
+
+            for alias in aliases:
+                if alias in self.allmodules.aliases:
+                    skipped_lines.append(
+                        self.strings["alias_exists"].format(
+                            alias=utils.escape_html(alias),
+                            command=utils.escape_html(self.allmodules.aliases[alias]),
+                        )
+                    )
+                    continue
+
+                if alias in planned_aliases:
+                    skipped_lines.append(
+                        self.strings["alias_exists"].format(
+                            alias=utils.escape_html(alias),
+                            command=utils.escape_html(planned_aliases[alias]),
+                        )
+                    )
+                    continue
+
+                if not self.allmodules.add_alias(alias, cmd, rest):
+                    await utils.answer(
+                        message,
+                        self.strings["no_command"].format(utils.escape_html(cmd)),
+                    )
+                    return
+
+                stored_aliases[alias] = target
+                planned_aliases[alias] = target
+                added_aliases.append(alias)
+
+            if added_aliases:
+                added_lines.append((added_aliases, target))
+
+        if added_lines:
+            self.set("aliases", stored_aliases)
+
+        if len(added_lines) == 1 and len(added_lines[0][0]) == 1 and not skipped_lines:
             await utils.answer(
                 message,
-                self.strings("alias_created").format(utils.escape_html(alias)),
+                self.strings["alias_created"].format(
+                    utils.escape_html(added_lines[0][0][0])
+                ),
             )
-        else:
-            await utils.answer(
-                message,
-                self.strings("no_command").format(utils.escape_html(cmd)),
+            return
+
+        added_count = sum(len(aliases) for aliases, _ in added_lines)
+        response = []
+
+        if added_lines:
+            response.append(
+                self.strings["aliases_created"].format(
+                    count=added_count,
+                    aliases="\n".join(
+                        self.strings["aliases_created_line"].format(
+                            aliases=utils.escape_html(", ".join(aliases)),
+                            command=utils.escape_html(target),
+                        )
+                        for aliases, target in added_lines
+                    ),
+                )
             )
+
+        response.extend(skipped_lines)
+
+        await utils.answer(message, "\n\n".join(response))
 
     @loader.command()
     async def delalias(self, message: Message):
-        args = utils.get_args(message)
+        args_raw = utils.get_args_raw(message)
 
-        if len(args) != 1:
-            await utils.answer(message, self.strings("delalias_args"))
+        if not args_raw:
+            await utils.answer(message, self.strings["delalias_args"])
             return
 
-        alias = args[0]
+        if args_raw.strip() in {"-c", "--clear"}:
+            self.allmodules.aliases.clear()
+            self.set("aliases", {})
+            await utils.answer(message, self.strings["aliases_cleared"])
+            return
 
-        if not self.allmodules.remove_alias(alias):
-            await utils.answer(
-                message,
-                self.strings("no_alias").format(utils.escape_html(alias)),
-            )
+        aliases = []
+        seen_aliases = set()
+        for line in args_raw.splitlines():
+            for alias in line.split(","):
+                alias = alias.lower().strip()
+                if alias and alias not in seen_aliases:
+                    aliases.append(alias)
+                    seen_aliases.add(alias)
+
+        if not aliases:
+            await utils.answer(message, self.strings["delalias_args"])
             return
 
         current = self.get("aliases", {})
-        del current[alias]
-        self.set("aliases", current)
+        removed_aliases = []
+        missed_aliases = []
+
+        for alias in aliases:
+            if not self.allmodules.remove_alias(alias):
+                missed_aliases.append(alias)
+                continue
+
+            current.pop(alias, None)
+            removed_aliases.append(alias)
+
+        if removed_aliases:
+            self.set("aliases", current)
+
+        if len(removed_aliases) == 1 and not missed_aliases:
+            await utils.answer(
+                message,
+                self.strings["alias_removed"].format(
+                    utils.escape_html(removed_aliases[0])
+                ),
+            )
+            return
+
+        response = []
+        if removed_aliases:
+            response.append(
+                self.strings["aliases_removed"].format(
+                    count=len(removed_aliases),
+                    aliases=utils.escape_html(", ".join(removed_aliases)),
+                )
+            )
+
+        response.extend(
+            self.strings["no_alias"].format(utils.escape_html(alias))
+            for alias in missed_aliases
+        )
+
         await utils.answer(
             message,
-            self.strings("alias_removed").format(utils.escape_html(alias)),
+            "\n\n".join(response),
         )
 
     @loader.command()
     async def cleardb(self, message: Message):
         await self.inline.form(
-            self.strings("confirm_cleardb"),
+            self.strings["confirm_cleardb"],
             message,
             reply_markup=[
                 {
-                    "text": self.strings("cleardb_confirm"),
+                    "text": self.strings["cleardb_confirm"],
                     "callback": self._inline__cleardb,
                 },
                 {
-                    "text": self.strings("cancel"),
+                    "text": self.strings["cancel"],
                     "action": "close",
                 },
             ],
@@ -361,20 +511,20 @@ class CoreMod(loader.Module):
     async def _inline__cleardb(self, call: InlineCall):
         self._db.clear()
         self._db.save()
-        await utils.answer(call, self.strings("db_cleared"))
+        await utils.answer(call, self.strings["db_cleared"])
 
     @loader.command()
     async def togglecmdcmd(self, message: Message):
         """Toggle disable specific command of a module: togglecmd <module> <command> or togglecmd <command>"""
         args = utils.get_args(message)
         if not args:
-            await utils.answer(message, self.strings("wrong_usage_tcc"))
+            await utils.answer(message, self.strings["wrong_usage_tcc"])
 
         if args and len(args) >= 2:
             mod_arg, cmd = args[0], args[1]
             mod_inst = self.allmodules.lookup(mod_arg)
             if not mod_inst:
-                await utils.answer(message, self.strings("mod404").format(mod_arg))
+                await utils.answer(message, self.strings["mod404"].format(mod_arg))
 
         module_key = mod_inst.__class__.__name__
 
@@ -382,7 +532,7 @@ class CoreMod(loader.Module):
         current = [x for x in disabled_commands.get(module_key, [])]
 
         if cmd.lower() not in [c.lower() for c in mod_inst.heroku_commands.keys()]:
-            await utils.answer(message, self.strings("cmd404"))
+            await utils.answer(message, self.strings["cmd404"])
 
         if any(c.lower() == cmd.lower() for c in current):
             current = [c for c in current if c.lower() != cmd.lower()]
@@ -397,7 +547,9 @@ class CoreMod(loader.Module):
             except Exception:
                 pass
 
-            await utils.answer(message, f"Command {cmd} enabled in module {module_key}")
+            await utils.answer(
+                message, self.strings["cmd_enabled"].format(cmd, module_key)
+            )
         else:
             current.append(cmd)
             disabled_commands[module_key] = current
@@ -413,7 +565,7 @@ class CoreMod(loader.Module):
                     self.allmodules.aliases.pop(alias, None)
 
             await utils.answer(
-                message, f"Command {cmd} disabled in module {module_key}"
+                message, self.strings["cmd_disabled"].format(cmd, module_key)
             )
 
     @loader.command()
@@ -421,12 +573,12 @@ class CoreMod(loader.Module):
         """Toggle disable entire module: togglemod <module>"""
         args = utils.get_args(message)
         if not args:
-            await utils.answer(message, self.strings("wrong_usage_tmc"))
+            await utils.answer(message, self.strings["wrong_usage_tmc"])
 
         mod_arg = args[0]
         mod_inst = self.allmodules.lookup(mod_arg)
         if not mod_inst:
-            await utils.answer(message, self.strings("mod404").format(mod_arg))
+            await utils.answer(message, self.strings["mod404"].format(mod_arg))
 
         module_key = mod_inst.__class__.__name__
         disabled = self._db.get(main.__name__, "disabled_modules", [])
@@ -441,7 +593,7 @@ class CoreMod(loader.Module):
                 self.allmodules.register_inline_stuff(mod_inst)
             except Exception:
                 pass
-            await utils.answer(message, self.strings("mod_enabled").format(module_key))
+            await utils.answer(message, self.strings["mod_enabled"].format(module_key))
         else:
             disabled += [module_key]
             self._db.set(main.__name__, "disabled_modules", disabled)
@@ -452,14 +604,14 @@ class CoreMod(loader.Module):
                 self.allmodules.unregister_inline_stuff(mod_inst, "disable")
             except Exception:
                 pass
-            await utils.answer(message, self.strings("mod_disabled").format(module_key))
+            await utils.answer(message, self.strings["mod_disabled"].format(module_key))
 
     @loader.command()
     async def clearmodule(self, message: Message):
         """Clear all DB entries for module: clearmodule <module>"""
         args = utils.get_args(message)
         if not args:
-            await utils.answer(message, self.strings("wrong_usage_cmc"))
+            return await utils.answer(message, self.strings["wrong_usage_cmc"])
 
         mod_arg = args[0]
         mod_inst = self.allmodules.lookup(mod_arg)
@@ -484,7 +636,7 @@ class CoreMod(loader.Module):
             disabled_modules = [m for m in disabled_modules if m != module_key]
             self._db.set(main.__name__, "disabled_modules", disabled_modules)
 
-        await utils.answer(message, f"Cleared DB for module {module_key}")
+        await utils.answer(message, self.strings["cmc_done"].format(mod_arg))
 
     async def installationcmd(self, message: Message):
         """| Guide of installation"""
@@ -495,7 +647,7 @@ class CoreMod(loader.Module):
             not args or args not in {"-vds", "-wsl", "-ul", "-jh", "-hh", "-lh"}
         ) and not (
             await self.inline.form(
-                self.strings("choose_installation"),
+                self.strings["choose_installation"],
                 message,
                 reply_markup=self._markup,
                 photo="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_installation.png",
@@ -505,27 +657,25 @@ class CoreMod(loader.Module):
             await self.client.send_file(
                 message.peer_id,
                 "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_installation.png",
-                caption=self.strings("vds_install"),
+                caption=self.strings["vds_install"],
                 reply_to=getattr(message, "reply_to_msg_id", None),
             )
         match True:
             case _ if "-vds" in args:
-                await utils.answer(message, self.strings("vds_install"))
+                await utils.answer(message, self.strings["vds_install"])
             case _ if "-wsl" in args:
-                await utils.answer(message, self.strings("wsl_install"))
+                await utils.answer(message, self.strings["wsl_install"])
             case _ if "-ul" in args:
-                await utils.answer(message, self.strings("userland_install"))
-            case _ if "-jh" in args:
-                await utils.answer(message, self.strings("jamhost_install"))
+                await utils.answer(message, self.strings["userland_install"])
             case _ if "-hh" in args:
-                await utils.answer(message, self.strings("hikkahost_install"))
+                await utils.answer(message, self.strings["hikkahost_install"])
             case _ if "-lh" in args:
-                await utils.answer(message, self.strings("lavhost_install"))
+                await utils.answer(message, self.strings["lavhost_install"])
 
     async def _inline__choose__installation(self, call: InlineCall, platform: str):
         with contextlib.suppress(Exception):
             await utils.answer(
                 call,
-                self.strings(f"{platform}_install"),
+                self.strings[f"{platform}_install"],
                 reply_markup=self._markup,
             )

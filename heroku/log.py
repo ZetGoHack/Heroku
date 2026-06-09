@@ -29,9 +29,9 @@ from logging.handlers import RotatingFileHandler
 from collections.abc import Coroutine
 
 import herokutl
-from aiogram.exceptions import TelegramNetworkError, TelegramRetryAfter
-from herokutl.errors import PersistentTimestampOutdatedError
+from herokutl.errors import PersistentTimestampOutdatedError, TimeoutError
 from herokutl.errors.rpcbaseerrors import ServerError, RPCError
+from herokutl.errors.rpcerrorlist import FloodWaitError
 
 from . import utils
 from ._internal import (
@@ -45,7 +45,7 @@ from .tl_cache import CustomTelegramClient
 from .types import BotInlineCall, Module, CoreOverwriteError
 
 INTERNET_ERRORS = (
-    TelegramNetworkError,
+    TimeoutError,
     asyncio.exceptions.TimeoutError,
     ServerError,
     PersistentTimestampOutdatedError,
@@ -59,8 +59,7 @@ def getlines(filename: str, module_globals=None) -> str:
     Update the cache if it doesn't contain an entry for this file already.
 
     Modified version of original `linecache.getlines`, which returns the
-    source code of Heroku modules properly. This is needed for
-    interactive line debugger in werkzeug web debugger.
+    source code of Heroku modules properly.
     """
 
     try:
@@ -82,11 +81,11 @@ def getlines(filename: str, module_globals=None) -> str:
 linecache.getlines = getlines
 
 
-def override_text(exception: Exception) -> typing.Optional[str]:
+def override_text(exception: Exception) -> str | None:
     """Returns error-specific description if available, else `None`"""
 
     match exception:
-        case TelegramNetworkError() | asyncio.exceptions.TimeoutError():
+        case TimeoutError() | asyncio.exceptions.TimeoutError():
             return (
                 "✈️ <b>You have problems with internet connection on your server.</b>"
             )
@@ -106,8 +105,8 @@ def override_text(exception: Exception) -> typing.Optional[str]:
         case ModuleNotFoundError():
             return f"📦 {traceback.format_exception_only(type(exception), exception)[0].split(':')[1].strip()}"
 
-        case TelegramRetryAfter():
-            return f"✋ <b>Bot is hitting limits on {type(exception.method).__name__!r} method and got {exception.retry_after} seconds floodwait</b>"
+        case FloodWaitError():
+            return f"✋ <b>Bot is hitting limits and got {exception.seconds} seconds floodwait</b>"
 
         case _:
             return None
@@ -118,9 +117,7 @@ class HerokuException:
         self,
         message: str,
         full_stack: str,
-        sysinfo: typing.Optional[
-            typing.Tuple[object, Exception, traceback.TracebackException]
-        ] = None,
+        sysinfo: None | (tuple[object, Exception, traceback.TracebackException]) = None,
     ):
         self.message = message
         self.full_stack = full_stack
@@ -133,8 +130,8 @@ class HerokuException:
         exc_type: object,
         exc_value: Exception,
         tb: traceback.TracebackException,
-        stack: typing.Optional[typing.List[inspect.FrameInfo]] = None,
-        comment: typing.Optional[typing.Any] = None,
+        stack: list[inspect.FrameInfo] | None = None,
+        comment: typing.Any | None = None,
     ) -> "HerokuException":
         def to_hashable(dictionary: dict) -> dict:
             dictionary = dictionary.copy()
@@ -287,8 +284,8 @@ class TelegramLogsHandler(logging.Handler):
     def dumps(
         self,
         lvl: int = 0,
-        client_id: typing.Optional[int] = None,
-    ) -> typing.List[str]:
+        client_id: int | None = None,
+    ) -> list[str]:
         """Return all entries of minimum level as list of strings"""
         return [
             self.targets[0].format(record)
@@ -300,7 +297,7 @@ class TelegramLogsHandler(logging.Handler):
     async def _show_full_trace(
         self,
         call: BotInlineCall,
-        bot: "aiogram.Bot",  # type: ignore  # noqa: F821
+        bot,
         item: HerokuException,
     ):
         chunks = (
@@ -323,15 +320,24 @@ class TelegramLogsHandler(logging.Handler):
     def get_logid_by_client(self, client_id: int) -> int:
         return self._mods[client_id].logchat
 
-    async def get_logs_topic_id_by_client(self, client_id: int) -> typing.Optional[int]:
+    async def get_logs_topic_id_by_client(self, client_id: int) -> int | None:
         """Get logs topic ID from database"""
-        try:
-            db = self._mods[client_id].db
-            topic_id = await utils.get_topic_id(db, "Logs")
-            return topic_id
-        except Exception:
-            logging.exception("Failed to get logs topic ID")
-            return None
+        allmods = self._mods[client_id]
+        topic_id = await utils.get_topic_id(allmods.db, "Logs")
+        if not topic_id:
+            logging.debug(
+                f"No logs topic found for client {client_id}. Creating new one."
+            )
+            topic = await utils.asset_forum_topic(
+                allmods.client,
+                allmods.db,
+                allmods.logchat,
+                "Logs",
+                "📊 Inline logs and error reports will be stored here",
+                5877307202888273539,
+            )
+            topic_id = topic.id
+        return topic_id
 
     async def sender(self):
         async with self._send_lock:
@@ -358,10 +364,7 @@ class TelegramLogsHandler(logging.Handler):
 
             self._exc_queue = {}
             for client_id in self._mods:
-                try:
-                    topic_id = await self.get_logs_topic_id_by_client(client_id)
-                except Exception:
-                    topic_id = None
+                topic_id = await self.get_logs_topic_id_by_client(client_id)
 
                 funcs = []
                 for item in self.tg_buff:
@@ -452,9 +455,9 @@ class TelegramLogsHandler(logging.Handler):
                 try:
                     await func()
                     break
-                except TelegramRetryAfter as e:
+                except FloodWaitError as e:
                     attempt += 1
-                    await asyncio.sleep(e.retry_after)
+                    await asyncio.sleep(e.seconds)
                 except RuntimeError:
                     logging.debug(
                         "RuntimeError in sender, probably event loop is closed, skipping",
@@ -607,7 +610,7 @@ def init():
             msg = record.getMessage()
             return "Failed to fetch updates" not in msg and "Sleep" not in msg
 
-    logging.getLogger("aiogram.dispatcher").addFilter(NoFetchUpdatesFilter())
+    logging.getLogger("herokutl.network").addFilter(NoFetchUpdatesFilter())
     handler = logging.StreamHandler()
     handler.setLevel(logging.INFO)
     handler.setFormatter(_main_formatter)
@@ -619,5 +622,4 @@ def init():
     logging.getLogger("herokutl").setLevel(logging.WARNING)
     logging.getLogger("matplotlib").setLevel(logging.WARNING)
     logging.getLogger("aiohttp").setLevel(logging.WARNING)
-    logging.getLogger("aiogram").setLevel(logging.WARNING)
     logging.captureWarnings(True)

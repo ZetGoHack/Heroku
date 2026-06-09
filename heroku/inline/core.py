@@ -1,4 +1,4 @@
-"""Inline buttons, galleries and other Telegram-Bot-API stuff"""
+"""Inline buttons, galleries and other Telethon bot stuff"""
 
 # ©️ Dan Gazizullin, 2021-2023
 # This file is a part of Hikka Userbot
@@ -18,17 +18,36 @@ import logging
 import time
 import typing
 
-from aiogram import Bot, Dispatcher
-from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
-from aiogram.exceptions import TelegramConflictError, TelegramUnauthorizedError
-from herokutl.errors.rpcerrorlist import InputUserDeactivatedError, YouBlockedUserError
+from herokutl import TelegramClient, events
+from herokutl.errors.rpcerrorlist import (
+    AccessTokenExpiredError,
+    AccessTokenInvalidError,
+    AuthKeyUnregisteredError,
+    InputUserDeactivatedError,
+    YouBlockedUserError,
+)
+from herokutl.sessions import MemorySession
 from herokutl.tl.functions.contacts import UnblockRequest
 from herokutl.tl.functions.messages import (
     GetDialogFiltersRequest,
     UpdateDialogFilterRequest,
 )
-from herokutl.tl.types import DialogFilter, InputPeerUser, Message
+from herokutl.tl.types import (
+    DialogFilter,
+    InputPeerUser,
+    Message,
+    UpdateBotChatBoost,
+    UpdateBotChatInviteRequester,
+    UpdateBotInlineSend,
+    UpdateBotMessageReaction,
+    UpdateBotMessageReactions,
+    UpdateBotPrecheckoutQuery,
+    UpdateBotShippingQuery,
+    UpdateChannelParticipant,
+    UpdateChatParticipant,
+    UpdateMessagePoll,
+    UpdateMessagePollVote,
+)
 from herokutl.utils import get_display_name
 
 from .. import utils
@@ -41,6 +60,7 @@ from .form import Form
 from .gallery import Gallery
 from .list import List
 from .query_gallery import QueryGallery
+from .tl import TelethonBot, web_document
 from .token_obtainment import TokenObtainment
 from .utils import Utils
 
@@ -48,6 +68,34 @@ logger = logging.getLogger(__name__)
 
 if typing.TYPE_CHECKING:
     from ..loader import Modules
+
+
+_BOT_UPDATE_EVENTS: dict[str, typing.Callable[[], object]] = {
+    # Default updates
+    "message": lambda: events.NewMessage(),
+    "edited_message": lambda: events.MessageEdited(),
+    "channel_post": lambda: events.NewMessage(),
+    "edited_channel_post": lambda: events.MessageEdited(),
+    "inline_query": lambda: events.InlineQuery(),
+    "callback_query": lambda: events.CallbackQuery(),
+    # Raw-based
+    "chosen_inline_result": lambda: events.Raw(types=UpdateBotInlineSend),
+    "shipping_query": lambda: events.Raw(types=UpdateBotShippingQuery),
+    "pre_checkout_query": lambda: events.Raw(types=UpdateBotPrecheckoutQuery),
+    "poll": lambda: events.Raw(types=UpdateMessagePoll),
+    "poll_answer": lambda: events.Raw(types=UpdateMessagePollVote),
+    "my_chat_member": lambda: events.Raw(
+        types=(UpdateChatParticipant, UpdateChannelParticipant)
+    ),
+    "chat_member": lambda: events.Raw(
+        types=(UpdateChatParticipant, UpdateChannelParticipant)
+    ),
+    "chat_join_request": lambda: events.Raw(types=UpdateBotChatInviteRequester),
+    "message_reaction": lambda: events.Raw(types=UpdateBotMessageReaction),
+    "message_reaction_count": lambda: events.Raw(types=UpdateBotMessageReactions),
+    "chat_boost": lambda: events.Raw(types=UpdateBotChatBoost),
+    "removed_chat_boost": lambda: events.Raw(types=UpdateBotChatBoost),
+}
 
 
 class InlineManager(
@@ -61,7 +109,7 @@ class InlineManager(
     BotPM,
 ):
     """
-    Inline buttons, galleries and other Telegram-Bot-API stuff
+    Inline buttons, galleries and other Telethon bot stuff
     :param client: Telegram client
     :param db: Database instance
     :param allmodules: All modules
@@ -82,11 +130,10 @@ class InlineManager(
         self._allmodules = allmodules
         self.translator: Translator = allmodules.translator
 
-        self._units: typing.Dict[str, dict] = {}
-        self._custom_map: typing.Dict[str, callable] = {}
-        self.fsm: typing.Dict[str, str] = {}
-        self._web_auth_tokens: typing.List[str] = []
-        self._error_events: typing.Dict[str, asyncio.Event] = {}
+        self._units: dict[str, dict] = {}
+        self._custom_map: dict[str, callable] = {}
+        self.fsm: dict[str, str] = {}
+        self._error_events: dict[str, asyncio.Event] = {}
 
         self._markup_ttl = 60 * 60 * 24
         self.init_complete = False
@@ -95,12 +142,15 @@ class InlineManager(
 
         self._me: int = None
         self._name: str = None
-        self._dp: Dispatcher = None
+        self._bot_client: TelegramClient = None
         self._task: asyncio.Future = None
         self._cleaner_task: asyncio.Future = None
-        self.bot: Bot = None
+        self.bot: TelethonBot = None
         self.bot_id: int = None
         self.bot_username: str = None
+
+        self._bot_update_handlers: dict[str, tuple[str, typing.Callable]] = {}
+        self._bot_handler_refs: dict[str, tuple[typing.Callable, object]] = {}
 
     async def _cleaner(self):
         """Cleans outdated inline units"""
@@ -110,6 +160,32 @@ class InlineManager(
                     del self._units[unit_id]
 
             await asyncio.sleep(5)
+
+    @staticmethod
+    def _web_document(url: str | None, **kwargs):
+        return web_document(url, **kwargs)
+
+    def _register_bot_handler(
+        self,
+        handler: typing.Callable,
+        event_builder,
+        *,
+        handler_id: str | None = None,
+    ):
+        self._bot_client.add_event_handler(handler, event_builder)
+        if handler_id:
+            self._bot_handler_refs[handler_id] = (handler, event_builder)
+
+    def _register_builtin_handlers(self):
+        self._register_bot_handler(self._inline_handler, events.InlineQuery())
+        self._register_bot_handler(self._callback_query_handler, events.CallbackQuery())
+        self._register_bot_handler(
+            self._chosen_inline_handler, events.Raw(types=UpdateBotInlineSend)
+        )
+        self._register_bot_handler(self._message_handler, events.NewMessage())
+
+        for handler_id, (update_type, handler) in self._bot_update_handlers.items():
+            self._attach_custom_handler(handler_id, update_type, handler)
 
     async def register_manager(
         self,
@@ -129,26 +205,35 @@ class InlineManager(
         self._name = get_display_name(self._client.heroku_me)
 
         if not ignore_token_checks:
-            is_token_asserted = await self.assert_token()
+            is_token_asserted = await self._assert_token()
             if not is_token_asserted:
                 self.init_complete = False
                 return
 
         self.init_complete = True
 
-        self.bot = Bot(
-            token=self._token, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+        self._bot_client = TelegramClient(
+            MemorySession(),
+            self._client.api_id,
+            self._client.api_hash,
+            receive_updates=True,
         )
-        self._bot = self.bot
-        self._dp = Dispatcher()
 
         try:
-            bot_me = await self.bot.get_me()
+            await self._bot_client.start(bot_token=self._token)
+            self.bot = TelethonBot(self._bot_client)
+            self._bot = self.bot
+            self._register_builtin_handlers()
+            bot_me = await self._bot_client.get_me()
             self.bot_username = bot_me.username
             self.bot_id = bot_me.id
-        except TelegramUnauthorizedError:
+        except (
+            AccessTokenExpiredError,
+            AccessTokenInvalidError,
+            AuthKeyUnregisteredError,
+        ):
             logger.critical("Token expired, revoking...")
-            return await self.dp_revoke_token(False)
+            return await self._dp_revoke_token(False)
 
         try:
             m = await self._client.send_message(self.bot_username, "/start heroku init")
@@ -209,65 +294,91 @@ class InlineManager(
 
         await self._client.delete_messages(self.bot_username, m)
 
-        self._dp.inline_query.register(
-            self._inline_handler,
-            lambda _: True,
-        )
-
-        self._dp.callback_query.register(
-            self._callback_query_handler,
-            lambda _: True,
-        )
-
-        self._dp.chosen_inline_result.register(
-            self._chosen_inline_handler,
-            lambda _: True,
-        )
-
-        self._dp.message.register(
-            self._message_handler,
-            lambda *_: True,
-        )
-
-        old = self.bot.get_updates
-        revoke = self.dp_revoke_token
-
-        async def new(*args, **kwargs):
-            nonlocal revoke, old
-            try:
-                return await old(*args, **kwargs)
-            except TelegramConflictError:
-                await revoke()
-            except TelegramUnauthorizedError:
-                logger.critical("Got Unauthorized")
-                await self._stop()
-
-        self.bot.get_updates = new
-
-        self._task = asyncio.ensure_future(
-            self._dp.start_polling(self._bot, handle_signals=False)
-        )
         self._cleaner_task = asyncio.ensure_future(self._cleaner())
 
     async def _stop(self):
         """Stop the bot"""
-        self._task.cancel()
-        await self._dp.stop_polling()
-        self._cleaner_task.cancel()
+        if self._task:
+            self._task.cancel()
+        if self._bot_client:
+            await self._bot_client.disconnect()
+        if self._cleaner_task:
+            self._cleaner_task.cancel()
 
-    def pop_web_auth_token(self, token: str) -> bool:
-        """
-        Check if web confirmation button was pressed
-        :param token: Token to check
-        :type token: str
-        :return: `True` if token was found, `False` otherwise
-        :rtype: bool
-        """
-        if token not in self._web_auth_tokens:
-            return False
+    async def _restart_polling(self):
+        """Kept for API compatibility; Telethon handlers are updated in-place."""
+        return
 
-        self._web_auth_tokens.remove(token)
-        return True
+    def _attach_custom_handler(
+        self,
+        handler_id: str,
+        update_type: str,
+        handler: typing.Callable,
+    ):
+        builder_factory = _BOT_UPDATE_EVENTS.get(update_type)
+        if not builder_factory or not self._bot_client:
+            return
+
+        event_builder = builder_factory()
+        self._register_bot_handler(handler, event_builder, handler_id=handler_id)
+
+    def register_bot_update_handler(
+        self,
+        handler_id: str,
+        update_type: str,
+        handler: typing.Callable,
+    ):
+        """
+        Register a bot update handler from a module
+        :param handler_id: Unique handler ID (use uuid4)
+        :param update_type: One of the supported Telegram update types
+        :param handler: Async callable to handle the update
+        """
+        if update_type not in _BOT_UPDATE_EVENTS:
+            logger.warning(
+                "Unsupported bot update type: %s (handler_id=%s)",
+                update_type,
+                handler_id,
+            )
+            return
+
+        self._bot_update_handlers[handler_id] = (update_type, handler)
+        logger.debug(
+            "Registered bot update handler %s for update type %s",
+            handler_id,
+            update_type,
+        )
+
+        if self.init_complete and self._bot_client:
+            self._attach_custom_handler(handler_id, update_type, handler)
+
+    def unregister_bot_update_handler(self, handler_id: str):
+        """
+        Unregister a bot update handler and rebuild dispatcher
+        :param handler_id: Handler ID to remove
+        """
+        if handler_id not in self._bot_update_handlers:
+            return
+
+        del self._bot_update_handlers[handler_id]
+        self._bot_handler_refs.pop(handler_id, None)
+        logger.debug("Unregistered bot update handler %s", handler_id)
+
+        if not self._bot_client:
+            return
+
+        for handler, event_builder in list(self._bot_handler_refs.values()):
+            self._bot_client.remove_event_handler(handler, event_builder)
+        self._bot_handler_refs.clear()
+
+        for hid, (update_type, handler) in self._bot_update_handlers.items():
+            builder_factory = _BOT_UPDATE_EVENTS.get(update_type)
+            if not builder_factory:
+                continue
+            event_builder = builder_factory()
+            self._bot_client.add_event_handler(handler, event_builder)
+            self._bot_handler_refs[hid] = (handler, event_builder)
+        logger.debug("Rebuilt custom handlers after unregistering %s", handler_id)
 
     async def _invoke_unit(self, unit_id: str, message: Message) -> Message:
         event = asyncio.Event()

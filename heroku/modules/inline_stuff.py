@@ -14,8 +14,6 @@ import re
 import string
 import random
 
-from herokutl.errors.rpcerrorlist import YouBlockedUserError
-from herokutl.tl.functions.contacts import UnblockRequest
 from herokutl.tl.types import Message
 
 from .. import loader, utils
@@ -60,13 +58,13 @@ class InlineStuff(loader.Module):
         )
 
     async def _check_bot(self, username: str) -> bool:
-        if await self.inline.check_bot(username):
+        if await self.inline._check_bot(username):
             return True
 
         try:
             await self._client.get_entity(username)
             return False
-        except:
+        except Exception:
             return True
 
     @loader.command()
@@ -88,7 +86,7 @@ class InlineStuff(loader.Module):
                 for litera in args
             )
         ):
-            await utils.answer(message, self.strings("bot_username_invalid"))
+            await utils.answer(message, self.strings["bot_username_invalid"])
             return
 
         try:
@@ -97,28 +95,28 @@ class InlineStuff(loader.Module):
             pass
         else:
             if not await self._check_bot(args):
-                await utils.answer(message, self.strings("bot_username_occupied"))
+                await utils.answer(message, self.strings["bot_username_occupied"])
                 return
 
         self._db.set("heroku.inline", "custom_bot", args)
         self._db.set("heroku.inline", "bot_token", None)
-        await utils.answer(message, self.strings("bot_updated"))
+        await utils.answer(message, self.strings["bot_updated"])
 
     @loader.command()
     async def ch_bot_token(self, message: Message):
         args = utils.get_args_raw(message)
         if not args or not re.match(r"[0-9]{8,10}:[a-zA-Z0-9_-]{34,36}", args):
-            await utils.answer(message, self.strings("token_invalid"))
+            await utils.answer(message, self.strings["token_invalid"])
             return
         self._db.set("heroku.inline", "bot_token", args)
-        await utils.answer(message, self.strings("bot_updated"))
+        await utils.answer(message, self.strings["bot_updated"])
 
-    async def aiogram_watcher(self, message: BotInlineMessage):
+    async def bot_watcher(self, message: BotInlineMessage):
         match message.text:
             case "/start":
                 await message.answer_photo(
                     "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/start_cmd.png",
-                    caption=self.strings("this_is_heroku").format(
+                    caption=self.strings["this_is_heroku"].format(
                         (
                             "<tg-emoji emoji-id=5463379725441341739>🪐</tg-emoji>"
                             if self._client.heroku_me.premium
@@ -185,7 +183,7 @@ class InlineStuff(loader.Module):
 
     async def restart(self, call: InlineCall, message):
         await call.edit(self.strings["restart"])
-        await self.invoke("restart", "-f", message=message, peer=self.inline.bot.id)
+        await self.invoke("restart", "-f", message=message, peer=self.inline.bot_id)
 
     async def reset_prefix(self, call: InlineCall, message):
         await message.answer(self.strings["prefix_reset"])

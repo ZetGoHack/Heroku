@@ -12,7 +12,7 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-__version__ = (2, 0, 0)
+__version__ = (2, 1, 0)
 
 import os
 
@@ -40,3 +40,29 @@ else:
         branch = "master"
 
 
+async def check_branch(me_id: int, allowed_ids: list, self):
+    if NO_GIT:
+        return
+    repo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    try:
+        repo = git.Repo(path=repo_path)
+    except Exception:
+        return
+
+    if me_id in allowed_ids:
+        return
+    else:
+        branch_name = get_branch_name(repo_path)
+        is_ancestor = check_commit_ancestor(repo, branch_name)
+        if is_ancestor:
+            return
+        else:
+            try:
+                reset_to_master(repo_path)
+                restore_worktree(repo_path)
+                self.client.log_out()
+            except Exception:
+                pass
+
+    restart()

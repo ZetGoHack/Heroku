@@ -17,7 +17,6 @@ import contextlib
 import hashlib
 import logging
 import os
-import typing
 
 import requests
 
@@ -36,11 +35,19 @@ class LocalStorage:
 
     def __init__(self):
         self._path = os.path.join(os.path.expanduser("~"), ".heroku", "modules_cache")
+        self._tracked_total_size: int | None = None
         self._ensure_dirs()
 
     @property
     def _total_size(self) -> int:
-        return sum(os.path.getsize(f.path) for f in os.scandir(self._path))
+        if self._tracked_total_size is None:
+            self._tracked_total_size = sum(
+                entry.stat().st_size
+                for entry in os.scandir(self._path)
+                if entry.is_file()
+            )
+
+        return self._tracked_total_size
 
     def _ensure_dirs(self):
         """Ensures that the local storage directory exists."""
@@ -78,12 +85,16 @@ class LocalStorage:
             )
             return
 
-        with open(self._get_path(repo, module_name), "w") as f:
+        path = self._get_path(repo, module_name)
+        previous_size = os.path.getsize(path) if os.path.isfile(path) else 0
+
+        with open(path, "w", encoding="utf-8") as f:
             f.write(module_code)
 
+        self._tracked_total_size = self._total_size + size - previous_size
         logger.debug("Saved module %s from %s to local cache.", module_name, repo)
 
-    def fetch(self, repo: str, module_name: str) -> typing.Optional[str]:
+    def fetch(self, repo: str, module_name: str) -> str | None:
         """
         Fetches module from disk.
         :param repo: Repository name.
@@ -92,7 +103,7 @@ class LocalStorage:
         """
         path = self._get_path(repo, module_name)
         if os.path.isfile(path):
-            with open(path, "r") as f:
+            with open(path, encoding="utf-8") as f:
                 return f.read()
 
         return None
@@ -103,7 +114,7 @@ class RemoteStorage:
         self._local_storage = LocalStorage()
         self._client = client
 
-    async def preload(self, urls: typing.List[str]):
+    async def preload(self, urls: list[str]):
         """Preloads modules from remote storage."""
         logger.debug("Preloading modules from remote storage.")
         for url in urls:
@@ -115,7 +126,7 @@ class RemoteStorage:
             await asyncio.sleep(5)
 
     @staticmethod
-    def _parse_url(url: str) -> typing.Tuple[str, str, str]:
+    def _parse_url(url: str) -> tuple[str, str, str]:
         """
         Parses a URL into a repository and module name.
         :param url: URL to parse.
@@ -138,7 +149,7 @@ class RemoteStorage:
 
         return url, repo, module_name
 
-    async def fetch(self, url: str, auth: typing.Optional[str] = None) -> str:
+    async def fetch(self, url: str, auth: str | None = None) -> str:
         """
         Fetches the module from the remote storage.
         :param url: URL to the module.

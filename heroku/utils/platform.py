@@ -20,7 +20,6 @@ IS_LAVHOST = "LAVHOST" in os.environ
 IS_HIKKAHOST = "HIKKAHOST" in os.environ
 IS_MACOS = "com.apple" in os.environ.get("PATH", "")
 IS_USERLAND = "userland" in os.environ.get("USER", "")
-IS_JAMHOST = "JAMHOST" in os.environ
 IS_WSL = False
 IS_WINDOWS = False
 with contextlib.suppress(Exception):
@@ -46,22 +45,28 @@ def get_named_platform() -> str:
                     return model
 
     match True:
+
         case _ if IS_WSL:
             return "WSL"
+
         case _ if IS_WINDOWS:
             return "Windows"
+
         case _ if IS_MACOS:
             return "MacOS"
-        case _ if IS_JAMHOST:
-            return "JamHost"
+
         case _ if IS_USERLAND:
             return "UserLand"
+
         case _ if IS_HIKKAHOST:
             return "HikkaHost"
+
         case _ if IS_DOCKER:
             return "Docker"
+
         case _ if IS_LAVHOST:
             return f"lavHost {os.environ['LAVHOST']}"
+
         case _:
             return "VDS"
 
@@ -76,30 +81,36 @@ def get_named_platform_emoji() -> str:
             with open("/proc/device-tree/model") as f:
                 model = f.read()
                 if "Orange" in model:
-                    return f"🍊 "
+                    return "🍊 "
 
                 if "Raspberry" in model:
-                    return f"🍇 "
+                    return "🍇 "
                 else:
                     return "?"
 
     match True:
+
         case _ if IS_WSL:
             return "🍀 "
+
         case _ if IS_WINDOWS:
             return "💻 "
+
         case _ if IS_MACOS:
             return "🍏 "
-        case _ if IS_JAMHOST:
-            return "🧃 "
+
         case _ if IS_USERLAND:
             return "🐧 "
+
         case _ if IS_HIKKAHOST:
             return "🌼 "
+
         case _ if IS_DOCKER:
             return "🐳 "
+
         case _ if IS_LAVHOST:
-            return f"✌️ "
+            return "✌️ "
+
         case _:
             return "💎 "
 
@@ -120,16 +131,19 @@ def get_platform_emoji() -> str:
     )
 
     match True:
+
         case _ if IS_HIKKAHOST:
             return BASE.format(5395745114494624362)
-        case _ if IS_JAMHOST:
-            return BASE.format(5242536621659678947)
+
         case _ if IS_USERLAND:
             return BASE.format(5458877818031077824)
+
         case _ if IS_LAVHOST:
             return BASE.format(5352753797531721191)
+
         case _ if IS_DOCKER:
             return BASE.format(5352678227582152630)
+
         case _:
             return BASE.format(5393588431026674882)
 

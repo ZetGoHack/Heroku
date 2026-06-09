@@ -23,9 +23,7 @@ def compat(code: str) -> str:
     ```python
         code = '''
             from ..inline import GeekInlineQuery, rand
-            from ..inline import rand, InlineQueryResultArticle
-            from ..inline import InlineQueryResultArticle, rand
-            from ..inline import rand, InlineQueryResultArticle, InputTextMessageContent
+            from ..inline import rand
         '''
         print(compat(code))
     ```

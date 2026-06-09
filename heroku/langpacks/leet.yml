@@ -62,7 +62,7 @@ heroku_security:
   seconds: "s3c5"
   _cmd_doc_inlinesec: "[command] - C0nf1g 1nl1n3 cmd'5 s3c s3771ng5"
   _cmd_doc_querysec: "T0ggl3 p3rm15510n 2 3x3cu73 1nl1n3 qu3r135 f0r 3x73rn4l u53rz"
-  _cmd_doc_owneradd: "<user> - 4dd u53r 2 `owner`"
+  _cmd_doc_owneradd: "[-f|--force] [-n|--nonick] <user> - 4dd u53r 2 `owner`"
   _cmd_doc_ownerlist: "L157 u53rz 1n `owner`"
   _cmd_doc_ownerrm: "<user> - R3m0v3 u53r fr0m `owner`"
   _cmd_doc_security: "[command] - C0nf1g cmd'5 s3c s3771ng5"
@@ -118,8 +118,6 @@ heroku_settings:
   btn_restart: "🔄 R3574r7"
   btn_update: "🧭 Upd473"
   close_menu: "😌 Cl053 m3nu"
-  custom_emojis: "✅ Cu570m 3m0j15"
-  no_custom_emojis: "🚫 Cu570m 3m0j15"
   suggest_subscribe: "✅ Sugg357 5ub5cr1b3 2 ch4nn3l"
   do_not_suggest_subscribe: "🚫 Sugg357 5ub5cr1b3 2 ch4nn3l"
   private_not_allowed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>7h15 cmd mu57 b3 3x3cu73d 1n ch47</b>"
@@ -134,7 +132,7 @@ heroku_settings:
   deauth_cancel: "🚫 C4nc3l"
   deauth_confirm_btn: "😢 D3l373"
   uninstall: "😢 <b>Un1n574ll1ng H3r0ku...</b>"
-  uninstalled: "😢 <b>H3r0ku un1n574ll3d. W3b 1n73rf4c3 15 571ll 4c71v3, u c4n 4dd 4n07h3r 4cc</b>"
+  uninstalled: "😢 <b>H3r0ku un1n574ll3d.</b>"
   cmd_nn_list: "<tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>N0N1ck 15 3n4bl3d 4 7h353 cmd5:</b>\n\n<blockquote expandable>{}</blockquote>"
   user_nn_list: "<tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>N0N1ck 15 3n4bl3d 4 7h353 u53rz:</b>\n\n<blockquote expandable>{}</blockquote>"
   chat_nn_list: "<tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>N0N1ck 15 3n4bl3d 4 7h353 ch475:</b>\n\n<blockquote expandable>{}</blockquote>"
@@ -166,6 +164,7 @@ heroku_settings:
 terminal:
   name: "T3rm1n4l"
   fw_protect: "H0w l0ng 2 w417 1n s3c5 b37w33n 3d175 1n cmd5"
+  command_protect: "8l0ck cl34rly d357ruc71v3 73rm1n4l cmd5 b3f0r3 3x3cu710n"
   what_to_kill: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>R3ply 2 4 73rm1n4l cmd 2 73rm1n473 17</b>"
   kill_fail: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>C0uld n07 k1ll pr0c355</b>"
   killed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>K1ll3d</b>"
@@ -187,18 +186,18 @@ terminal:
   _cmd_doc_terminal: "<command> - Ex3cu73 b45h cmd"
   _cmd_doc_terminate: "[-f 2 f0rc3 k1ll] - U53 1n r3ply 2 s3nd SIGTERM 2 4 pr0c355"
   _cls_doc: "Run5 cmd5"
+  exec_confirm: "<b>5y573m c0mm4nd:</b> <code>{}</code>"
+  exec_running: "<b>3x3cu71ng...</b>"
+  btn_execute: "3x3cu73"
+  btn_continue: "c0n71nu3 1npu7"
+  inline_hint: "73rm1n4l"
+  inline_hint_desc: "574r7 7yp1ng 4 c0mm4nd"
 
+  exec_error: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>3x3cu710n 3rr0r:</b>\n<code>{}</code>"
 heroku_web:
-  privacy_leak: "⚠️ <b>7h15 cmd g1v35 4cc355 2 ur H3r0ku w3b 1n73rf4c3. 17'5 n07 r3c0mm3nd3d 2 run 17 1n publ1c gr0up ch475. C0n51d3r u51ng 17 1n <a href='tg://openmessage?user_id={}'>S4v3d m5g5</a>. 7yp3</b> <code>{}proxypass force_insecure</code> <b>2 1gn0r3 7h15 w4rn1ng</b>"
-  privacy_leak_nowarn: "⚠️ <b>7h15 cmd g1v35 4cc355 2 ur H3r0ku w3b 1n73rf4c3. 17'5 n07 r3c0mm3nd3d 2 run 17 1n publ1c gr0up ch475. C0n51d3r u51ng 17 1n <a href='tg://openmessage?user_id={}'>S4v3d m5g5</a>.</b>"
-  opening_tunnel: "🔁 <b>0p3n1ng 7unn3l 2 H3r0ku w3b 1n73rf4c3...</b>"
-  tunnel_opened: "🎉 <b>7unn3l 0p3n3d. 7h15 l1nk 15 v4l1d 4 4b0u7 20 m1n5</b>"
   host_denied: "<tg-emoji emoji-id=6037254263187443802>💬</tg-emoji> S35510n 4dd1710n cmd5 r n07 4v41l4bl3 0n ur h0571ng, plz c0n74c7 ur h0571ng 4dm1n157r4710n."
-  web_btn: "🌍 W3b 1n73rf4c3"
-  _cmd_doc_weburl: "0p3n5 w3b 7unn3l 2 ur H3r0ku w3b 1n73rf4c3"
   btn_yes: "🚸 C0nf1rm 4nyw4y"
   btn_no: "🔻 Cl053"
-  lavhost_web: "✌️ <b>7h15 l1nk l34d5 2 ur H3r0ku w3b 1n73rf4c3 0n lavHost</b>\n\n<i>💡 U'll n33d 2 4u7h u51ng lavHost cr3d5, sp3c1f13d 0n r3g157r4710n</i>"
   invalid_target: "R3ply 2 7h3 m5g 0f 7h3 p3r50n u w4n7 2 4dd, 0r sp3c1fy 7h31r c0rr3c7 @username/id."
   cant_add_self: "U c4n'7 4dd ur53lf."
   add_user_confirm: "D0 u r34lly w4n7 2 4dd 4n 4cc {} ({})?"
@@ -219,7 +218,15 @@ heroku_web:
   2fa_enabled: "U h4v3 2-f4c70r 4u7h 3n4bl3d. 3n73r 7h3 p455w0rd."
   request_code: "🔃 R3qu357 7h3 c0d3 4g41n"
   code_expired: "7h3 c0d3 h45 3xp1r3d."
+  invalid_code_digits: "7h3 c0d3 mu57 c0n741n d1g175 0nly. Plz 7ry 4g41n."
+  switch_confirm: "⚠️ <b>7r4n5f3r 7h15 u53rb07 70 4n07h3r 73l3gr4m 4cc0un7?</b>\nCurr3n7 535510n w1ll b3 4rch1v3d, c0nf1g m0v3d, 4nd 1nl1n3 b07 d474 r3cr3473d."
+  switch_insecure: "🚫 <b>5w17ch 4cc0un7 f41l3d:</b> 1nl1n3 m3nu un4v41l4bl3. 7yp3 <code>{}switchacc force_insecure</code> 70 f0rc3."
+  switch_failed: "🚫 <b>5w17ch 4cc0un7 f41l3d:</b> <code>{}</code>"
+  _cmd_doc_switchacc: "7r4n5f3r u53rb07 70 4n07h3r 73l3gr4m 4cc0un7"
 
+  name: HerokuAccounts
+  _cls_doc: 1nl1n3 4cc0un7 m4n4g3m3n7
+  _cmd_doc_addacc: '[u53r/1d/r3ply] - 4dd 4n07h3r 4cc0un7 7hr0ugh 1nl1n3 l0g1n'
 heroku_backup:
   period: "⌚️ <b>7h3 un17 «ALPHA»</b> cr34735 r3gul4r b4ckup5. 7h353 s3771ng5 c4n b3 ch4ng3d l473r.\n\nPlz s3l3c7 7h3 b4ckup fr3qu3ncy\n\n<b>🚫 17 15 7hu5 1mp0551bl3 2 r3570r3 m0d5 d0wnl04d3d fr0m f1l35 w17h .lm cmd! B3 c4r3ful & d0 .backupmods b4 r3570r1ng.</b>"
   saved: "✅ 7h3 p3r10d1c17y 15 s4v3d! 17 c4n b3 ch4ng3d w17h <code>{prefix}set_backup_period</code>"
@@ -229,6 +236,7 @@ heroku_backup:
   invalid_args: "🚫 <b>Plz sp3c1fy 7h3 c0rr3c7 fr3qu3ncy 1n hr5, 0r `0` 2 d154bl3</b>"
   backup_caption: '<tg-emoji emoji-id=5469718869536940860>👆</tg-emoji> <b>7h15 15 ur DB b4ckup. D0 n07 sh4r3 17 w17h 4ny1, 17 c0n741n5 p3r50n4l 1nf0. 1f u n33d 2 r3570r3 17, u53</b> <pre><code class="language-heroku">{prefix}restoredb</code></pre> <b>1n r35p0n53 2 7h15 f1l3.</b>'
   backupall_info: '👆 <b>7h15 15 ur b4ckup 0f DB & m0d5. D0 n07 g1v3 17 2 4ny1, 17 c0n741n5 p3r50n4l 1nf0. 1f u n33d 2 r3570r3 17, u53</b> <pre><code class="language-heroku">{prefix}restoreall</code></pre> <b>1n r35p0n53 2 7h15 f1l3.</b>'
+  restoring_backup: "<tg-emoji emoji-id=5774134533590880843>🔄</tg-emoji> <b>R3570r1ng b4ckup, 1n574ll1ng d3p5 & m0d5...</b>"
   all_restored: "<tg-emoji emoji-id=5774134533590880843>🔄</tg-emoji> <b>Ur full b4ckup h45 b33n r3570r3d, r3574r71ng...</b>"
   all_restored_bot: "🔄 Ur full b4ckup h45 b33n r3570r3d, r3574r71ng..."
   reply_to_file: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>R3ply w17h .json 0r .zip f1l3</b>"
@@ -250,6 +258,7 @@ heroku_backup:
   _cmd_doc_backupall: "Cr34735 4 g3n3r4l b4ckup c0py (m0d5 + DB)"
   _cmd_doc_restoreall: "R3570r35 4 c0mm0n b4ckup (b453 + m0d5)"
 
+  name: HerokuBackup
 presets:
   name: "Pr35375"
   _fun_title: "🪩 3n73r741nm3n7 m0d5"
@@ -279,6 +288,13 @@ presets:
   remove_from_folder_usage: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>5p3c1fy f0ld3r 4nd m0dul3 t0 r3m0v3. </b> <code>{prefix}removefromfolder <f0ld3r> <m0dul3></code>"
   removed_from_folder: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Modul3 {} r3m0v3d fr0m f0ld3r</b> <code>{}</code>"
   module_not_in_folder: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Modul3 {} 15 n07 1n f0ld3r {}</b>"
+  _cmd_doc_presets: "| P4ck5 0f m0d5 2 l04d"
+  _cmd_doc_loadpreset: "Cu570m pr3537 l04d3r. R3ply 2 f1l3 0r 53nd f1l3 w17h cmd."
+  _cmd_doc_addtofolder: "<f0ld3r> <m0dul3> - 4dd m0dul3 2 cu570m f0ld3r"
+  _cmd_doc_folderload: "<f0ld3r> - 53nd cu570m f0ld3r 45 pr3537 f1l3"
+  _cmd_doc_removefromfolder: "<f0ld3r> <m0dul3> - R3m0v3 m0dul3 fr0m cu570m f0ld3r"
+  _cmd_doc_loadaliases: "L04d 4l14535 fr0m f1l3. 53nd f1l3 w17h cmd 0r r3ply 2 f1l3."
+  _cmd_doc_aliasload: "53nd 4l14535 45 f1l3"
   _cls_doc: "Sugg3575 n3w H3r0ku u53rz 4 p4ck5 0f m0d5 2 l04d"
 
 settings:
@@ -293,7 +309,6 @@ settings:
   vds_install: "<tg-emoji emoji-id=5471952986970267163>💎</tg-emoji> 7h3 1n574ll pr0c355 0n 4 VDS 15 d0n3 w17h 4 51ngl3 cmd:\n<pre><code class=\"language-shell\">sudo apt update &amp;&amp; sudo apt upgrade -y &amp;&amp; sudo apt install git python3-pip &amp;&amp; git clone https://github.com/coddrago/Heroku &amp;&amp; cd Heroku &amp;&amp; pip install -r requirements.txt &amp;&amp; python3 -m heroku</code></pre>\n<i>N073: 1f u d0 n07 h4v3 sudo pr1v5, 0m17 7h3 c0rr35p0nd1ng p4r7 0f 7h3 cmd.</i>"
   wsl_install: "<b>D0wnl04d WSL.</b> 2 d0 7h15, 0p3n P0w3rSh3ll 45 4dm1n & 7yp3 <code>wsl --install -d Ubuntu-22.04</code> \n⚠️ <i>2 1n574ll WSL, u n33d W1nd0w5 10 bu1ld 2004 0r W1nd0w5 11 0f 4ny v3r & 4 PC w17h v1r7u4l1z4710n supp0r7. 4 1n574ll4710n 0n 34rl13r v3r5 0f 7h3 OS, r3f3r 2</i> <a href=\"https://learn.microsoft.com/ru-ru/windows/wsl/install-manual\">7h15 p4g3</a>\n\n⬜️ <b>R3574r7 ur PC & l4unch 7h3 Ubuntu 22.04.x 4pp</b> \n\n⬜️ <b>P4573 7h3 cmd 1n70 17 (RMB):</b> <code>curl -Ss https://bootstrap.pypa.io/get-pip.py | python3</code> \n⚠️ <i>1f y3ll0w w4rn1ng5 4pp34r, 7yp3</i> <code>export PATH=\"/home/username/.local/bin:$PATH\"</code> <i>r3pl4c1ng /home/username/.local/bin w17h 7h3 p47h m3n710n3d 1n 7h3 m5g</i>\n\n⬜️ <b>P4573 7h3 cmd (RMB):</b> \n<pre><code class=\"language-bash\">clear &amp;&amp; git clone https://github.com/coddrago/Heroku &amp;&amp; cd Heroku &amp;&amp; pip install -r requirements.txt &amp;&amp; python3 -m heroku</code></pre>\n🔗 <b>Wh3r3 2 g37 API_ID & API_HASH?</b>: <a href=\"https://youtu.be/DcqDA249Lhg?t=24\">V1d30</a>"
   userland_install: "<b>1n574ll Us3rL4nd fr0m 7h15</b> <a href=\"https://play.google.com/store/apps/details?id=tech.ula\">l1nk</a>\n\n<b>0p3n 17, s3l3c7 Ubuntu —&gt; M1n1m4l —&gt; T3rm1n4l</b>\n\n<b>W417 4 7h3 d157r0 2 1n574ll, u c4n p0ur 50m3 734</b>\n\n<b>4f73r succ355ful 1n574ll, 4 73rm1n4l w1ll 0p3n 1n fr0n7 0f u, 7yp3 7h3r3:</b>\n<pre><code class=\"language-bash\">sudo apt update &amp;&amp; sudo apt upgrade -y &amp;&amp; sudo apt install python3 git python3-pip -y &amp;&amp; git clone https://github.com/coddrago/Heroku &amp;&amp; cd Heroku &amp;&amp; sudo pip install -r requirements.txt &amp;&amp; python3 -m heroku</code></pre>\n\n<b>47 7h3 3nd 0f 7h3 1n574ll, 4 l1nk w1ll 4pp34r, f0ll0w 17 & 3n73r ur 4cc d3741l5 2 l0g1n.\n\nV01là! U h4v3 1n574ll3d H3r0ku 0n Us3rL4nd.</b>"
-  jamhost_install: "🪐 <b>1n574ll4710n 0n 🧃 J4mH057:</b>\n\n<b>Pr0c33d 2 @jamhostbot, 7yp3 </b><code>/pay</code><b> & f0ll0w 175 1n57ruc710n5.</b>"
   hikkahost_install: "<b>🌘 H0w 2 1n574ll H3r0ku 0n H1kk4H057?</b>\n\n1. G0 2 @hikkahost_bot\n2. S3l3c7 \"1n574ll\"\n3. S3l3c7 \"🪐 H3r0ku\"\n\n& c0n71nu3 w17h 7h3 1n574ll4710n.\n\n<b>4f73r 7h47, u w1ll r3c31v3 4 l1nk, 0p3n 17 & l0g 1n70 ur 4cc.</b>"
   lavhost_install: "⬇️ 2 1n574ll, 51mply g0 2 @lavhostbot & f0ll0w 7h353 s73p5:\n\n• 3n73r 7h3 /buy cmd, s3l3c7 & p4y 7h3 1nv01c3\n• 1f n3c3554ry, s3nd 7h3 p4ym3n7 r3c31p7\n• 4f73r p4ym3n7 c0nf1rm4710n, 3n73r /install & s3l3c7 H3r0ku\n• F0ll0w 7h3 b07'5 1n57ruc710n5"
   too_many_args: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>2 m4ny 4rg5</b>"
@@ -308,15 +323,21 @@ settings:
   id_not_found_scgroup: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> 7h15 3n717y d035 n07 3x157 1n 4ny s3c gr0up. 7h3r3f0r3, 4dd1ng 4 pr3f1x 4 17 15 p01n7l355"
   invalid_id_or_username: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> 1nv4l1d id/username w45 g1v3n"
   alias_created: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>4l145 cr3473d. 4cc355 17 w17h</b> <code>{}</code>"
+  aliases_created: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>4dd3d {count} 4l14535:</b>\n<blockquote expandable>{aliases}</blockquote>"
+  aliases_created_line: "{aliases} f0r {command}"
   aliases_list: "<b>🔗 1mp0rt3d 4l145:</b>\n\n<blockquote expandable>{}</blockquote>"
-  aliases_file: "<tg-emoji emoji-id=5256113064821926998>📁</tg-emoji> <b>Y0ur 4l145</b>\n\n<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>{prefix}la 1n r3ply t0 th1s m3ss4g3 t0 1mp0rt</b>"  
+  aliases_file: "<tg-emoji emoji-id=5256113064821926998>📁</tg-emoji> <b>Y0ur 4l145</b>\n\n<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>{prefix}la 1n r3ply t0 th1s m3ss4g3 t0 1mp0rt</b>"
   aliases: "<b>🔗 4l14535:</b>\n"
+  happy_beta: "\n\n<tg-emoji emoji-id=5465188915990255885>🌟</tg-emoji> <b>Y0u 4r3 4 h4ppy 0wn3r 0f 7h3 <code>{}</code> v3r510n!</b>"
   no_command: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Cmd</b> <code>{}</code> <b>d035 n07 3x157</b>"
   no_command_loaded: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Cmd</b> <code>{}</code> <b>d035 n07 3x157</b>\n\n<b>L04d3d 4l145:</b> <blockquote expandable>{}</blockquote>"
+  alias_exists: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>4l145</b> <code>{alias}</code> <b>4lr34dy 3x1575 f0r c0mm4nd</b> <code>{command}</code>"
   alias_args: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>U mu57 pr0v1d3 4 cmd & 7h3 4l145 4 17</b>"
   unstable: "\n\n<tg-emoji emoji-id=5355133243773435190>❕</tg-emoji> <b>U r u51ng 4n un574bl3 br4nch</b> <code>{}</code><b>!</b>"
   delalias_args: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>U mu57 pr0v1d3 7h3 4l145 n4m3</b>"
   alias_removed: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>4l145</b> <code>{}</code> <b>r3m0v3d</b>."
+  aliases_removed: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>R3m0v3d {count} 4l14535:</b>\n<blockquote expandable>{aliases}</blockquote>"
+  aliases_cleared: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>4ll 4l14535 r3m0v3d</b>."
   no_alias: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>4l145</b> <code>{}</code> <b>d035 n07 3x157</b>"
   db_cleared: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>DB cl34r3d</b>"
   heroku: "{} <b>{}.{}.{}</b> <i>{}</i>\n\n<b><tg-emoji emoji-id=5289608677244811430>📁</tg-emoji> <b>heroku-tl:</b> <i>{}</i>\n\n<tg-emoji emoji-id=5228879218363872764>⌨</tg-emoji> <b>D3v5: <a href=\"t.me/codrago\">@codrago</a>, <a href=\"t.me/zetgo\">@zetgo</a></b>"
@@ -325,9 +346,13 @@ settings:
   cancel: "🚫 C4nc3l"
   wrong_usage_tcc: "U54g3: 70gg13cmd <m0dul3> <c0mm4nd> 0r 70gg13cmd <c0mm4nd>"
   wrong_usage_tmc: "U54g3: 70gg13m0d <m0dul3>"
-  wrong_usage_cmc: "Cl34r3d D8 f0r m0dul3 {}"
+  wrong_usage_cmc: "U54g3: cl34rm0dul3 <m0dul3>"
+  cmc_done: "<b>Cl34r3d D8 f0r m0dul3 {}</b>"
   mod_enabled: "M0dul3 {} 3n4bl3d"
   mod_disabled: "M0dul3 {} d154bl3d"
+  cmd_enabled: "Cmd {} 3n4bl3d 1n m0dul3 {}"
+  cmd_disabled: "Cmd {} d154bl3d 1n m0dul3 {}"
+  not_a_user: "<tg-emoji emoji-id=5447644880824181073>⚠️</tg-emoji> <b>3n717y {} 15 n07 4 u53r</b>"
   who_to_blacklist: "<tg-emoji emoji-id=5382187118216879236>❓</tg-emoji> <b>Wh0 2 bl4ckl157?</b>"
   who_to_unblacklist: "<tg-emoji emoji-id=5382187118216879236>❓</tg-emoji> <b>Wh0 2 unbl4ckl157?</b>"
   _cmd_doc_addalias: "S37 4n 4l145 4 4 cmd"
@@ -335,14 +360,19 @@ settings:
   _cmd_doc_blacklist: "[chat_id] [module] - Bl4ckl157 7h3 b07 fr0m 0p3r471ng s0m3wh3r3"
   _cmd_doc_blacklistuser: "[user_id] - Pr3v3n7 7h15 u53r fr0m runn1ng 4ny cmd5"
   _cmd_doc_cleardb: "Cl34r 7h3 3n71r3 DB, 3ff3c71v3ly p3rf0rm1ng 4 f4c70ry r3537"
-  _cmd_doc_delalias: "R3m0v3 4n 4l145 4 4 cmd"
+  _cmd_doc_delalias: "<4l145|-c|--clear> - R3m0v3 4n 4l145 0r 4ll 4l14535"
   _cmd_doc_heroku: "G37 H3r0ku v3r510n"
   _cmd_doc_setprefix: "<prefix> [owner] - S375 cmd pr3f1x"
+  _cmd_doc_togglecmd: "<m0dul3> <cmd> 0r <cmd> - 3n4bl3/d154bl3 cmd"
+  _cmd_doc_togglemod: "<m0dul3> - 3n4bl3/d154bl3 wh0l3 m0dul3"
+  _cmd_doc_clearmodule: "<m0dul3> - Cl34r 4ll DB 3n7r135 f0r m0dul3"
   _cmd_doc_unblacklist: "<chat_id> - Unbl4ckl157 7h3 b07 fr0m 0p3r471ng s0m3wh3r3"
   _cmd_doc_unblacklistuser: "[user_id] - 4ll0w 7h15 u53r 2 run p3rm1773d cmd5"
   _cfg_nonstandart_prefixes: "4ll0w n0n-574nd4r7 pr3f1x35 l1k3 fl4g5 0r m0r3 7h4n 1 symb0l"
   _cls_doc: "C7rl c0r3 u53rb07 s3771ng5"
 
+  cmd404: <tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>Cmd n07 f0und</b>
+  mod404: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>W47ch3r {} n07 f0und</b>
 heroku_config:
   name: "H3r0kuC0nf1g"
   choose_core: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Ch0053 4 c473g0ry</b>"
@@ -351,6 +381,11 @@ heroku_config:
   configuring_mod: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Ch0053 c0nf1g 0p710n 4 m0d</b> <code>{}</code>\n\n<b>Curr3n7 0p75:</b>\n\n{}"
   configuring_folder: "<tg-emoji emoji-id=5433653135799228968>📁</tg-emoji> <b>Ch0053 c0nf1g 0p710n 4 f0ld3r</b> <code>{}</code>\n\n<b>Curr3n7 0p75:</b>\n\n{}"
   configuring_lib: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Ch0053 c0nf1g 0p710n 4 l1b</b> <code>{}</code>\n\n<b>Curr3n7 0p75:</b>\n\n{}"
+  configuring_category: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Ch0053 c0nf1g 0p710n 4 m0d</b> <code>{}</code> <b>1n c473g0ry</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Curr3n7 0p75:</b>\n{}"
+  configuring_category_lib: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Ch0053 c0nf1g 0p710n 4 l1b</b> <code>{}</code> <b>1n c473g0ry</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Curr3n7 0p75:</b>\n{}"
+  category_header: "\n<b>📂 {}</b>"
+  category_header_doc: "\n<b>📂 {}</b>\n<i>{}</i>"
+  category_uncategorized: "\n<b>▫️ 07h3r</b>"
   configuring_option: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>C0nf1gur1ng 0p710n</b> <code>{}</code> <b>0f m0d</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>D3f4ul7: {}</b>\n\n<b>Curr3n7: {}</b>\n\n{}"
   configuring_option_lib: "<tg-emoji emoji-id=5431736674147114227>📦</tg-emoji> <b>C0nf1gur1ng 0p710n</b> <code>{}</code> <b>0f l1b</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>D3f4ul7: {}</b>\n\n<b>Curr3n7: {}</b>\n\n{}"
   option_saved: "<tg-emoji emoji-id=5318933532825888187>⚙️</tg-emoji> <b>0p710n</b> <code>{}</code> <b>0f m0d</b> <code>{}</code><b> s4v3d!</b>\n<b>Curr3n7: {}</b>"
@@ -396,6 +431,7 @@ inline_stuff:
   _cmd_doc_ch_heroku_bot: "<username> - Ch4ng3 ur H3r0ku 1nl1n3 b07 u53rn4m3"
   _cls_doc: "Pr0v1d35 supp0r7 4 1nl1n3 57uff"
 
+  _cmd_doc_ch_bot_token: <70k3n> - Ch4ng3 1nl1n3 b07 70k3n
 test:
   name: "T3573r"
   set_loglevel: "<tg-emoji emoji-id=5355133243773435190>🚫</tg-emoji> <b>Plz sp3c1fy v3rb0517y 45 4n 1n73g3r 0r 57r1ng</b>"
@@ -410,7 +446,7 @@ test:
   suspend_invalid_time: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>1nv4l1d 71m3 2 su5p3nd</b>"
   suspended: "<tg-emoji emoji-id=5452023368054216810>🥶</tg-emoji> <b>B07 su5p3nd3d 4 {}</b>"
   confidential: "⚠️ <b>L0g l3v3l</b> <code>{}</code> <b>m4y r3v34l ur c0nf1d3n714l 1nf0, b3 c4r3ful</b>"
-  confidential_text: "⚠️ <b>L0g l3v3l</b> <code>{0}</code> <b>m4y r3v34l ur c0nf1d3n714l 1nf0, b3 c4r3ful</b>\n<b>7yp3</b> <code>.logs {0} force_insecure</code> <b>2 1gn0r3 7h15 w4rn1ng</b>"
+  confidential_text: "⚠️ <b>L0g l3v3l</b> <code>{0}</code> <b>m4y r3v34l ur c0nf1d3n714l 1nf0, b3 c4r3ful</b>\n<b>7yp3</b> <code>.logs {0} -f</code> <b>2 1gn0r3 7h15 w4rn1ng</b>"
   choose_loglevel: "💁‍♂️ <b>Ch0053 l0g l3v3l</b>"
   bad_module: "<tg-emoji emoji-id=5355133243773435190>🚫</tg-emoji> <b>M0dul3 n07 f0und</b>"
   debugging_enabled: "<tg-emoji emoji-id=5332533929020761310>✅</tg-emoji> <b>D3bugg1ng m0d3 3n4bl3d 4 m0dul3</b> <code>{0}</code>\n<i>G0 2 d1r n4m3d `debug_modules`, 3d17 f1l3 n4m3d `{0}.py` & s33 ch4ng35 1n r34l 71m3</i>"
@@ -421,7 +457,7 @@ test:
   _cmd_doc_clearlogs: "Cl34r l0g5"
   _cmd_doc_debugmod: "[module] - 4 d3v5: 0p3n m0dul3 4 d3bugg1ng\nU w1ll b3 4bl3 2 7r4ck ch4ng35 1n r34l-71m3"
   _cmd_doc_dump: "U53 1n r3ply 2 g37 4 dump 0f 4 m5g"
-  _cmd_doc_logs: "<level> - Dump l0g5"
+  _cmd_doc_logs: "<level> [-f] - Dump l0g5"
   _cmd_doc_ping: "7357 ur u53rb07 p1ng"
   _cmd_doc_suspend: "<time> - Su5p3nd5 7h3 b07 4 N s3c5"
   _cls_doc: "P3rf0rm 0p5 b453d 0n u53rb07 s3lf-73571ng"
@@ -441,6 +477,7 @@ updater:
   update_confirm: "<tg-emoji emoji-id=5382187118216879236>❓</tg-emoji> <b>R u 5ur3 u w4n7 2 upd473?\n\n<a href=\"https://github.com/coddrago/Heroku/commit/{}\">{}</a> ⤑ <a href=\"https://github.com/coddrago/Heroku/commit/{}\">{}</a></b>"
   no_update: "<tg-emoji emoji-id=5465496001856950230>🌟</tg-emoji> <b>U r 0n 7h3 l47357 v3r510n, pull upd4735 4nyw4y?</b>"
   cancel: "🚫 C4nc3l"
+  stop_ub_confirm: "Y0ur {} w1ll b3 570pp3d, 4r3 y0u 5ur3?"
   full_success: "<tg-emoji emoji-id=6028215594707324419>👍</tg-emoji> <b>Us3rb07 15 fully l04d3d! {}</b>\n<i>Full r3574r7 700k {}s</i>"
   ub_stop: "Ur {emoji} h45 b33n 570pp3d"
   full_fail: "<tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> <b>Us3rb07 15 fully l04d3d, bu7 4n 3rr0r 0ccurr3d! {}\n<i>Full r3574r7 700k {}s\nF41l3d 2 l04d {} m0d5</i>"
@@ -469,6 +506,9 @@ updater:
   ignore: "🚫 1gn0r3"
   changelog: '<tg-emoji emoji-id=5434144690511290129>📰</tg-emoji> <b>Ch4ng3l0g 0f 7h3 l457 m4j0r upd473:</b><blockquote expandable>{}</blockquote>'
 
+  _cmd_doc_autoupdate: 70ggl3 4u70m471c upd4735
+  _cmd_doc_changelog: 5h0w ch4ng3l0g 0f 7h3 l457 m4j0r upd473
+  _cmd_doc_ubstop: 570p y0ur u53rb07
 api_protection:
   name: "4P1L1m173r"
   warning: "⚠️ <b>W4RN1NG!</b>\n\nUr 4cc 3xc33d3d 7h3 l1m17 0f r3qu3575, sp3c1f13d 1n c0nf1g. 1n 0rd3r 2 pr3v3n7 T3l3gr4m 4P1 Fl00d, u53rb07 h45 b33n <b>fully fr0z3n</b> 4 {} s3c5. Fur7h3r 1nf0 15 pr0v1d3d 1n 4774ch3d f1l3. \n\n17 15 r3c0mm3nd3d 2 g37 h3lp 1n <code>{prefix}support</code> gr0up!\n\n1f u 7h1nk, 7h47 17 15 4n 1n73nd3d b3h4v10r, 7h3n w417 un71l u53rb07 g375 unl0ck3d & n3x7 71m3, wh3n u w1ll b3 g01ng 2 p3rf0rm such 4n 0p, u53 <code>{prefix}suspend_api_protect</code> &lt;time in seconds&gt;"
@@ -488,7 +528,6 @@ api_protection:
   _cmd_doc_api_fw_protection: "70ggl3 4P1 R473l1m173r"
   _cmd_doc_suspend_api_protect: "<time in seconds> - Su5p3nd 4P1 R473l1m173r 4 n s3c5"
   _cls_doc: "H3lp5 u53rb07 4v01d sp4mm1ng T3l3gr4m 4P1"
-  
 help:
   name: "H3lp"
   undoc: "🦥 N0 d0c5"
@@ -502,7 +541,12 @@ help:
   not_exact: "<tg-emoji emoji-id=5355133243773435190>☝️</tg-emoji> <b>N0 3x4c7 m47ch 0ccur3d, 50 7h3 cl05357 r35ul7 15 sh0wn 1n5734d</b>"
   request_join: "U r3qu3573d l1nk 4 H3r0ku supp0r7 ch47"
   core_notice: "<tg-emoji emoji-id=5355133243773435190>☝️</tg-emoji> <b>7h15 15 4 c0r3 m0dul3. U c4n'7 unl04d 17 n0r r3pl4c3</b>"
+  show_preview_in_help: "5h0w # m374 b4nn3r 1n h3lp pr3v13w [m0dul3]"
 
+  _cls_doc: 5h0w5 h3lp f0r m0dul35 4nd c0mm4nd5
+  _cmd_doc_help: '[m0dul3] - 5h0w h3lp f0r m0dul35 4nd c0mm4nd5'
+  _cmd_doc_helphide: <m0dul3 ...> - h1d3 0r 5h0w m0dul35 1n h3lp
+  _cmd_doc_support: 5h0w 5upp0r7 ch47 l1nk
 heroku_info:
   info_message: "{}\n<blockquote>┌\n├  【<tg-emoji emoji-id=5883964170268840032>👤</tg-emoji>】 <b>0wn3r</b>: {me}\n├  【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>V3r510n</b>: {version}\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5778335621491723621>📷</tg-emoji>】 <b>Pr3f1x</b>: {prefix}⠀ ⠀ \n├  【<tg-emoji emoji-id=5843799474362652262>🔄</tg-emoji>】 <b>Up71m3</b>: {uptime}\n├  【<tg-emoji emoji-id=5879770735999717115>👤</tg-emoji>】 <b>Br4nch</b>: {branch}\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5775887550262546277>❗️</tg-emoji>】 <b>CPU</b>: {cpu_usage}\n├  【<tg-emoji emoji-id=5931409969613116639>🛡</tg-emoji>】 <b>RAM</b>: {ram_usage}\n├  【<tg-emoji emoji-id=5931472654660800739>📊</tg-emoji>】 <b>P1ng</b>: {ping}\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5926783847453692661>🛡</tg-emoji>】 <b>Upd473</b>: {upd}\n├  【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>H057</b>: {platform}\n├  【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>OS</b>: {os}\n├  【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>Py7h0n V3r</b>: {python_ver}\n└</blockquote>"
   non_detectable: "<tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> <b>7h15 c0mp0n3n7 c4nn07 b3 d373c73d 0n ur s3rv3r!</b>"
@@ -518,10 +562,10 @@ heroku_info:
   _cfg_cst_btn: "Cu570m bu770n 4 1nf0. L34v3 3mp7y 2 r3m0v3 bu770n"
   _cfg_banner: "URL 2 1m4g3 b4nn3r"
   desc: "<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <b>Us3rb07 — wh47 15 17?</b>\n\n<tg-emoji emoji-id=5472238129849048175>😎</tg-emoji> 4 u53rb07 r3f3r5 2 4 <b>3rd-p4r7y pr0gr4m</b> 7h47 1n73r4c75 w17h 7h3 T3l3gr4m 4P1 2 p3rf0rm <b>4u70m473d 745k5 0n b3h4lf 0f 4 u53r</b>. 7h353 u53rb075 c4n b3 u53d 2 4u70m473 v4r10u5 745k5 5uch 45 <b>s3nd1ng m5g5, j01n1ng ch4nn3l5, d0wnl04d1ng m3d14, & much m0r3</b>.\n\n<tg-emoji emoji-id=5474667187258006816>😎</tg-emoji> Us3rb075 r d1ff3r3n7 fr0m r3gul4r T3l3gr4m b075 45 <b>7h3y run 0n 7h3 u53r'5 4cc</b> r47h3r 7h4n 4 b07 4cc. 7h15 m34n5 7h47 u53rb075 c4n 4cc355 m0r3 f347ur35 & h4v3 gr3473r fl3x1b1l17y 1n 73rm5 0f 7h3 4c710n5 7h3y c4n p3rf0rm.\n\n<tg-emoji emoji-id=5472267631979405211>🚫</tg-emoji> H0w3v3r, 17 15 1mp0r74n7 2 n073 7h47 <b>u53rb075 r n07 0ff1c14lly supp0r73d by T3l3gr4m</b> & 7h31r u53 m4y v10l473 7h3 pl47f0rm'5 73rm5 0f s3rv1c3. 45 such, <b>u53rz sh0uld 3x3rc153 c4u710n wh3n u51ng u53rb075</b> & 3n5ur3 7h47 7h3y r n07 b31ng u53d 4 m4l1c10u5 purp0535.\n\n"
-  no_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> Wh3r3 15 7h3 l1nk 0r r3ply 2 7h3 f0n7?"  
+  no_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> Wh3r3 15 7h3 l1nk 0r r3ply 2 7h3 f0n7?"
   no_banner: "<tg-emoji emoji-id=6010394680179562842>😶</tg-emoji> <b>N07h1ng w45 f0und 47 7h3 sp3c1f13d l1nk </b><code>{link></code><b>.\n\nCh3ck 7h3 1n73gr17y 0f ur f1l3 47 7h3 l1nk, & 4l50 m4k3 5ur3 7h47 7h3 l1nk p01n75 d1r3c7ly 2 7h3 f1l3.</b>"
-  font_installed: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>F0n7 1n574ll3d 5ucc355fully!</b>\n<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <i>U c4n n0w 3nj0y u51ng 17.</i>"  
-  incorrect_format_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>1nv4l1d f0n7 f0rm47!</b>\n<blockquote>Supp0r73d f0rm475 -> otf, ttf</blockquote>"  
+  font_installed: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>F0n7 1n574ll3d 5ucc355fully!</b>\n<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <i>U c4n n0w 3nj0y u51ng 17.</i>"
+  incorrect_format_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>1nv4l1d f0n7 f0rm47!</b>\n<blockquote>Supp0r73d f0rm475 -> otf, ttf</blockquote>"
   incorrect_img_format: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>1nv4l1d 1m4g3 f0rm47</b>\n<blockquote>Supp0r73d f0rm475 -> jpg, jpeg, png, bmp, webp</blockquote>"
   _cmd_doc_ubinfo: "S3nd 1nf0 4k4 'Wh47 15 H3r0ku?'"
   _cmd_doc_info: "S3nd u53rb07 1nf0"
@@ -529,6 +573,7 @@ heroku_info:
   _ihandle_doc_info: "S3nd u53rb07 1nf0"
   _cls_doc: "Sh0w u53rb07 1nf0"
 
+  name: HerokuInfo
 loader:
   name: "L04d3r"
   link: "<tg-emoji emoji-id=5256113064821926998>📁</tg-emoji> <b>F1l3 0f</b> {class_name}\n\n<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>{prefix}lm 1n r3ply 2 7h15 m5g 2 1n574ll</b>\n\n<tg-emoji emoji-id=4916086774649848789>🔗</tg-emoji> <code>{prefix}dlm {url}</code>\n\n{not_exact}"
@@ -536,6 +581,7 @@ loader:
   finding_module_in_repos: "<tg-emoji emoji-id=5873204392429096339>🔄</tg-emoji> L00k1ng 4 m0dul35 1n r3p05."
   loading_module_via_file: "<tg-emoji emoji-id=5873204392429096339>🔄</tg-emoji> L04d1ng 7h3 m0dul3."
   ml_load_module: "<tg-emoji emoji-id=5873204392429096339>🔄</tg-emoji> I'm d0wnl04d1ng 7h3 m0dul3 45 4 f1l3."
+  no_ml: "<tg-emoji emoji-id=5454225457916420314>😖</tg-emoji> <b>M0dul3</b> <code>{}</code> <b>c4nn07 b3 3xp0r73d 45 4 f1l3</b>"
   not_exact: "<tg-emoji emoji-id=5355133243773435190>⚠️</tg-emoji> <i>N0 3x4c7 m47ch h45 b33n f0und, 50 7h3 cl05357 r35ul7 15 sh0wn 1n5734d</i>"
   args: "<tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> <b>U mu57 sp3c1fy 4rg5</b>"
   repo_config_doc: "URL 2 4 m0dul3 r3p0"
@@ -548,12 +594,13 @@ loader:
   loaded: "<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>M0dul3</b> <code>{}</code>{} <b>l04d3d {}</b>{}{}{}{}{}{}{}{}"
   no_class: "<b>Wh47 cl455 n33d5 2 b3 unl04d3d?</b>"
   unloaded: "{} <b>M0dul3 {} unl04d3d.</b>"
+  unload_suggestions: "<tg-emoji emoji-id=5253780051471642059>❌</tg-emoji> <b>M0dul3</b> <code>{}</code> <b>n07 f0und.</b>\n\n<b>M4yb3 u m34n7:</b>"
   modules_unloaded: "<tg-emoji emoji-id=5784993237412351403>✅</tg-emoji> <b>Unl04d3d {unloaded_num} m0dul35:</b>\n<blockquote expandable>{unloaded}</blockquote>"
-  not_unloaded: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>M0dul3 n07 unl04d3d.</b>"
-  modules_not_unloaded: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>F41l3d 2 unl04d {not_unloaded} m0dul35.</b>\n<blockquote expandable>{errors}</blockquote>"
+  not_unloaded: "<tg-emoji emoji-id=5253780051471642059>❌</tg-emoji> <b>M0dul3 n07 unl04d3d.</b>"
+  modules_not_unloaded: "<tg-emoji emoji-id=5253780051471642059>❌</tg-emoji> <b>F41l3d 2 unl04d {not_unloaded} m0dul35.</b>\n<blockquote expandable>{errors}</blockquote>"
   requirements_failed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>R3qu1r3m3n75 1n574ll4710n f41l3d</b>"
   requirements_restarted: "🚀 <b>Ur u53rb07 15 r3574r73d, 4f73r r3574r7, 1n574ll 7h3 m0dul3 4g41n.</b>"
-  requirements_installing: "<tg-emoji emoji-id=5328311576736833844>🚀</tg-emoji> <b>1n574ll1ng r3qu1r3m3n75:\n\n{}</b>"
+  requirements_installing: "<tg-emoji emoji-id=5873225338984599714>🚀</tg-emoji> <b>1n574ll1ng r3qu1r3m3n75:\n\n{}</b>"
   requirements_restart: "<tg-emoji emoji-id=5875145601682771643>🚀</tg-emoji> <b>R3qu1r3m3n75 1n574ll3d, bu7 4 r3574r7 15 r3qu1r3d 4</b> <code>{}</code> <b>2 4pply</b>"
   all_modules_deleted: "<tg-emoji emoji-id=5784993237412351403>✅</tg-emoji> <b>4ll m0dul35 d3l373d</b>"
   undoc: "<tg-emoji emoji-id=5427052514094619126>🤷‍♀️</tg-emoji> N0 d0c5"
@@ -602,7 +649,17 @@ loader:
   _cmd_doc_unloadmod: "Unl04d m0dul3 by cl455 n4m3"
   _cls_doc: "L04d5 m0dul35"
   basic_auth_doc: "B451c 4u7h 4 m0dul3 r3p0"
+  choose_repo: "<tg-emoji emoji-id=5873153278023307367>🗂️</tg-emoji> <b>Ch00s3 4 r3p0 2 1n574ll 4ll m0dul35 fr0m:</b>"
+  installing_all_from_repo: "<tg-emoji emoji-id=5873204392429096339>⏳</tg-emoji> <b>1n574ll1ng 4ll m0dul35 fr0m r3p0...</b>"
+  installed_all_from_repo: "<tg-emoji emoji-id=5429092129638980960>🪐</tg-emoji> <b>4ll m0dul35 fr0m r3p0 1n574ll3d 5ucc355fully!</b>"
+  dlm_all_from_repo_error_nomods: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>N0 m0dul35 f0und 1n 7h15 r3p0, f4gg07!</b>"
+  dlm_all_from_repo_error_somemods: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>50m3 m0dul35 f41l3d 2 1n574ll, b17ch:</b>\n"
+  show_banner_doc: "5h0w # m374 b4nn3r l1k3 pr3v13w?"
 
+  '404': <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>M0dul3 n07 f0und</b>
+  _cmd_doc_dlmall: 1n574ll 4ll m0dul35 fr0m 53l3c73d r3p0
+  _cmd_doc_ml: <m0dul3> - 53nd m0dul3 45 4 f1l3
+  result: "<tg-emoji emoji-id=5337183664630709422>🔎</tg-emoji> <b>534rch r35ul7 f0r</b> <code>{query}</code>\n\n<tg-emoji emoji-id=5258270535710317499>📦</tg-emoji> <b>{name}</b> by <b>{dev}</b>\n<tg-emoji emoji-id=5879813604068298387>ℹ️</tg-emoji> <i>{cls_doc}</i>\n<tg-emoji emoji-id=5372981976804366741>🤖</tg-emoji> <b>C0mm4nd5:</b>\n{commands}\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <code>{prefix}dlmod {mhash}</code>"
 translations:
   name: "7r4n5l4710n5"
   lang_saved: "{} <b>L4ngu4g3 54v3d!</b>"
@@ -619,8 +676,18 @@ translations:
   requested_join: "💫 <b>M0dul3</b> <code>{}</code> <b>r3qu3573d 2 j01n ch4nn3l <a href='https://t.me/{}'>{}</a></b>\n\n<b>❓ R3450n:</b> <i>{}</i>"
   fw_error: "<tg-emoji emoji-id=5877458226823302157>🕒</tg-emoji> <b>C4ll</b> <code>{}</code> <b>c4u53d Fl00dW417 0f {} 0n m37h0d</b> <code>{}</code>"
   rpc_error: "<tg-emoji emoji-id=5877477244938489129>🚫</tg-emoji> <b>C4ll</b> <code>{}</code> <b>f41l3d du3 2 RPC 3rr:</b> <code>{}</code>"
-  _cmd_doc_dllangpack: "[link to a langpack | empty to remove] - Ch4ng3 H3r0ku 7r4n5l473 p4ck (3x73rn4l)"
-  _cmd_doc_setlang: "[languages in the order of priority] - Ch4ng3 d3f4ul7 l4ngu4g3"
+  _cmd_doc_dllangpack: "[l1nk 2 p4ck] - 4dd 3x73rn4l 7r4n5l4710n p4ck"
+  _cmd_doc_setlang: "[l4ngu4g3] - ch4ng3 d3f4ul7 l4ngu4g3"
+  downloaded_langs: "D0wnl04d3d"
+  btn_yes: "Y35"
+  btn_cancel: "C4nc3l"
+  btn_delete: "D3l373"
+  btn_back: "B4ck"
+  no_downloaded: "<b>L157 15 3mp7y</b>"
+  choose_downloaded: "<b>D0wnl04d3d l4ngu4g35</b>"
+  confirm_lang: "<b>1n574ll 7h15 l4ngu4g3?</b>"
+  action_cancelled: "<b>4c710n c4nc3ll3d</b>"
+  lang_deleted: "<b>L4ngu4g3 5ucc355fu11y d3l373d</b>"
   _cls_doc: "Pr0c35535 1n73rn4l 7r4n5l4710n5"
 
 eval:
@@ -637,6 +704,8 @@ eval:
   _cmd_doc_ebf: "3v4lu4735 Br41nf*ck c0d3"
   _cmd_doc_ec: "3v4lu4735 C c0d3"
   _cmd_doc_ecpp: "3v4lu4735 C++ c0d3"
+  _cmd_doc_ers: "3v4lu4735 Ru57 c0d3"
+  _cmd_doc_eg: "3v4lu4735 G0 c0d3"
   _cmd_doc_enode: "3v4lu4735 N0d3.j5 c0d3"
   _cmd_doc_ephp: "3v4lu4735 PHP c0d3"
   _cmd_doc_eruby: "3v4lu4735 Ruby c0d3"
@@ -714,3 +783,11 @@ $inline:
   button403: "U r n07 4ll0w3d 2 pr355 7h15 bu770n!"
   keep_id: "⚠️ D0 n07 r3m0v3 ID! {}"
   no_query_results: "<tg-emoji emoji-id=5440660757194744323>‼️</tg-emoji> <b>F41L3D 70 CR34T3 F0RM</b>\n\nP0551BL3 W4Y5 70 F1X 7H3 3RR0R:\n\n1. R3574RT H3R0KU: <code>{prefix}restart</code>\n\n2. 3N4BL3 1NL1N3 M0D3 F0R 7H3 B07: G0 70 @B07F47H3R, 53ND /MYB075, CL1CK B07 53771N65 -> 1NL1N3 M0D3 -> 0N\n\n3. CR34T3 4 N3W B07: 53ND 7H3 C0MM4ND <code>{prefix}ch_heroku_bot</code> <@B07N4M3>"
+heroku_plugin_security:
+  name: HikkaPluginSecurity
+  _cls_doc: M4n4g3 3x73rn4l m0dul3 53cur17y 0v3rr1d35
+  _cmd_doc_external: <m0dul3> - D3ny full u53rb07 4cc355 f0r m0dul3
+  _cmd_doc_unexternal: <m0dul3> - Gr4n7 full u53rb07 4cc355 f0r m0dul3
+  no_hash: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Y0u mu57 5p3c1fy 4 m0dul3 n4m3</b>
+  hash_not_found: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>M0dul3 w17h 7h15 n4m3 n07 f0und</b>
+  hash_not_found_suggest: <tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>N0 m47ch35. Cl05357:</b> <code>{}</code>

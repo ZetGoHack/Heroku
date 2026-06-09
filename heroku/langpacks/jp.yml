@@ -62,7 +62,7 @@ heroku_security:
   seconds: "秒"
   _cmd_doc_inlinesec: "[command] - インラインコマンドのセキュリティ設定を構成します"
   _cmd_doc_querysec: "外部ユーザーのインラインクエリの実行許可を切り替えます"
-  _cmd_doc_owneradd: "<user> - ユーザーを `owner` に追加します"
+  _cmd_doc_owneradd: "[-f|--force] [-n|--nonick] <user> - ユーザーを `owner` に追加します"
   _cmd_doc_ownerlist: "`owner` グループのユーザーを一覧表示します"
   _cmd_doc_ownerrm: "<user> - ユーザーを `owner` から削除します"
   _cmd_doc_security: "[command] - コマンドのセキュリティ設定を構成します"
@@ -118,8 +118,6 @@ heroku_settings:
   btn_restart: "🔄 再起動"
   btn_update: "🧭 アップデート"
   close_menu: "😌 メニューを閉じる"
-  custom_emojis: "✅ カスタム絵文字"
-  no_custom_emojis: "🚫 カスタム絵文字"
   suggest_subscribe: "✅ チャンネル登録を提案する"
   do_not_suggest_subscribe: "🚫 チャンネル登録を提案する"
   private_not_allowed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>このコマンドはチャットで実行する必要があります</b>"
@@ -134,7 +132,7 @@ heroku_settings:
   deauth_cancel: "🚫 キャンセル"
   deauth_confirm_btn: "😢 削除"
   uninstall: "😢 <b>Heroku をアンインストールしています...</b>"
-  uninstalled: "😢 <b>Heroku をアンインストールしました。Web インターフェースはまだアクティブです。別のアカウントを追加できます</b>"
+  uninstalled: "😢 <b>Heroku をアンインストールしました。</b>"
   cmd_nn_list: "<tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>NoNick は以下のコマンドで有効になっています:</b>\n\n<blockquote expandable>{}</blockquote>"
   user_nn_list: "<tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>NoNick は以下のユーザーに対して有効になっています:</b>\n\n<blockquote expandable>{}</blockquote>"
   chat_nn_list: "<tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>NoNick は以下のチャットで有効になっています:</b>\n\n<blockquote expandable>{}</blockquote>"
@@ -166,6 +164,7 @@ heroku_settings:
 terminal:
   name: "Terminal"
   fw_protect: "コマンドの編集間に待機する秒数"
+  command_protect: "実行前に明らかに破壊的なターミナルコマンドをブロックします"
   what_to_kill: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>終了する端末コマンドに返信してください</b>"
   kill_fail: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>プロセスをキルできませんでした</b>"
   killed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>キルしました</b>"
@@ -187,18 +186,18 @@ terminal:
   _cmd_doc_terminal: "<command> - bashコマンドを実行します"
   _cmd_doc_terminate: "[-f 強制終了] - 返信で使用し、プロセスにSIGTERMを送信します"
   _cls_doc: "コマンドを実行します"
+  exec_confirm: "<b>システムコマンド:</b> <code>{}</code>"
+  exec_running: "<b>実行しています...</b>"
+  btn_execute: "実行する"
+  btn_continue: "入力を続ける"
+  inline_hint: "ターミナル"
+  inline_hint_desc: "コマンドを入力し始めてください"
 
+  exec_error: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>実行エラー:</b>\n<code>{}</code>"
 heroku_web:
-  privacy_leak: "⚠️ <b>このコマンドは Heroku Web インターフェースへのアクセスを提供します。公開グループチャットでの実行はお勧めしません。<a href='tg://openmessage?user_id={}'>保存用メッセージ</a>で使用することを検討してください。警告を無視するには</b> <code>{}proxypass force_insecure</code> <b>と入力してください</b>"
-  privacy_leak_nowarn: "⚠️ <b>このコマンドは Heroku Web インターフェースへのアクセスを提供します。公開グループチャットでの実行はお勧めしません。<a href='tg://openmessage?user_id={}'>保存用メッセージ</a>で使用することを検討してください。</b>"
-  opening_tunnel: "🔁 <b>Heroku Web インターフェースへのトンネルを開いています...</b>"
-  tunnel_opened: "🎉 <b>トンネルが開かれました。このリンクは約20分間有効です</b>"
   host_denied: "<tg-emoji emoji-id=6037254263187443802>💬</tg-emoji> セッション追加コマンドはご利用のホスティングでは利用できません。ホスティング管理者にお問い合わせください。"
-  web_btn: "🌍 Web インターフェース"
-  _cmd_doc_weburl: "Heroku Web インターフェースへの Web トンネルを開きます"
   btn_yes: "🚸 とにかく確認"
   btn_no: "🔻 閉じる"
-  lavhost_web: "✌️ <b>このリンクは lavHost 上の Heroku Web インターフェースにつながります</b>\n\n<i>💡 登録時に指定した lavHost の認証情報を使用してログインする必要があります</i>"
   invalid_target: "追加したい人のメッセージに返信するか、正しい @username/id を指定してください。"
   cant_add_self: "自分自身を追加することはできません。"
   add_user_confirm: "本当にアカウント {} ({}) を追加しますか？"
@@ -219,7 +218,15 @@ heroku_web:
   2fa_enabled: "2段階認証が有効になっています。パスワードを入力してください。"
   request_code: "🔃 コードを再リクエスト"
   code_expired: "コードの有効期限が切れました。"
+  invalid_code_digits: "コードは数字のみで入力してください。もう一度お試しください。"
+  switch_confirm: "⚠️ <b>このUserbotを別のTelegramアカウントへ移行しますか？</b>\n現在のセッションはアーカイブされ、設定は移行され、inline botデータは新しいアカウント用に再作成されます。"
+  switch_insecure: "🚫 <b>アカウント移行に失敗しました:</b> インラインメニューが利用できません。強制するには <code>{}switchacc force_insecure</code> と入力してください。"
+  switch_failed: "🚫 <b>アカウント移行に失敗しました:</b> <code>{}</code>"
+  _cmd_doc_switchacc: "Userbotを別のTelegramアカウントへ移行する"
 
+  name: HerokuAccounts
+  _cls_doc: インラインアカウント管理
+  _cmd_doc_addacc: '[user/id/reply] - インラインログインで別アカウントを追加'
 heroku_backup:
   period: "⌚️ <b>ユニット «ALPHA»</b> は定期的なバックアップを作成します。これらの設定は後で変更できます。\n\nバックアップの頻度を選択してください\n\n<b>🚫 これにより、.lm コマンドでファイルからダウンロードされたモジュールを復元することは不可能になります！注意してください。復元する前に .backupmods を行ってください。</b>"
   saved: "✅ 周期が保存されました！ <code>{prefix}set_backup_period</code> で変更できます"
@@ -229,6 +236,7 @@ heroku_backup:
   invalid_args: "🚫 <b>正しい頻度を時間単位で指定するか、無効にする場合は `0` を指定してください</b>"
   backup_caption: '<tg-emoji emoji-id=5469718869536940860>👆</tg-emoji> <b>これはデータベースのバックアップです。個人情報が含まれているため、誰とも共有しないでください。復元する必要がある場合は、このファイルへの返信として</b> <pre><code class="language-heroku">{prefix}restoredb</code></pre> <b>を使用してください。</b>'
   backupall_info: '👆 <b>これはデータベースとモジュールのバックアップです。個人情報が含まれているため、誰にも渡さないでください。復元する必要がある場合は、このファイルへの返信として</b> <pre><code class="language-heroku">{prefix}restoreall</code></pre> <b>を使用してください。</b>'
+  restoring_backup: "<tg-emoji emoji-id=5774134533590880843>🔄</tg-emoji> <b>バックアップを復元し、依存関係とモジュールをインストールしています...</b>"
   all_restored: "<tg-emoji emoji-id=5774134533590880843>🔄</tg-emoji> <b>完全バックアップが復元されました。再起動しています...</b>"
   all_restored_bot: "🔄 完全バックアップが復元されました。再起動しています..."
   reply_to_file: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>.json または .zip ファイルに返信してください</b>"
@@ -250,6 +258,7 @@ heroku_backup:
   _cmd_doc_backupall: "一般的なバックアップコピー（モジュール + データベース）を作成します"
   _cmd_doc_restoreall: "共通バックアップ（ベース + モジュール）を復元します"
 
+  name: HerokuBackup
 presets:
   name: "Presets"
   _fun_title: "🪩 エンターテイメントモジュール"
@@ -279,6 +288,13 @@ presets:
   remove_from_folder_usage: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>削除するフォルダとモジュールを指定してください。 </b> <code>{prefix}removefromfolder <フォルダ> <モジュール></code>"
   removed_from_folder: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>フォルダからモジュール {} を削除しました</b> <code>{}</code>"
   module_not_in_folder: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>モジュール {} はフォルダ {}</b> にありません"
+  _cmd_doc_presets: "| 読み込むモジュールパック"
+  _cmd_doc_loadpreset: "カスタムプリセットを読み込みます。コマンドと一緒にファイルを送るか、ファイルに返信してください。"
+  _cmd_doc_addtofolder: "<フォルダ> <モジュール> - カスタムフォルダにモジュールを追加します"
+  _cmd_doc_folderload: "<フォルダ> - カスタムフォルダをプリセットファイルとして送信します"
+  _cmd_doc_removefromfolder: "<フォルダ> <モジュール> - カスタムフォルダからモジュールを削除します"
+  _cmd_doc_loadaliases: "ファイルからエイリアスを読み込みます。コマンドと一緒にファイルを送るか、ファイルに返信してください。"
+  _cmd_doc_aliasload: "エイリアスをファイルとして送信します"
   _cls_doc: "新しい Heroku ユーザーにロードするモジュールのパックを提案します"
 
 settings:
@@ -293,7 +309,6 @@ settings:
   vds_install: "<tg-emoji emoji-id=5471952986970267163>💎</tg-emoji> VDS でのインストールプロセスは単一のコマンドで完了します:\n<pre><code class=\"language-shell\">sudo apt update &amp;&amp; sudo apt upgrade -y &amp;&amp; sudo apt install git python3-pip &amp;&amp; git clone https://github.com/coddrago/Heroku &amp;&amp; cd Heroku &amp;&amp; pip install -r requirements.txt &amp;&amp; python3 -m heroku</code></pre>\n<i>注: sudo 権限がない場合は、コマンドの該当部分を省略してください。</i>"
   wsl_install: "<b>WSL をダウンロードします。</b> これを行うには、PowerShell を管理者として開き、<code>wsl --install -d Ubuntu-22.04</code> と入力します \n⚠️ <i>WSL をインストールするには、Windows 10 ビルド 2004 または Windows 11 の任意のバージョンと、仮想化サポートを備えた PC が必要です。以前のバージョンの OS へのインストールについては、</i> <a href=\"https://learn.microsoft.com/ru-ru/windows/wsl/install-manual\">このページ</a><i>を参照してください</i>\n\n⬜️ <b>PC を再起動し、Ubuntu 22.04.x アプリケーションを起動します</b> \n\n⬜️ <b>その中にコマンドを貼り付けます (右クリック):</b> <code>curl -Ss https://bootstrap.pypa.io/get-pip.py | python3</code> \n⚠️ <i>黄色い警告が表示された場合は、</i> <code>export PATH=\"/home/username/.local/bin:$PATH\"</code> <i>と入力し、/home/username/.local/bin をメッセージに記載されているパスに置き換えてください</i>\n\n⬜️ <b>コマンドを貼り付けます (右クリック):</b> \n<pre><code class=\"language-bash\">clear &amp;&amp; git clone https://github.com/coddrago/Heroku &amp;&amp; cd Heroku &amp;&amp; pip install -r requirements.txt &amp;&amp; python3 -m heroku</code></pre>\n🔗 <b>API_ID と API_HASH はどこで入手できますか？</b>: <a href=\"https://youtu.be/DcqDA249Lhg?t=24\">ビデオ</a>"
   userland_install: "<b>UserLAnd をこの</b> <a href=\"https://play.google.com/store/apps/details?id=tech.ula\">リンク</a><b>からインストールします</b>\n\n<b>開き、Ubuntu —&gt; Minimal —&gt; Terminal を選択します</b>\n\n<b>ディストリビューションのインストールを待ちます（お茶でも飲んで待っていてください）</b>\n\n<b>インストールが成功するとターミナルが開くので、そこに入力します:</b>\n<pre><code class=\"language-bash\">sudo apt update &amp;&amp; sudo apt upgrade -y &amp;&amp; sudo apt install python3 git python3-pip -y &amp;&amp; git clone https://github.com/coddrago/Heroku &amp;&amp; cd Heroku &amp;&amp; sudo pip install -r requirements.txt &amp;&amp; python3 -m heroku</code></pre>\n\n<b>インストールの最後にリンクが表示されるので、それに従ってアカウント情報を入力し、ログインします。\n\nこれで UserLAnd に Heroku がインストールされました。</b>"
-  jamhost_install: "🪐 <b>🧃 JamHost へのインストール:</b>\n\n<b>@jamhostbot に進み、</b><code>/pay</code><b> と入力して指示に従ってください。</b>"
   hikkahost_install: "<b>🌘 HikkaHost に Heroku をインストールするには？</b>\n\n1. @hikkahost_bot に移動します\n2. \"Install\" を選択します\n3. \"🪐 Heroku\" を選択します\n\nそしてインストールを続けます。\n\n<b>その後、リンクを受け取るので、それを開いてアカウントにログインしてください。</b>"
   lavhost_install: "⬇️ インストールするには、@lavhostbot に移動して以下の手順に従ってください:\n\n• /buy コマンドを入力し、請求書を選択して支払います\n• 必要に応じて、支払い領収書を送信します\n• 支払い確認後、/install を入力して Heroku を選択します\n• ボットの指示に従ってください"
   too_many_args: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>引数が多すぎます</b>"
@@ -308,15 +323,21 @@ settings:
   id_not_found_scgroup: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> このエンティティはいずれのセキュリティグループにも存在しません。したがって、プレフィックスを追加しても意味がありません"
   invalid_id_or_username: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> 無効な id/username が指定されました"
   alias_created: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>エイリアスが作成されました。</b> <code>{}</code> <b>でアクセスできます</b>"
+  aliases_created: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>{count} 個のエイリアスを追加しました:</b>\n<blockquote expandable>{aliases}</blockquote>"
+  aliases_created_line: "{aliases} -> {command}"
   aliases_list: "<b>🔗 エイリアスをインポートしました:</b>\n\n<blockquote expandable>{}</blockquote>"
   aliases_file: "<tg-emoji emoji-id=5256113064821926998>📁</tg-emoji> <b>あなたのエイリアス</b>\n\n<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>このメッセージに返信して {prefix}la でエイリアスをインポート</b>"
   aliases: "<b>🔗 エイリアス:</b>\n"
+  happy_beta: "\n\n<tg-emoji emoji-id=5465188915990255885>🌟</tg-emoji>  <b>あなたは、<code>{}</code>バージョンの幸運な所有者ですね！</b>"
   no_command: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>コマンド</b> <code>{}</code> <b>は存在しません</b>"
   no_command_loaded: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>コマンド</b> <code>{}</code> <b>は存在しません</b>\n\n<b>読み込まれたエイリアス：</b><blockquote expandable>{}</blockquote>"
+  alias_exists: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>エイリアス</b> <code>{alias}</code> <b>はコマンド</b> <code>{command}</code> <b>に既に存在します</b>"
   alias_args: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>コマンドとそのエイリアスを指定する必要があります</b>"
   unstable: "\n\n<tg-emoji emoji-id=5355133243773435190>❕</tg-emoji> <b>不安定なブランチ</b> <code>{}</code> <b>を使用しています！</b>"
   delalias_args: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>エイリアス名を指定する必要があります</b>"
   alias_removed: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>エイリアス</b> <code>{}</code> <b>を削除しました</b>"
+  aliases_removed: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>{count} 個のエイリアスを削除しました:</b>\n<blockquote expandable>{aliases}</blockquote>"
+  aliases_cleared: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>すべてのエイリアスを削除しました</b>"
   no_alias: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>エイリアス</b> <code>{}</code> <b>は存在しません</b>"
   db_cleared: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>データベースをクリアしました</b>"
   heroku: "{} <b>{}.{}.{}</b> <i>{}</i>\n\n<b><tg-emoji emoji-id=5289608677244811430>📁</tg-emoji> <b>heroku-tl:</b> <i>{}</i>\n\n<tg-emoji emoji-id=5228879218363872764>⌨</tg-emoji> <b>開発者: <a href=\"t.me/codrago\">@codrago</a>, <a href=\"t.me/zetgo\">@zetgo</a></b>"
@@ -325,9 +346,13 @@ settings:
   cancel: "🚫 キャンセル"
   wrong_usage_tcc: "使用法：togglecmd <モジュール> <コマンド> または togglecmd <コマンド>"
   wrong_usage_tmc: "使用法：togglemod <モジュール>"
-  wrong_usage_cmc: "モジュール {} のデータベースをクリアしました"
+  wrong_usage_cmc: "使用法：clearmodule <モジュール>"
+  cmc_done: "<b>モジュール {} のデータベースをクリアしました</b>"
   mod_enabled: "モジュール {} を有効にしました"
   mod_disabled: "モジュール {} を無効にしました"
+  cmd_enabled: "コマンド {} をモジュール {} で有効にしました"
+  cmd_disabled: "コマンド {} をモジュール {} で無効にしました"
+  not_a_user: "<tg-emoji emoji-id=5447644880824181073>⚠️</tg-emoji> <b>エンティティ {} はユーザーではありません</b>"
   who_to_blacklist: "<tg-emoji emoji-id=5382187118216879236>❓</tg-emoji> <b>誰をブラックリストに追加しますか？</b>"
   who_to_unblacklist: "<tg-emoji emoji-id=5382187118216879236>❓</tg-emoji> <b>誰をブラックリストから削除しますか？</b>"
   _cmd_doc_addalias: "コマンドのエイリアスを設定します"
@@ -335,14 +360,19 @@ settings:
   _cmd_doc_blacklist: "[chat_id] [module] - ボットの動作を特定の場所でブラックリストに追加します"
   _cmd_doc_blacklistuser: "[user_id] - このユーザーによるコマンド実行を禁止します"
   _cmd_doc_cleardb: "データベース全体をクリアし、事実上のファクトリーリセットを実行します"
-  _cmd_doc_delalias: "コマンドのエイリアスを削除します"
+  _cmd_doc_delalias: "<alias|-c|--clear> - エイリアスまたはすべてのエイリアスを削除します"
   _cmd_doc_heroku: "Heroku バージョンを取得します"
   _cmd_doc_setprefix: "<prefix> [owner] - コマンドプレフィックスを設定します"
+  _cmd_doc_togglecmd: "<module> <command> または <command> - コマンドを有効化/無効化します"
+  _cmd_doc_togglemod: "<module> - モジュール全体を有効化/無効化します"
+  _cmd_doc_clearmodule: "<module> - モジュールのデータベース項目をすべて削除します"
   _cmd_doc_unblacklist: "<chat_id> - ボットの動作を特定の場所でブラックリストから削除します"
   _cmd_doc_unblacklistuser: "[user_id] - このユーザーに許可されたコマンドの実行を許可します"
   _cfg_nonstandart_prefixes: "フラグや複数の記号などの非標準プレフィックスを許可します"
   _cls_doc: "コアユーザーボット設定を制御します"
 
+  cmd404: <tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>コマンドが見つかりません</b>
+  mod404: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>ウォッチャー {} が見つかりません</b>
 heroku_config:
   name: "HerokuConfig"
   choose_core: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>カテゴリを選択してください</b>"
@@ -351,6 +381,11 @@ heroku_config:
   configuring_mod: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>モジュール</b> <code>{}</code> <b>の設定オプションを選択してください</b>\n\n<b>現在のオプション:</b>\n\n{}"
   configuring_folder: "<tg-emoji emoji-id=5433653135799228968>📁</tg-emoji> <b>フォルダー</b> <code>{}</code> <b>の設定オプションを選択してください</b>\n\n<b>現在のオプション:</b>\n\n{}"
   configuring_lib: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>ライブラリ</b> <code>{}</code> <b>の設定オプションを選択してください</b>\n\n<b>現在のオプション:</b>\n\n{}"
+  configuring_category: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>モジュール</b> <code>{}</code> <b>のカテゴリ</b> <code>{}</code> <b>の設定オプションを選択してください</b>\n<i>ℹ️ {}</i>\n\n<b>現在のオプション:</b>\n{}"
+  configuring_category_lib: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>ライブラリ</b> <code>{}</code> <b>のカテゴリ</b> <code>{}</code> <b>の設定オプションを選択してください</b>\n<i>ℹ️ {}</i>\n\n<b>現在のオプション:</b>\n{}"
+  category_header: "\n<b>📂 {}</b>"
+  category_header_doc: "\n<b>📂 {}</b>\n<i>{}</i>"
+  category_uncategorized: "\n<b>▫️ その他</b>"
   configuring_option: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>モジュール</b> <code>{}</code> <b>のオプション</b> <code>{}</code> <b>を設定中</b>\n<i>ℹ️ {}</i>\n\n<b>デフォルト: {}</b>\n\n<b>現在: {}</b>\n\n{}"
   configuring_option_lib: "<tg-emoji emoji-id=5431736674147114227>📦</tg-emoji> <b>ライブラリ</b> <code>{}</code> <b>のオプション</b> <code>{}</code> <b>を設定中</b>\n<i>ℹ️ {}</i>\n\n<b>デフォルト: {}</b>\n\n<b>現在: {}</b>\n\n{}"
   option_saved: "<tg-emoji emoji-id=5318933532825888187>⚙️</tg-emoji> <b>モジュール</b> <code>{}</code> <b>のオプション</b> <code>{}</code> <b>が保存されました！</b>\n<b>現在: {}</b>"
@@ -396,6 +431,7 @@ inline_stuff:
   _cmd_doc_ch_heroku_bot: "<username> - Heroku インラインボットのユーザー名を変更します"
   _cls_doc: "インライン機能のサポートを提供します"
 
+  _cmd_doc_ch_bot_token: <token> - インラインボットのトークンを変更
 test:
   name: "Tester"
   set_loglevel: "<tg-emoji emoji-id=5355133243773435190>🚫</tg-emoji> <b>詳細レベルを整数または文字列で指定してください</b>"
@@ -410,7 +446,7 @@ test:
   suspend_invalid_time: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>一時停止する時間が無効です</b>"
   suspended: "<tg-emoji emoji-id=5452023368054216810>🥶</tg-emoji> <b>ボットは {} 間一時停止されました</b>"
   confidential: "⚠️ <b>ログレベル</b> <code>{}</code> <b>は機密情報を開示する可能性があります。注意してください</b>"
-  confidential_text: "⚠️ <b>ログレベル</b> <code>{0}</code> <b>は機密情報を開示する可能性があります。注意してください</b>\n<b>警告を無視するには</b> <code>.logs {0} force_insecure</code> <b>と入力してください</b>"
+  confidential_text: "⚠️ <b>ログレベル</b> <code>{0}</code> <b>は機密情報を開示する可能性があります。注意してください</b>\n<b>警告を無視するには</b> <code>.logs {0} -f</code> <b>と入力してください</b>"
   choose_loglevel: "💁‍♂️ <b>ログレベルを選択してください</b>"
   bad_module: "<tg-emoji emoji-id=5355133243773435190>🚫</tg-emoji> <b>モジュールが見つかりません</b>"
   debugging_enabled: "<tg-emoji emoji-id=5332533929020761310>✅</tg-emoji> <b>モジュール</b> <code>{0}</code> <b>のデバッグモードが有効になりました</b>\n<i>`debug_modules` ディレクトリに移動し、`{0}.py` という名前のファイルを編集して、変更をリアルタイムで確認してください</i>"
@@ -421,7 +457,7 @@ test:
   _cmd_doc_clearlogs: "ログをクリアします"
   _cmd_doc_debugmod: "[module] - 開発者向け: デバッグ用にモジュールを開きます\n変更をリアルタイムで追跡できます"
   _cmd_doc_dump: "返信で使用してメッセージのダンプを取得します"
-  _cmd_doc_logs: "<level> - ログをダンプします"
+  _cmd_doc_logs: "<level> [-f] - ログをダンプします"
   _cmd_doc_ping: "ユーザーボットの Ping をテストします"
   _cmd_doc_suspend: "<time> - ボットを N 秒間一時停止します"
   _cls_doc: "ユーザーボットのセルフテストに基づいた操作を実行します"
@@ -441,6 +477,7 @@ updater:
   update_confirm: "<tg-emoji emoji-id=5382187118216879236>❓</tg-emoji> <b>本当にアップデートしますか？\n\n<a href=\"https://github.com/coddrago/Heroku/commit/{}\">{}</a> ⤑ <a href=\"https://github.com/coddrago/Heroku/commit/{}\">{}</a></b>"
   no_update: "<tg-emoji emoji-id=5465496001856950230>🌟</tg-emoji> <b>最新バージョンですが、とにかくアップデートを取得しますか？</b>"
   cancel: "🚫 キャンセル"
+  stop_ub_confirm: "あなたの {} は停止されました。本当によろしいですか？"
   full_success: "<tg-emoji emoji-id=6028215594707324419>👍</tg-emoji> <b>ユーザーボットが完全に読み込まれました！ {}</b>\n<i>完全な再起動に {}秒かかりました</i>"
   ub_stop: "{emoji} は停止されました"
   full_fail: "<tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> <b>ユーザーボットは完全に読み込まれましたが、エラーが発生しました！ {}\n<i>完全な再起動に {}秒かかりました\n{} 個のモジュールを読み込めませんでした</i>"
@@ -469,6 +506,9 @@ updater:
   ignore: "🚫 無視"
   changelog: '<tg-emoji emoji-id=5434144690511290129>📰</tg-emoji> <b>最後のメジャーアップデートの変更履歴:</b><blockquote expandable>{}</blockquote>'
 
+  _cmd_doc_autoupdate: 自動更新を切り替え
+  _cmd_doc_changelog: 最後のメジャーアップデートの changelog を表示
+  _cmd_doc_ubstop: ユーザーボットを停止
 api_protection:
   name: "APILimiter"
   warning: "⚠️ <b>警告！</b>\n\nあなたのアカウントは設定で指定されたリクエスト制限を超えました。Telegram API フラッドを防ぐため、ユーザーボットは {} 秒間<b>完全に凍結</b>されました。詳細情報は添付ファイルに記載されています。\n\n<code>{prefix}support</code> グループで助けを求めることをお勧めします！\n\nこれが意図された動作であると思う場合は、ユーザーボットのロックが解除されるまで待ち、次回同様の操作を行う際は <code>{prefix}suspend_api_protect</code> &lt;秒数&gt; を使用してください"
@@ -488,7 +528,6 @@ api_protection:
   _cmd_doc_api_fw_protection: "API レートリミッターを切り替えます"
   _cmd_doc_suspend_api_protect: "<time in seconds> - API レートリミッターを n 秒間一時停止します"
   _cls_doc: "ユーザーボットが Telegram API をスパムするのを防ぎます"
-  
 help:
   name: "Help"
   undoc: "🦥 ドキュメントなし"
@@ -503,6 +542,11 @@ help:
   request_join: "Heroku サポートチャットへのリンクをリクエストしました"
   core_notice: "<tg-emoji emoji-id=5355133243773435190>☝️</tg-emoji> <b>これはコアモジュールです。アンロードや置換はできません</b>"
 
+  _cls_doc: モジュールとコマンドのヘルプを表示します
+  _cmd_doc_help: '[module] - モジュールとコマンドのヘルプを表示'
+  _cmd_doc_helphide: <module ...> - help でモジュールを非表示/表示
+  _cmd_doc_support: サポートチャットのリンクを表示
+  show_preview_in_help: 'helpプレビューに # meta banner を表示 [module]'
 heroku_info:
   info_message: "{}\n<blockquote>┌\n├  【<tg-emoji emoji-id=5883964170268840032>👤</tg-emoji>】 <b>所有者</b>: {me}\n├  【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>バージョン</b>: {version}\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5778335621491723621>📷</tg-emoji>】 <b>プレフィックス</b>: {prefix}⠀ ⠀ \n├  【<tg-emoji emoji-id=5843799474362652262>🔄</tg-emoji>】 <b>稼働時間</b>: {uptime}\n├  【<tg-emoji emoji-id=5879770735999717115>👤</tg-emoji>】 <b>ブランチ</b>: {branch}\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5775887550262546277>❗️</tg-emoji>】 <b>ＣＰＵ</b>: {cpu_usage}\n├  【<tg-emoji emoji-id=5931409969613116639>🛡</tg-emoji>】 <b>ＲＡＭ</b>: {ram_usage}\n├  【<tg-emoji emoji-id=5931472654660800739>📊</tg-emoji>】 <b>Ｐｉｎｇ</b>: {ping}\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5926783847453692661>🛡</tg-emoji>】 <b>更新</b>: {upd}\n├  【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>ホスト</b>: {platform}\n├  【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>ＯＳ</b>: {os}\n├  【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>Python Ver</b>: {python_ver}\n└</blockquote>"
   non_detectable: "<tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> <b>このコンポーネントはお使いのサーバーでは検出できません！</b>"
@@ -518,17 +562,19 @@ heroku_info:
   _cfg_cst_btn: "情報のカスタムボタン。ボタンを削除するには空のままにしてください"
   _cfg_banner: "画像バナーのURL"
   desc: "<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <b>ユーザーボットとは？</b>\n\n<tg-emoji emoji-id=5472238129849048175>😎</tg-emoji> ユーザーボットとは、Telegram API と対話して<b>ユーザーに代わって自動化されたタスクを実行するサードパーティのプログラム</b>のことです。これらのユーザーボットは、<b>メッセージの送信、チャンネルへの参加、メディアのダウンロードなど</b>、さまざまなタスクを自動化するために使用できます。\n\n<tg-emoji emoji-id=5474667187258006816>😎</tg-emoji> ユーザーボットは、ボットアカウントではなく<b>ユーザーのアカウントで実行される</b>ため、通常の Telegram ボットとは異なります。つまり、ユーザーボットはより多くの機能にアクセスでき、実行できるアクションの柔軟性が高くなります。\n\n<tg-emoji emoji-id=5472267631979405211>🚫</tg-emoji> ただし、<b>ユーザーボットは Telegram によって公式にサポートされていない</b>ことに注意してください。使用するとプラットフォームの利用規約に違反する可能性があります。そのため、<b>ユーザーはユーザーボットを使用する際に注意が必要であり</b>、悪意のある目的で使用されていないことを確認する必要があります。\n\n"
-  no_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> フォントへのリンクまたは返信はどこですか？"  
+  no_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> フォントへのリンクまたは返信はどこですか？"
   no_banner: "<tg-emoji emoji-id=6010394680179562842>😶</tg-emoji> <b>指定されたリンク </b><code>{link></code><b> には何も見つかりませんでした。\n\nリンク先のファイルの整合性を確認し、リンクがファイルを直接指していることも確認してください。</b>"
-  font_installed: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>フォントが正常にインストールされました！</b>\n<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <i>これでお楽しみいただけます。</i>"  
-  incorrect_format_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>無効なフォント形式です！</b>\n<blockquote>サポートされている形式 -> otf, ttf</blockquote>"  
+  font_installed: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>フォントが正常にインストールされました！</b>\n<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <i>これでお楽しみいただけます。</i>"
+  incorrect_format_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>無効なフォント形式です！</b>\n<blockquote>サポートされている形式 -> otf, ttf</blockquote>"
   incorrect_img_format: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>無効な画像形式です</b>\n<blockquote>サポートされている形式 -> jpg, jpeg, png, bmp, webp</blockquote>"
   _cmd_doc_ubinfo: "'Heroku とは？'という情報を送信します"
   _cmd_doc_info: "ユーザーボット情報を送信します"
   _cmd_doc_setinfo: "<text> - .info のテキストを変更します"
   _ihandle_doc_info: "ユーザーボット情報を送信します"
   _cls_doc: "ユーザーボット情報を表示します"
+  show_preview_in_help: "helpコマンドのプレビューに # meta banner を表示 [module]"
 
+  name: HerokuInfo
 loader:
   name: "Loader"
   link: "<tg-emoji emoji-id=5256113064821926998>📁</tg-emoji> <b>{class_name} のファイル</b>\n\n<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>インストールするには、このメッセージに返信して {prefix}lm</b>\n\n<tg-emoji emoji-id=4916086774649848789>🔗</tg-emoji> <code>{prefix}dlm {url}</code>\n\n{not_exact}"
@@ -536,6 +582,7 @@ loader:
   finding_module_in_repos: "<tg-emoji emoji-id=5873204392429096339>🔄</tg-emoji> リポジトリ内のモジュールを探しています。"
   loading_module_via_file: "<tg-emoji emoji-id=5873204392429096339>🔄</tg-emoji> モジュールを読み込んでいます。"
   ml_load_module: "<tg-emoji emoji-id=5873204392429096339>🔄</tg-emoji> モジュールをファイルとしてダウンロードしています。"
+  no_ml: "<tg-emoji emoji-id=5454225457916420314>😖</tg-emoji> <b>モジュール</b> <code>{}</code> <b>はファイルとしてエクスポートできません</b>"
   not_exact: "<tg-emoji emoji-id=5355133243773435190>⚠️</tg-emoji> <i>完全一致が見つからなかったため、最も近い結果が表示されています</i>"
   args: "<tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> <b>引数を指定する必要があります</b>"
   repo_config_doc: "モジュールリポジトリへのURL"
@@ -548,12 +595,13 @@ loader:
   loaded: "<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>モジュール</b> <code>{}</code>{} <b>が読み込まれました {}</b>{}{}{}{}{}{}{}{}"
   no_class: "<b>どのクラスをアンロードする必要がありますか？</b>"
   unloaded: "{} <b>モジュール {} がアンロードされました。</b>"
+  unload_suggestions: "<tg-emoji emoji-id=5253780051471642059>❌</tg-emoji> <b>モジュール</b> <code>{}</code> <b>が見つかりません。</b>\n\n<b>もしかして:</b>"
   modules_unloaded: "<tg-emoji emoji-id=5784993237412351403>✅</tg-emoji> <b>{unloaded_num} 個のモジュールをアンロードしました:</b>\n<blockquote expandable>{unloaded}</blockquote>"
-  not_unloaded: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>モジュールはアンロードされませんでした。</b>"
-  modules_not_unloaded: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>{not_unloaded} 個のモジュールのアンロードに失敗しました。</b>\n<blockquote expandable>{errors}</blockquote>"
+  not_unloaded: "<tg-emoji emoji-id=5253780051471642059>❌</tg-emoji> <b>モジュールはアンロードされませんでした。</b>"
+  modules_not_unloaded: "<tg-emoji emoji-id=5253780051471642059>❌</tg-emoji> <b>{not_unloaded} 個のモジュールのアンロードに失敗しました。</b>\n<blockquote expandable>{errors}</blockquote>"
   requirements_failed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>要件のインストールに失敗しました</b>"
   requirements_restarted: "🚀 <b>ユーザーボットが再起動されました。再起動後、モジュールを再度インストールしてください。</b>"
-  requirements_installing: "<tg-emoji emoji-id=5328311576736833844>🚀</tg-emoji> <b>要件をインストールしています:\n\n{}</b>"
+  requirements_installing: "<tg-emoji emoji-id=5873225338984599714>🚀</tg-emoji> <b>要件をインストールしています:\n\n{}</b>"
   requirements_restart: "<tg-emoji emoji-id=5875145601682771643>🚀</tg-emoji> <b>要件はインストールされましたが、</b> <code>{}</code> <b>を適用するには再起動が必要です</b>"
   all_modules_deleted: "<tg-emoji emoji-id=5784993237412351403>✅</tg-emoji> <b>すべてのモジュールが削除されました</b>"
   undoc: "<tg-emoji emoji-id=5427052514094619126>🤷‍♀️</tg-emoji> ドキュメントなし"
@@ -602,7 +650,17 @@ loader:
   _cmd_doc_unloadmod: "クラス名でモジュールをアンロードします"
   _cls_doc: "モジュールを読み込みます"
   basic_auth_doc: "モジュールリポジトリの基本認証"
+  choose_repo: "<tg-emoji emoji-id=5873153278023307367>🗂️</tg-emoji> <b>すべてのモジュールをインストールするリポジトリを選択してください:</b>"
+  installing_all_from_repo: "<tg-emoji emoji-id=5873204392429096339>⏳</tg-emoji> <b>リポジトリからすべてのモジュールをインストール中...</b>"
+  installed_all_from_repo: "<tg-emoji emoji-id=5429092129638980960>🪐</tg-emoji> <b>リポジトリからすべてのモジュールが正常にインストールされました！</b>"
+  dlm_all_from_repo_error_nomods: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>このリポジトリにモジュールが見つかりません！</b>"
+  dlm_all_from_repo_error_somemods: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>一部のモジュールのインストールに失敗しました:</b>\n"
+  show_banner_doc: "メタバナーのプレビューを表示しますか？"
 
+  '404': <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>モジュールが見つかりません</b>
+  _cmd_doc_dlmall: 選択したリポジトリから全モジュールをインストール
+  _cmd_doc_ml: <module> - モジュールをファイルとして送信
+  result: "<tg-emoji emoji-id=5337183664630709422>🔎</tg-emoji> <b>検索結果:</b> <code>{query}</code>\n\n<tg-emoji emoji-id=5258270535710317499>📦</tg-emoji> <b>{name}</b> by <b>{dev}</b>\n<tg-emoji emoji-id=5879813604068298387>ℹ️</tg-emoji> <i>{cls_doc}</i>\n<tg-emoji emoji-id=5372981976804366741>🤖</tg-emoji> <b>コマンド:</b>\n{commands}\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <code>{prefix}dlmod {mhash}</code>"
 translations:
   name: "Translations"
   lang_saved: "{} <b>言語が保存されました！</b>"
@@ -619,8 +677,18 @@ translations:
   requested_join: "💫 <b>モジュール</b> <code>{}</code> <b>がチャンネル <a href='https://t.me/{}'>{}</a> への参加をリクエストしました</b>\n\n<b>❓ 理由:</b> <i>{}</i>"
   fw_error: "<tg-emoji emoji-id=5877458226823302157>🕒</tg-emoji> <b>呼び出し</b> <code>{}</code> <b>により、メソッド</b> <code>{}</code> <b>で {} の FloodWait が発生しました</b>"
   rpc_error: "<tg-emoji emoji-id=5877477244938489129>🚫</tg-emoji> <b>呼び出し</b> <code>{}</code> <b>はRPCエラーにより失敗しました:</b> <code>{}</code>"
-  _cmd_doc_dllangpack: "[link to a langpack | empty to remove] - Heroku 翻訳パック（外部）を変更します"
-  _cmd_doc_setlang: "[languages in the order of priority] - デフォルト言語を変更します"
+  _cmd_doc_dllangpack: "[リンク] - 外部の翻訳パックを追加"
+  _cmd_doc_setlang: "[言語] - デフォルトの言語を変更する"
+  downloaded_langs: "ダウンロード済み"
+  btn_yes: "はい"
+  btn_cancel: "キャンセル"
+  btn_delete: "削除"
+  btn_back: "戻る"
+  no_downloaded: "<b>リストは空です</b>"
+  choose_downloaded: "<b>ダウンロード済みの言語</b>"
+  confirm_lang: "<b>この言語をインストールしますか？</b>"
+  action_cancelled: "<b>操作をキャンセルしました</b>"
+  lang_deleted: "<b>言語を削除しました</b>"
   _cls_doc: "内部翻訳を処理します"
 
 eval:
@@ -637,6 +705,8 @@ eval:
   _cmd_doc_ebf: "Brainf*ck コードを評価します"
   _cmd_doc_ec: "C コードを評価します"
   _cmd_doc_ecpp: "C++ コードを評価します"
+  _cmd_doc_ers: "Rust コードを評価します"
+  _cmd_doc_eg: "Go コードを評価します"
   _cmd_doc_enode: "Node.js コードを評価します"
   _cmd_doc_ephp: "PHP コードを評価します"
   _cmd_doc_eruby: "Ruby コードを評価します"
@@ -714,3 +784,11 @@ $inline:
   button403: "このボタンを押すことは許可されていません！"
   keep_id: "⚠️ ID を削除しないでください！ {}"
   no_query_results: "<tg-emoji emoji-id=5440660757194744323>‼️</tg-emoji> <b>フォームの作成に失敗しました</b>\n\nエラー修正の可能な方法:\n\n1. Herokuを再起動: <code>{prefix}restart</code>\n\n2. ボットのインラインモードを有効化: @BotFatherに移動、/mybotsを送信、Bot Settings -> Inline Mode -> Onをクリック\n\n3. 新しいボットを作成: コマンド <code>{prefix}ch_heroku_bot</code> <@ボット名> を送信"
+heroku_plugin_security:
+  name: HikkaPluginSecurity
+  _cls_doc: 外部モジュールのセキュリティ上書きを管理します
+  _cmd_doc_external: <module> - モジュールのユーザーボット完全アクセスを拒否
+  _cmd_doc_unexternal: <module> - モジュールのユーザーボット完全アクセスを許可
+  no_hash: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>モジュール名を指定してください</b>
+  hash_not_found: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>この名前のモジュールは見つかりません</b>
+  hash_not_found_suggest: <tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>一致なし。最も近い候補:</b> <code>{}</code>

@@ -6,7 +6,6 @@
 
 import logging
 import socket
-import typing
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +50,7 @@ def is_port_open(host: str, port: int) -> bool:
         return False
 
 
-def get_network_interfaces() -> typing.Dict[str, str]:
+def get_network_interfaces() -> dict[str, str]:
     """
     Get network interfaces and their IP addresses
     :return: Dictionary of interface: IP

@@ -15,13 +15,76 @@
 import getpass
 import hashlib
 import os
+import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 from ._internal import restart
 
 if "--no-git" in sys.argv:
     os.environ["HEROKU_NO_GIT"] = "1"
+
+
+def get_data_root():
+    for index, arg in enumerate(sys.argv):
+        if arg == "--data-root" and index + 1 < len(sys.argv):
+            return Path(sys.argv[index + 1]).expanduser()
+
+        if arg.startswith("--data-root="):
+            return Path(arg.split("=", maxsplit=1)[1]).expanduser()
+
+    return Path(
+        "/data"
+        if "DOCKER" in os.environ
+        else os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    )
+
+
+def wipe_data():
+    if not {"-w", "--wipe"} & set(sys.argv):
+        return
+
+    print(
+        "Are you sure you want to completely delete all session files, "
+        "their databases and modules? This action is irreversible [y/N]"
+    )
+    if input("> ").strip().lower() not in {"yes", "y"}:
+        print("Cancelled")
+        sys.exit(0)
+
+    data_root = get_data_root()
+    patterns = (
+        "config.json",
+        "config-*.json",
+        "*.session",
+        "*.session-journal",
+        "api_token.txt",
+    )
+    dirs = ("loaded_modules",)
+    removed = 0
+
+    for pattern in patterns:
+        for path in data_root.glob(pattern):
+            if not path.is_file():
+                continue
+
+            path.unlink()
+            removed += 1
+
+    for dirname in dirs:
+        path = data_root / dirname
+        if not path.is_dir():
+            continue
+
+        shutil.rmtree(path)
+        removed += 1
+
+    print(f"Removed files: {removed}")
+    sys.exit(0)
+
+
+wipe_data()
 
 
 def get_file_hash(filename):
@@ -59,6 +122,7 @@ def deps():
 if (
     getpass.getuser() == "root"
     and "--root" not in " ".join(sys.argv)
+    and not {"-h", "--help"} & set(sys.argv)
     and all(trigger not in os.environ for trigger in {"DOCKER", "NO_SUDO"})
 ):
     print("\U0001f6ab" * 15)
@@ -118,7 +182,7 @@ else:
 
     prev_hash = None
     if os.path.exists(".requirements_hash"):
-        with open(".requirements_hash", "r") as f:
+        with open(".requirements_hash") as f:
             prev_hash = f.read().strip()
 
     if prev_hash != get_file_hash("requirements.txt"):

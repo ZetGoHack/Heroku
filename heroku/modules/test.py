@@ -17,7 +17,6 @@ import os
 import platform as lib_platform
 import random
 import time
-import typing
 from io import BytesIO
 
 from herokutl.tl.types import Message
@@ -92,10 +91,15 @@ class TestMod(loader.Module):
                 "custom_message",
                 "<tg-emoji emoji-id=5920515922505765329>⚡️</tg-emoji> <b>𝙿𝚒𝚗𝚐: </b><code>{ping}</code><b> 𝚖𝚜 </b>\n<tg-emoji emoji-id=5900104897885376843>🕓</tg-emoji><b> 𝚄𝚙𝚝𝚒𝚖𝚎: </b><code>{uptime}</code>",
                 lambda: (
-                    "<blockquote expandable>"
-                    + self.strings("configping")
-                    + ("\n" + self.strings("configpingph").format("\n"+utils.config_placeholders()) if utils.config_placeholders() else "")
-                    + "</blockquote>"
+                    self.strings["configping"]
+                    + (
+                        "\n"
+                        + self.strings["configpingph"].format(
+                            "\n" + utils.config_placeholders()
+                        )
+                        if utils.config_placeholders()
+                        else ""
+                    )
                 ),
                 validator=loader.validators.String(),
             ),
@@ -151,34 +155,43 @@ class TestMod(loader.Module):
             handler.handledbuffer = []
             handler.tg_buff = ""
 
-        await utils.answer(message, self.strings("logs_cleared"))
+        await utils.answer(message, self.strings["logs_cleared"])
 
     @loader.command()
     async def logs(
         self,
-        message: typing.Union[Message, InlineCall],
+        message: Message | InlineCall,
         force: bool = False,
-        lvl: typing.Union[int, None] = None,
+        lvl: int | None = None,
     ):
+        raw_args = utils.get_args_raw(message) if isinstance(message, Message) else ""
+        args = raw_args.split()
+        if "-f" in args or "--force" in args:
+            force = True
+            args = [arg for arg in args if arg not in {"-f", "--force"}]
+
         if not isinstance(lvl, int):
-            args = utils.get_args_raw(message)
             if args:
                 try:
                     try:
-                        lvl = int(args.split()[0])
+                        lvl = int(args[0])
                     except ValueError:
-                        lvl = getattr(logging, args.split()[0].upper(), None)
+                        lvl = getattr(logging, args[0].upper(), None)
                 except IndexError:
                     lvl = None
             else:
                 lvl = None
 
         if not isinstance(lvl, int):
+            if force:
+                await utils.answer(message, self.strings["set_loglevel"])
+                return
+
             try:
                 if self.inline.init_complete:
                     await utils.answer(
                         message,
-                        self.strings("choose_loglevel"),
+                        self.strings["choose_loglevel"],
                         reply_markup=utils.chunks(
                             [
                                 {
@@ -197,12 +210,12 @@ class TestMod(loader.Module):
                             ],
                             2,
                         )
-                        + [[{"text": self.strings("cancel"), "action": "close"}]],
+                        + [[{"text": self.strings["cancel"], "action": "close"}]],
                     )
                 else:
                     raise
             except Exception as e:
-                await utils.answer(message, self.strings("set_loglevel") + f"\n{e}")
+                await utils.answer(message, self.strings["set_loglevel"] + f"\n{e}")
 
             return
 
@@ -223,27 +236,20 @@ class TestMod(loader.Module):
             else logging._levelToName[lvl]  # skipcq: PYL-W0212
         )
 
-        if (
-            lvl < logging.WARNING
-            and not force
-            and (
-                not isinstance(message, Message)
-                or "force_insecure" not in message.raw_text.lower()
-            )
-        ):
+        if lvl < logging.WARNING and not force:
             try:
                 if not self.inline.init_complete:
                     raise
 
                 cfg = {
-                    "text": self.strings("confidential").format(named_lvl),
+                    "text": self.strings["confidential"].format(named_lvl),
                     "reply_markup": [
                         {
-                            "text": self.strings("send_anyway"),
+                            "text": self.strings["send_anyway"],
                             "callback": self.logs,
                             "args": [True, lvl],
                         },
-                        {"text": self.strings("cancel"), "action": "close"},
+                        {"text": self.strings["cancel"], "action": "close"},
                     ],
                 }
                 if isinstance(message, Message):
@@ -254,17 +260,25 @@ class TestMod(loader.Module):
             except Exception:
                 await utils.answer(
                     message,
-                    self.strings("confidential_text").format(named_lvl),
+                    self.strings["confidential_text"].format(named_lvl),
                 )
 
             return
 
         if len(logs) <= 2:
-            back_button = {"text": self.strings["back"], "callback": self.logs}
             await utils.answer(
                 message,
-                self.strings("no_logs").format(named_lvl),
-                reply_markup=back_button,
+                self.strings["no_logs"].format(named_lvl),
+                **(
+                    {}
+                    if force
+                    else {
+                        "reply_markup": {
+                            "text": self.strings["back"],
+                            "callback": self.logs,
+                        },
+                    }
+                ),
             )
             return
 
@@ -285,20 +299,19 @@ class TestMod(loader.Module):
             ),
         )
 
-        if getattr(message, "out", True):
-            await message.delete()
+        caption = self.strings["logs_caption"].format(named_lvl, *other)
 
         if isinstance(message, Message):
             await utils.answer(
                 message,
-                logs,
-                caption=self.strings("logs_caption").format(named_lvl, *other),
+                caption,
+                file=logs,
             )
         else:
             await self._client.send_file(
                 message.form["chat"],
                 logs,
-                caption=self.strings("logs_caption").format(named_lvl, *other),
+                caption=caption,
                 reply_to=message.form["top_msg_id"],
             )
 
@@ -307,15 +320,15 @@ class TestMod(loader.Module):
         try:
             time_sleep = float(utils.get_args_raw(message))
             if time_sleep > 86400 * 365 * 100:
-                await utils.answer(message, self.strings("suspend_invalid_time"))
+                await utils.answer(message, self.strings["suspend_invalid_time"])
             else:
                 await utils.answer(
                     message,
-                    self.strings("suspended").format(time_sleep),
+                    self.strings["suspended"].format(time_sleep),
                 )
                 time.sleep(time_sleep)
         except ValueError:
-            await utils.answer(message, self.strings("suspend_invalid_time"))
+            await utils.answer(message, self.strings["suspend_invalid_time"])
 
     @loader.command()
     async def ping(self, message: Message):

@@ -1,27 +1,9 @@
-# ©️ Dan Gazizullin, 2021-2023
-# This file is a part of Hikka Userbot
-# 🌐 https://github.com/hikariatama/Hikka
-# You can redistribute it and/or modify it under the terms of the GNU AGPLv3
-# 🔑 https://www.gnu.org/licenses/agpl-3.0.html
-
-# ©️ Codrago, 2024-2030
-# This file is a part of Heroku Userbot
-# 🌐 https://github.com/coddrago/Heroku
-# You can redistribute it and/or modify it under the terms of the GNU AGPLv3
-# 🔑 https://www.gnu.org/licenses/agpl-3.0.html
-
 import logging
 import typing
 
-from aiogram.types import CallbackQuery
-from aiogram.types import InlineQuery as AiogramInlineQuery
-from aiogram.types import InlineQueryResultArticle, InputTextMessageContent
-from aiogram.types import Message as AiogramMessage
-from pydantic import ConfigDict
+from herokutl.tl import types
 
-HerokuReplyMarkup = typing.Union[
-    typing.List[typing.List[dict]], typing.List[dict], dict
-]
+HerokuReplyMarkup = typing.Union[list[list[dict]], list[dict], dict]
 
 logger = logging.getLogger(__name__)
 
@@ -30,13 +12,13 @@ if typing.TYPE_CHECKING:
 
 
 class InlineMessage:
-    """Aiogram message, sent via inline bot"""
+    """Message sent via inline bot."""
 
     def __init__(
         self,
-        inline_manager: "InlineManager",  # type: ignore  # noqa: F821
+        inline_manager: "InlineManager",
         unit_id: str,
-        inline_message_id: str,
+        inline_message_id,
     ):
         self.inline_message_id = inline_message_id
         self.unit_id = unit_id
@@ -47,11 +29,8 @@ class InlineMessage:
         )
 
     async def edit(self, *args, **kwargs) -> "InlineMessage":
-        if "unit_id" in kwargs:
-            kwargs.pop("unit_id")
-
-        if "inline_message_id" in kwargs:
-            kwargs.pop("inline_message_id")
+        kwargs.pop("unit_id", None)
+        kwargs.pop("inline_message_id", None)
 
         return await self.inline_manager._edit_unit(
             *args,
@@ -63,47 +42,143 @@ class InlineMessage:
     async def delete(self) -> bool:
         entity = self._units.get(self.unit_id)
         if not entity:
-            return await self.original_call.answer("msg not found", show_alert=True)
+            if hasattr(self, "original_call"):
+                return await self.original_call.answer("msg not found", alert=True)
+            return False
 
-        msgid = entity.get("message_id")
-        cid = entity.get("chat")
-
-        await self.inline_manager._client.delete_messages(cid, msgid)
+        await self.inline_manager._client.delete_messages(
+            entity.get("chat"),
+            entity.get("message_id"),
+        )
         if hasattr(self, "original_call"):
             return await self.original_call.answer("")
+        return True
 
     async def unload(self) -> bool:
         return await self.inline_manager._unload_unit(unit_id=self.unit_id)
 
 
+class _User:
+    def __init__(self, user_id: int | None):
+        self.id = user_id
+
+
+class _Chat:
+    def __init__(self, chat_id: int | None, type_: str = "private"):
+        self.id = chat_id
+        self.type = type_
+
+
+class _MessageProxy:
+    def __init__(
+        self,
+        inline_manager: "InlineManager",
+        *,
+        chat_id: int | None,
+        message_id: int | None,
+        sender_id: int | None = None,
+        text: str = "",
+        message=None,
+    ):
+        self.inline_manager = inline_manager
+        self.chat = _Chat(chat_id)
+        self.chat_id = chat_id
+        self.message_id = message_id
+        self.id = message_id
+        self.from_user = _User(sender_id)
+        self.sender_id = sender_id
+        self.text = text
+        self.raw_text = text
+        self.message = text
+        self._message = message
+        self.message_thread_id = getattr(message, "message_thread_id", None)
+
+    async def answer(self, text: str, **kwargs):
+        return await self.inline_manager.bot.send_message(
+            self.chat_id,
+            text,
+            reply_markup=kwargs.get("reply_markup"),
+            message_thread_id=kwargs.get("message_thread_id"),
+        )
+
+    async def answer_photo(
+        self, photo, *, caption: str = None, reply_markup=None, **kwargs
+    ):
+        return await self.inline_manager.bot.send_photo(
+            self.chat_id,
+            photo,
+            caption=caption,
+            reply_markup=reply_markup,
+            message_thread_id=kwargs.get("message_thread_id"),
+        )
+
+    async def edit_text(self, text: str, *, reply_markup=None, **kwargs):
+        return await self.inline_manager.bot.client.edit_message(
+            self.chat_id,
+            self.message_id,
+            text,
+            parse_mode="HTML",
+            buttons=reply_markup,
+        )
+
+
 class BotInlineMessage:
-    """Aiogram message, sent through inline bot itself"""
+    """Message sent through the inline bot itself."""
 
     def __init__(
         self,
-        inline_manager: "InlineManager",  # type: ignore  # noqa: F821
-        unit_id: str,
-        chat_id: int,
-        message_id: int,
+        inline_manager: "InlineManager",
+        unit_id: str | None = None,
+        chat_id: int | None = None,
+        message_id: int | None = None,
+        message=None,
     ):
+        if message is not None:
+            chat_id = message.chat_id
+            message_id = message.id
+
         self.chat_id = chat_id
         self.unit_id = unit_id
         self.inline_manager = inline_manager
         self.message_id = message_id
+        self.id = message_id
         self._units = inline_manager._units
         self.form = (
-            {"id": unit_id, **self._units[unit_id]} if unit_id in self._units else {}
+            {"id": unit_id, **self._units[unit_id]}
+            if unit_id and unit_id in self._units
+            else {}
+        )
+        self._message = message
+        self.text = getattr(message, "raw_text", "") if message is not None else ""
+        self.raw_text = self.text
+        self.message = self.text
+        self.from_user = _User(getattr(message, "sender_id", None))
+        self.sender_id = getattr(message, "sender_id", None)
+        self.chat = _Chat(chat_id)
+
+    async def answer(self, text: str, **kwargs):
+        return await self.inline_manager.bot.send_message(
+            self.chat_id,
+            text,
+            reply_markup=kwargs.get("reply_markup"),
+            message_thread_id=kwargs.get("message_thread_id"),
+        )
+
+    async def answer_photo(
+        self, photo, *, caption: str = None, reply_markup=None, **kwargs
+    ):
+        return await self.inline_manager.bot.send_photo(
+            self.chat_id,
+            photo,
+            caption=caption,
+            reply_markup=reply_markup,
+            message_thread_id=kwargs.get("message_thread_id"),
         )
 
     async def edit(self, *args, **kwargs) -> "BotMessage":
-        if "unit_id" in kwargs:
-            kwargs.pop("unit_id")
-
-        if "message_id" in kwargs:
-            kwargs.pop("message_id")
-
-        if "chat_id" in kwargs:
-            kwargs.pop("chat_id")
+        kwargs.pop("unit_id", None)
+        kwargs.pop("message_id", None)
+        kwargs.pop("chat_id", None)
 
         return await self.inline_manager._edit_unit(
             *args,
@@ -122,9 +197,7 @@ class BotInlineMessage:
         )
 
     async def unload(self, *args, **kwargs) -> bool:
-        if "unit_id" in kwargs:
-            kwargs.pop("unit_id")
-
+        kwargs.pop("unit_id", None)
         return await self.inline_manager._unload_unit(
             *args,
             unit_id=self.unit_id,
@@ -132,110 +205,149 @@ class BotInlineMessage:
         )
 
 
-class InlineCall(CallbackQuery, InlineMessage):
-    """Modified version of classic aiogram `CallbackQuery`"""
+class _CallbackMixin:
+    def _init_callback(self, call, inline_manager: "InlineManager"):
+        self.original_call = call
+        self.inline_manager = inline_manager
+        self.data = (
+            call.data.decode("utf-8", errors="ignore")
+            if isinstance(call.data, (bytes, bytearray))
+            else call.data
+        )
+        self.id = call.id
+        self.from_user = _User(call.sender_id)
+        self.sender_id = call.sender_id
+        self.chat_id = call.chat_id
+        self.message_id = call.message_id
+        self.inline_message_id = (
+            call.query.msg_id
+            if isinstance(
+                getattr(call.query, "msg_id", None),
+                (types.InputBotInlineMessageID, types.InputBotInlineMessageID64),
+            )
+            else None
+        )
+        self.message = _MessageProxy(
+            inline_manager,
+            chat_id=call.chat_id,
+            message_id=call.message_id,
+            sender_id=call.sender_id,
+        )
 
-    model_config = ConfigDict(frozen=False)
+    async def answer(
+        self,
+        text: str | None = None,
+        *,
+        show_alert: bool = False,
+        alert: bool | None = None,
+        **kwargs,
+    ):
+        return await self.original_call.answer(
+            text,
+            alert=show_alert if alert is None else alert,
+            cache_time=kwargs.get("cache_time", 0),
+            url=kwargs.get("url"),
+        )
+
+
+class InlineCall(_CallbackMixin, InlineMessage):
+    """Callback query for an inline message."""
 
     def __init__(
         self,
-        call: CallbackQuery,
-        inline_manager: "InlineManager",  # type: ignore  # noqa: F821
-        unit_id: str,
+        call,
+        inline_manager: "InlineManager",
+        unit_id: str | None,
     ):
-        dump = call.model_dump()
-        if "result_id" in dump:  # tryung to avoid ValidationError
-            dump["id"] = dump.pop("result_id")
-        dump["chat_instance"] = ""
-        CallbackQuery.__init__(self, **dump)
-
-        self.as_(inline_manager.bot)
-
-        self.original_call = call
-
+        self._init_callback(call, inline_manager)
         InlineMessage.__init__(
             self,
             inline_manager,
             unit_id,
-            call.inline_message_id,
+            self.inline_message_id,
         )
 
 
-class BotInlineCall(CallbackQuery, BotInlineMessage):
-    """Modified version of classic aiogram `CallbackQuery`"""
-
-    model_config = ConfigDict(frozen=False)
+class BotInlineCall(_CallbackMixin, BotInlineMessage):
+    """Callback query for a bot-sent message."""
 
     def __init__(
         self,
-        call: CallbackQuery,
-        inline_manager: "InlineManager",  # type: ignore  # noqa: F821
-        unit_id: str,
+        call,
+        inline_manager: "InlineManager",
+        unit_id: str | None,
     ):
-        CallbackQuery.__init__(self, **call.model_dump())
-
-        self.original_call = call
-
+        self._init_callback(call, inline_manager)
         BotInlineMessage.__init__(
             self,
             inline_manager,
             unit_id,
-            call.message.chat.id,
-            call.message.message_id,
+            call.chat_id,
+            call.message_id,
+        )
+        self.message = _MessageProxy(
+            inline_manager,
+            chat_id=call.chat_id,
+            message_id=call.message_id,
+            sender_id=call.sender_id,
         )
 
 
 class InlineUnit:
-    """InlineManager extension type. For internal use only"""
+    """InlineManager extension type. For internal use only."""
 
     def __init__(self):
-        """Made just for type specification"""
+        """Made just for type specification."""
 
 
-class BotMessage(AiogramMessage):
-    """Modified version of original Aiogram Message"""
-
-    def __init__(self):
-        super().__init__()
+class BotMessage(_MessageProxy):
+    pass
 
 
-class InlineQuery(AiogramInlineQuery):
-    """Modified version of original Aiogram InlineQuery"""
+class InlineQuery:
+    """Telethon-backed inline query wrapper."""
 
-    model_config = ConfigDict(frozen=False)
-
-    def __init__(self, inline_query: AiogramInlineQuery):
-        super().__init__(**inline_query.model_dump())
-
+    def __init__(self, inline_query):
         self.inline_query = inline_query
+        self.id = inline_query.id
+        self.query = inline_query.text or ""
+        self.text = self.query
+        self.from_user = _User(inline_query.sender_id)
+        self.sender_id = inline_query.sender_id
         self.args = (
-            self.inline_query.query.split(maxsplit=1)[1]
-            if len(self.inline_query.query.split()) > 1
-            else ""
+            self.query.split(maxsplit=1)[1] if len(self.query.split()) > 1 else ""
         )
 
-    @staticmethod
-    def _get_res(title: str, description: str, thumbnail_url: str) -> list:
-        from ..utils.other import rand
+    def __getattr__(self, item: str):
+        return getattr(self.inline_query, item)
 
+    async def answer(self, results=None, cache_time: int = 0, **kwargs):
+        return await self.inline_query.answer(
+            results or [],
+            cache_time=cache_time,
+            private=kwargs.pop("is_personal", kwargs.pop("private", False)),
+            **kwargs,
+        )
+
+    async def _get_res(self, title: str, description: str, thumbnail_url: str) -> list:
         return [
-            InlineQueryResultArticle(
-                id=rand(20),
+            await self.inline_query.builder.article(
                 title=title,
                 description=description,
-                input_message_content=InputTextMessageContent(
-                    message_text="😶‍🌫️ <i>There is nothing here...</i>",
-                    parse_mode="HTML",
+                text="😶‍🌫️ <i>There is nothing here...</i>",
+                parse_mode="HTML",
+                link_preview=False,
+                thumb=(
+                    self.inline_query.inline_manager._web_document(thumbnail_url)
+                    if hasattr(self.inline_query, "inline_manager")
+                    else None
                 ),
-                thumbnail_url=thumbnail_url,
-                thumb_width=128,
-                thumb_height=128,
             )
         ]
 
     async def e400(self):
         await self.answer(
-            self._get_res(
+            await self._get_res(
                 title="🚫 400",
                 description=(
                     "Bad request. You need to pass right arguments, follow module's"
@@ -248,7 +360,7 @@ class InlineQuery(AiogramInlineQuery):
 
     async def e403(self):
         await self.answer(
-            self._get_res(
+            await self._get_res(
                 title="🚫 403",
                 description="You have no permissions to access this result",
                 thumbnail_url="https://img.icons8.com/external-wanicon-flat-wanicon/344/external-forbidden-new-normal-wanicon-flat-wanicon.png",
@@ -258,7 +370,7 @@ class InlineQuery(AiogramInlineQuery):
 
     async def e404(self):
         await self.answer(
-            self._get_res(
+            await self._get_res(
                 title="🚫 404",
                 description="No results found",
                 thumbnail_url="https://img.icons8.com/external-justicon-flat-justicon/344/external-404-error-responsive-web-design-justicon-flat-justicon.png",
@@ -268,7 +380,7 @@ class InlineQuery(AiogramInlineQuery):
 
     async def e426(self):
         await self.answer(
-            self._get_res(
+            await self._get_res(
                 title="🚫 426",
                 description="You need to update Heroku before sending this request",
                 thumbnail_url="https://img.icons8.com/fluency/344/approve-and-update.png",
@@ -278,10 +390,10 @@ class InlineQuery(AiogramInlineQuery):
 
     async def e500(self):
         await self.answer(
-            self._get_res(
+            await self._get_res(
                 title="🚫 500",
-                description="Internal userbot error while processing request. More info in logs",
-                thumbnail_url="https://img.icons8.com/external-vitaliy-gorbachev-flat-vitaly-gorbachev/344/external-error-internet-security-vitaliy-gorbachev-flat-vitaly-gorbachev.png",
+                description="Internal userbot error while processing request",
+                thumbnail_url="https://img.icons8.com/fluency/344/high-priority.png",
             ),
             cache_time=0,
         )

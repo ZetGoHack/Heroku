@@ -19,20 +19,11 @@ import os
 import time
 import traceback
 import typing
+from collections.abc import Callable
 from urllib.parse import urlparse
 
-from aiogram.types import (
-    CallbackQuery,
-    InlineKeyboardMarkup,
-    InlineQuery,
-    InlineQueryResultGif,
-    InlineQueryResultPhoto,
-    InputMediaAnimation,
-    InputMediaPhoto,
-)
-from aiogram.exceptions import TelegramBadRequest, TelegramRetryAfter
+from herokutl.errors.rpcerrorlist import FloodWaitError, MediaPrevInvalidError
 from herokutl.errors.rpcerrorlist import ChatSendInlineForbiddenError
-from herokutl.extensions.html import CUSTOM_EMOJIS
 from herokutl.tl.types import Message
 
 from .. import main, utils
@@ -46,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 class ListGalleryHelper:
-    def __init__(self, lst: typing.List[str]):
+    def __init__(self, lst: list[str]):
         self.lst = lst
         self._current_index = -1
 
@@ -61,25 +52,25 @@ class ListGalleryHelper:
 class Gallery(InlineUnit):
     async def gallery(
         self: "InlineManager",
-        message: typing.Union[Message, int],
-        next_handler: typing.Union[callable, typing.List[str]],
-        caption: typing.Union[typing.List[str], str, callable] = "",
+        message: Message | int,
+        next_handler: Callable | list[str],
+        caption: list[str] | str | Callable = "",
         *,
-        custom_buttons: typing.Optional[HerokuReplyMarkup] = None,
+        custom_buttons: HerokuReplyMarkup | None = None,
         force_me: bool = False,
-        always_allow: typing.Optional[typing.List[int]] = None,
+        always_allow: list[int] | None = None,
         manual_security: bool = False,
         disable_security: bool = False,
-        ttl: typing.Union[int, bool] = False,
-        on_unload: typing.Optional[callable] = None,
-        preload: typing.Union[bool, int] = False,
+        ttl: int | bool = False,
+        on_unload: Callable | None = None,
+        preload: bool | int = False,
         gif: bool = False,
         silent: bool = False,
         _reattempt: bool = False,
-    ) -> typing.Union[bool, InlineMessage]:
+    ) -> bool | InlineMessage:
         """
         Send inline gallery to chat
-        :param caption: Caption for photo, or callable, returning caption
+        :param caption: Caption for photo, or Callable, returning caption
         :param message: Where to send inline. Can be either `Message` or `int`
         :param next_handler: Callback function, which must return url for next photo or list with photo urls
         :param custom_buttons: Custom buttons to add above native ones
@@ -111,11 +102,11 @@ class Gallery(InlineUnit):
             isinstance(caption, str)
             or isinstance(caption, list)
             and all(isinstance(item, str) for item in caption)
-        ) and not callable(caption):
+        ) and not Callable(caption):
             logger.error(
                 (
                     "Invalid type for `caption`. Expected `str` or `list` or"
-                    " `callable`, got `%s`"
+                    " `Callable`, got `%s`"
                 ),
                 type(caption),
             )
@@ -194,7 +185,7 @@ class Gallery(InlineUnit):
             else:
                 logger.error(
                     (
-                        "Invalid type for `next_handler`. Expected `callable` or `list`"
+                        "Invalid type for `next_handler`. Expected `Callable` or `list`"
                         " of `str`, got `%s`"
                     ),
                     type(next_handler),
@@ -234,7 +225,7 @@ class Gallery(InlineUnit):
             **({"ttl": round(time.time()) + ttl} if ttl else {}),
             **({"force_me": force_me} if force_me else {}),
             **({"disable_security": disable_security} if disable_security else {}),
-            **({"on_unload": on_unload} if callable(on_unload) else {}),
+            **({"on_unload": on_unload} if Callable(on_unload) else {}),
             **({"preload": preload} if preload else {}),
             **({"gif": gif} if gif else {}),
             **({"always_allow": always_allow} if always_allow else {}),
@@ -267,7 +258,7 @@ class Gallery(InlineUnit):
                 )(
                     (
                         utils.get_platform_emoji()
-                        if self._client.heroku_me.premium and CUSTOM_EMOJIS
+                        if self._client.heroku_me.premium
                         else "🪐"
                     )
                     + self.translator.getkey("inline.opening_gallery"),
@@ -325,10 +316,12 @@ class Gallery(InlineUnit):
         self._units[unit_id]["message_id"] = m.id
 
         if isinstance(message, Message) and message.out:
-            await message.delete()
+            with contextlib.suppress(Exception):
+                await message.delete()
 
         if status_message and not message.out:
-            await status_message.delete()
+            with contextlib.suppress(Exception):
+                await status_message.delete()
 
         if not isinstance(next_handler, ListGalleryHelper):
             asyncio.ensure_future(self._load_gallery_photos(unit_id))
@@ -337,12 +330,12 @@ class Gallery(InlineUnit):
 
     async def _call_photo(
         self: "InlineManager",
-        callback: typing.Union[
-            typing.Callable[[], typing.Awaitable[str]],
-            typing.Callable[[], str],
-            typing.List[str],
-        ],
-    ) -> typing.Union[str, bool]:
+        callback: (
+            typing.Callable[[], typing.Awaitable[str]]
+            | typing.Callable[[], str]
+            | list[str]
+        ),
+    ) -> str | bool:
         """Parses photo url from `callback`. Returns url on success, otherwise `False`"""
         match True:
             case _ if isinstance(callback, str):
@@ -351,13 +344,13 @@ class Gallery(InlineUnit):
                 photo_url = callback[0]
             case _ if asyncio.iscoroutinefunction(callback):
                 photo_url = await callback()
-            case _ if callable(callback):
+            case _ if Callable(callback):
                 photo_url = callback()
             case _:
                 logger.error(
                     (
                         "Invalid type for `next_handler`. Expected `str`, `list` or"
-                        " `callable`, got %s"
+                        " `Callable`, got %s"
                     ),
                     type(callback),
                 )
@@ -394,8 +387,8 @@ class Gallery(InlineUnit):
 
     async def _gallery_slideshow_loop(
         self: "InlineManager",
-        call: CallbackQuery,
-        unit_id: typing.Optional[str] = None,
+        call,
+        unit_id: str | None = None,
     ):
         while True:
             await asyncio.sleep(7)
@@ -420,21 +413,25 @@ class Gallery(InlineUnit):
 
     async def _gallery_slideshow(
         self: "InlineManager",
-        call: CallbackQuery,
-        unit_id: typing.Optional[str] = None,
+        call,
+        unit_id: str | None = None,
     ):
         if not self._units[unit_id].get("slideshow", False):
             self._units[unit_id]["slideshow"] = True
-            await self.bot.edit_message_reply_markup(
-                inline_message_id=call.inline_message_id,
-                reply_markup=self._gallery_markup(unit_id),
+            await self._bot_client.edit_message(
+                call.inline_message_id,
+                self._get_caption(unit_id, self._units[unit_id]["current_index"]),
+                parse_mode="HTML",
+                buttons=self._gallery_markup(unit_id),
             )
             await call.answer("✅ Slideshow on")
         else:
             del self._units[unit_id]["slideshow"]
-            await self.bot.edit_message_reply_markup(
-                inline_message_id=call.inline_message_id,
-                reply_markup=self._gallery_markup(unit_id),
+            await self._bot_client.edit_message(
+                call.inline_message_id,
+                self._get_caption(unit_id, self._units[unit_id]["current_index"]),
+                parse_mode="HTML",
+                buttons=self._gallery_markup(unit_id),
             )
             await call.answer("🚫 Slideshow off")
             return
@@ -448,8 +445,8 @@ class Gallery(InlineUnit):
 
     async def _gallery_back(
         self: "InlineManager",
-        call: CallbackQuery,
-        unit_id: typing.Optional[str] = None,
+        call,
+        unit_id: str | None = None,
     ):
         queue = self._units[unit_id]["photos"]
 
@@ -465,14 +462,18 @@ class Gallery(InlineUnit):
             return
 
         try:
-            await self.bot.edit_message_media(
-                inline_message_id=call.inline_message_id,
-                media=self._get_current_media(unit_id),
-                reply_markup=self._gallery_markup(unit_id),
+            media, caption, force_document = self._get_current_media(unit_id)
+            await self._bot_client.edit_message(
+                call.inline_message_id,
+                caption,
+                parse_mode="HTML",
+                file=media,
+                force_document=force_document,
+                buttons=self._gallery_markup(unit_id),
             )
-        except TelegramRetryAfter as e:
+        except FloodWaitError as e:
             await call.answer(
-                f"Got FloodWait. Wait for {e.retry_after} seconds",
+                f"Got FloodWait. Wait for {e.seconds} seconds",
                 show_alert=True,
             )
         except Exception:
@@ -483,7 +484,7 @@ class Gallery(InlineUnit):
     def _get_current_media(
         self: "InlineManager",
         unit_id: str,
-    ) -> typing.Union[InputMediaPhoto, InputMediaAnimation]:
+    ) -> tuple[str, str, bool]:
         """Return current media, which should be updated in gallery"""
         media = self._get_next_photo(unit_id)
         try:
@@ -493,29 +494,29 @@ class Gallery(InlineUnit):
             ext = None
 
         if self._units[unit_id].get("gif", False) or ext in {".gif", ".mp4"}:
-            return InputMediaAnimation(
-                media=media,
-                caption=self._get_caption(
+            return (
+                media,
+                self._get_caption(
                     unit_id,
                     index=self._units[unit_id]["current_index"],
                 ),
-                parse_mode="HTML",
+                True,
             )
 
-        return InputMediaPhoto(
-            media=media,
-            caption=self._get_caption(
+        return (
+            media,
+            self._get_caption(
                 unit_id,
                 index=self._units[unit_id]["current_index"],
             ),
-            parse_mode="HTML",
+            False,
         )
 
     async def _gallery_page(
         self: "InlineManager",
-        call: CallbackQuery,
-        page: typing.Union[int, str],
-        unit_id: typing.Optional[str] = None,
+        call,
+        page: int | str,
+        unit_id: str | None = None,
     ):
         match True:
             case _ if page == "slideshow":
@@ -555,19 +556,23 @@ class Gallery(InlineUnit):
                 asyncio.ensure_future(self._load_gallery_photos(unit_id))
 
         try:
-            await self.bot.edit_message_media(
-                inline_message_id=call.inline_message_id,
-                media=self._get_current_media(unit_id),
-                reply_markup=self._gallery_markup(unit_id),
+            media, caption, force_document = self._get_current_media(unit_id)
+            await self._bot_client.edit_message(
+                call.inline_message_id,
+                caption,
+                parse_mode="HTML",
+                file=media,
+                force_document=force_document,
+                buttons=self._gallery_markup(unit_id),
             )
-        except TelegramBadRequest:
+        except MediaPrevInvalidError:
             logger.debug("Error fetching photo content, attempting load next one")
             del self._units[unit_id]["photos"][self._units[unit_id]["current_index"]]
             self._units[unit_id]["current_index"] -= 1
             return await self._gallery_page(call, page, unit_id)
-        except TelegramRetryAfter as e:
+        except FloodWaitError as e:
             await call.answer(
-                f"Got FloodWait. Wait for {e.retry_after} seconds",
+                f"Got FloodWait. Wait for {e.seconds} seconds",
                 show_alert=True,
             )
             return
@@ -597,75 +602,67 @@ class Gallery(InlineUnit):
         return (
             caption
             if isinstance(caption, str)
-            else caption() if callable(caption) else ""
+            else caption() if Callable(caption) else ""
         )
 
-    def _gallery_markup(self: "InlineManager", unit_id: str) -> InlineKeyboardMarkup:
-        """Generates aiogram markup for `gallery`"""
+    def _gallery_markup(self: "InlineManager", unit_id: str):
+        """Generates Telethon markup for `gallery`"""
         callback = functools.partial(self._gallery_page, unit_id=unit_id)
         unit = self._units[unit_id]
         return self.generate_markup(
             (
-                (
-                    unit.get("custom_buttons", [])
-                    + self.build_pagination(
-                        unit_id=unit_id,
-                        callback=callback,
-                        total_pages=len(unit["photos"]),
-                    )
-                    + [
-                        [
-                            *(
-                                [
-                                    {
-                                        "text": "⏪",
-                                        "callback": callback,
-                                        "args": (unit["current_index"] - 1,),
-                                    }
-                                ]
-                                if unit["current_index"] > 0
-                                else []
-                            ),
-                            *(
-                                [
-                                    {
-                                        "text": (
-                                            "🛑"
-                                            if unit.get("slideshow", False)
-                                            else "⏱"
-                                        ),
-                                        "callback": callback,
-                                        "args": ("slideshow",),
-                                    }
-                                ]
-                                if unit["current_index"] < len(unit["photos"]) - 1
-                                or not isinstance(
-                                    unit["next_handler"], ListGalleryHelper
-                                )
-                                else []
-                            ),
-                            *(
-                                [
-                                    {
-                                        "text": "⏩",
-                                        "callback": callback,
-                                        "args": (unit["current_index"] + 1,),
-                                    }
-                                ]
-                                if unit["current_index"] < len(unit["photos"]) - 1
-                                or not isinstance(
-                                    unit["next_handler"], ListGalleryHelper
-                                )
-                                else []
-                            ),
-                        ]
-                    ]
+                unit.get("custom_buttons", [])
+                + self.build_pagination(
+                    unit_id=unit_id,
+                    callback=callback,
+                    total_pages=len(unit["photos"]),
                 )
-                + [[{"text": "🔻 Close", "callback": callback, "args": ("close",)}]]
+                + [
+                    [
+                        *(
+                            [
+                                {
+                                    "text": "⏪",
+                                    "callback": callback,
+                                    "args": (unit["current_index"] - 1,),
+                                }
+                            ]
+                            if unit["current_index"] > 0
+                            else []
+                        ),
+                        *(
+                            [
+                                {
+                                    "text": (
+                                        "🛑" if unit.get("slideshow", False) else "⏱"
+                                    ),
+                                    "callback": callback,
+                                    "args": ("slideshow",),
+                                }
+                            ]
+                            if unit["current_index"] < len(unit["photos"]) - 1
+                            or not isinstance(unit["next_handler"], ListGalleryHelper)
+                            else []
+                        ),
+                        *(
+                            [
+                                {
+                                    "text": "⏩",
+                                    "callback": callback,
+                                    "args": (unit["current_index"] + 1,),
+                                }
+                            ]
+                            if unit["current_index"] < len(unit["photos"]) - 1
+                            or not isinstance(unit["next_handler"], ListGalleryHelper)
+                            else []
+                        ),
+                    ]
+                ]
             )
+            + [[{"text": "🔻 Close", "callback": callback, "args": ("close",)}]]
         )
 
-    async def _gallery_inline_handler(self: "InlineManager", inline_query: InlineQuery):
+    async def _gallery_inline_handler(self: "InlineManager", inline_query):
         for unit in self._units.copy().values():
             if (
                 inline_query.from_user.id == self._me
@@ -680,22 +677,35 @@ class Gallery(InlineUnit):
                         ext = None
 
                     args = {
-                        "thumbnail_url": "https://img.icons8.com/fluency/344/loading.png",
-                        "caption": self._get_caption(unit["uid"], index=0),
+                        "text": self._get_caption(unit["uid"], index=0),
                         "parse_mode": "HTML",
-                        "reply_markup": self._gallery_markup(unit["uid"]),
+                        "buttons": self._gallery_markup(unit["uid"]),
                         "id": utils.rand(20),
                         "title": "Processing inline gallery",
                     }
 
                     if unit.get("gif", False) or ext in {".gif", ".mp4"}:
                         await inline_query.answer(
-                            [InlineQueryResultGif(gif_url=unit["photo_url"], **args)]
+                            [
+                                await inline_query.builder.document(
+                                    unit["photo_url"],
+                                    type="gif",
+                                    **args,
+                                )
+                            ]
                         )
                         return
 
                     await inline_query.answer(
-                        [InlineQueryResultPhoto(photo_url=unit["photo_url"], **args)],
+                        [
+                            await inline_query.builder.photo(
+                                unit["photo_url"],
+                                id=args["id"],
+                                text=args["text"],
+                                parse_mode=args["parse_mode"],
+                                buttons=args["buttons"],
+                            )
+                        ],
                         cache_time=0,
                     )
                 except Exception as e:

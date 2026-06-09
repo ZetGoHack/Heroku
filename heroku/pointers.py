@@ -12,6 +12,9 @@
 
 import typing
 
+if typing.TYPE_CHECKING:
+    from .database import Database
+
 
 class PointerList(list):
     """Pointer to list saved in database"""
@@ -21,13 +24,13 @@ class PointerList(list):
         db: "Database",  # type: ignore  # noqa: F821
         module: str,
         key: str,
-        default: typing.Optional[typing.Any] = None,
+        default: typing.Any | None = None,
     ):
         self._db = db
         self._module = module
         self._key = key
         self._default = default
-        super().__init__(db.get(module, key, default))
+        super().__init__(db._get_raw(module, key, default))
 
     @property
     def data(self) -> list:
@@ -45,14 +48,14 @@ class PointerList(list):
     def __str__(self):
         return f"PointerList({list(self)})"
 
-    def __delitem__(self, __i: typing.Union[typing.SupportsIndex, slice]) -> None:
+    def __delitem__(self, __i: typing.SupportsIndex | slice) -> None:
         a = super().__delitem__(__i)
         self._save()
         return a
 
     def __setitem__(
         self,
-        __i: typing.Union[typing.SupportsIndex, slice],
+        __i: typing.SupportsIndex | slice,
         __v: typing.Any,
     ) -> None:
         a = super().__setitem__(__i, __v)
@@ -98,7 +101,7 @@ class PointerList(list):
         self._db.set(self._module, self._key, list(self))
 
     def tolist(self):
-        return self._db.get(self._module, self._key, self._default)
+        return self._db._get_raw(self._module, self._key, self._default)
 
 
 class PointerDict(dict):
@@ -109,13 +112,13 @@ class PointerDict(dict):
         db: "Database",  # type: ignore  # noqa: F821
         module: str,
         key: str,
-        default: typing.Optional[typing.Any] = None,
+        default: typing.Any | None = None,
     ):
         self._db = db
         self._module = module
         self._key = key
         self._default = default
-        super().__init__(db.get(module, key, default))
+        super().__init__(db._get_raw(module, key, default))
 
     @property
     def data(self) -> dict:
@@ -131,7 +134,7 @@ class PointerDict(dict):
         return f"PointerDict({dict(self)})"
 
     def __bool__(self) -> bool:
-        return bool(self._db.get(self._module, self._key, self._default))
+        return bool(self._db._get_raw(self._module, self._key, self._default))
 
     def __setitem__(self, key: str, value: typing.Any):
         super().__setitem__(key, value)
@@ -171,7 +174,7 @@ class PointerDict(dict):
         self._db.set(self._module, self._key, dict(self))
 
     def todict(self):
-        return self._db.get(self._module, self._key, self._default)
+        return self._db._get_raw(self._module, self._key, self._default)
 
 
 class BaseSerializingMiddlewareDict:
@@ -293,7 +296,7 @@ class BaseSerializingMiddlewareList:
 
 
 class NamedTupleMiddlewareList(BaseSerializingMiddlewareList):
-    def __init__(self, pointer: PointerList, item_type: typing.Type[typing.Any]):
+    def __init__(self, pointer: PointerList, item_type: type[typing.Any]):
         super().__init__(pointer)
         self._item_type = item_type
 
@@ -305,7 +308,7 @@ class NamedTupleMiddlewareList(BaseSerializingMiddlewareList):
 
 
 class NamedTupleMiddlewareDict(BaseSerializingMiddlewareDict):
-    def __init__(self, pointer: PointerList, item_type: typing.Type[typing.Any]):
+    def __init__(self, pointer: PointerList, item_type: type[typing.Any]):
         super().__init__(pointer)
         self._item_type = item_type
 

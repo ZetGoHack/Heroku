@@ -20,7 +20,7 @@ parser = herokutl.utils.sanitize_parse_mode("html")
 logger = logging.getLogger(__name__)
 
 
-def iter_attrs(obj: typing.Any, /) -> typing.List[typing.Tuple[str, typing.Any]]:
+def iter_attrs(obj: typing.Any, /) -> list[tuple[str, typing.Any]]:
     """
     Returns list of attributes of object
     :param obj: Object to iterate over
@@ -39,7 +39,7 @@ def validate_html(html: str) -> str:
     return herokutl.extensions.html.unparse(escape_html(text), entities)
 
 
-def get_kwargs() -> typing.Dict[str, typing.Any]:
+def get_kwargs() -> dict[str, typing.Any]:
     """
     Get kwargs of function, in which is called
     :return: kwargs
@@ -49,7 +49,7 @@ def get_kwargs() -> typing.Dict[str, typing.Any]:
     return {key: values[key] for key in keys if key != "self"}
 
 
-def get_args(message: typing.Union[Message, str]) -> typing.List[str]:
+def get_args(message: Message | str) -> list[str]:
     """
     Get arguments from message
     :param message: Message or string to get arguments from
@@ -71,7 +71,7 @@ def get_args(message: typing.Union[Message, str]) -> typing.List[str]:
     return list(filter(lambda x: len(x) > 0, split))
 
 
-def get_args_raw(message: typing.Union[Message, str]) -> str:
+def get_args_raw(message: Message | str) -> str:
     """
     Get the parameters to the command as a raw string (not split)
     :param message: Message or string to get arguments from
@@ -117,9 +117,9 @@ def get_args_html(message: Message) -> str:
 
 
 def get_args_split_by(
-    message: typing.Union[Message, str],
+    message: Message | str,
     separator: str,
-) -> typing.List[str]:
+) -> list[str]:
     """
     Split args with a specific separator
     :param message: Message or string to get arguments from
@@ -140,7 +140,7 @@ def get_args_split_by(
     return [section.strip() for section in sections if section.strip()]
 
 
-def get_args_int(message: typing.Union[Message, str]) -> typing.List[int]:
+def get_args_int(message: Message | str) -> list[int]:
     """
     Get arguments as integers
     :param message: Message or string to get arguments from
@@ -156,7 +156,7 @@ def get_args_int(message: typing.Union[Message, str]) -> typing.List[int]:
     return result
 
 
-def get_args_bool(message: typing.Union[Message, str]) -> typing.List[bool]:
+def get_args_bool(message: Message | str) -> list[bool]:
     """
     Get arguments as booleans (true/false, yes/no, 1/0)
     :param message: Message or string to get arguments from

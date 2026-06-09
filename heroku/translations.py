@@ -30,9 +30,17 @@ PACKS = Path(__file__).parent / "langpacks"
 SUPPORTED_LANGUAGES = {
     "en": "🇬🇧 English",
     "ru": "🇷🇺 Русский",
-    "ua": "🇺🇦 Український",
+    "uk": "🇺🇦 Український",
     "de": "🇩🇪 Deutsch",
-    "jp": "🇯🇵 日本語",
+    "ja": "🇯🇵 日本語",
+}
+LANGUAGE_ALIASES = {
+    "ua": "uk",
+    "jp": "ja",
+}
+LANGUAGE_COMPAT_ALIASES = {
+    "uk": ("ua",),
+    "ja": ("jp",),
 }
 MEME_LANGUAGES = {
     "leet": "🏴‍☠️ 1337",
@@ -40,6 +48,34 @@ MEME_LANGUAGES = {
     "tiktok": "🏴‍☠️ TikTokKid",
     "neofit": "🏴‍☠️ Neofit",
 }
+
+
+def normalize_language(language: str) -> str:
+    return LANGUAGE_ALIASES.get(language, language)
+
+
+def normalize_language_token(language: str) -> str:
+    return language if utils.check_url(language) else normalize_language(language)
+
+
+def iter_language_codes(language: str) -> typing.Iterator[str]:
+    if utils.check_url(language):
+        yield language
+        return
+
+    language = normalize_language(language)
+    yield language
+    yield from LANGUAGE_COMPAT_ALIASES.get(language, ())
+
+
+def get_language_pack_path(language: str) -> Path | None:
+    for code in iter_language_codes(language):
+        for suffix in (".json", ".yml"):
+            path = PACKS / f"{code}{suffix}"
+            if path.exists():
+                return path
+
+    return None
 
 
 def fmt(text: str, kwargs: dict) -> str:
@@ -55,7 +91,7 @@ class BaseTranslator:
         self,
         pack: Path,
         prefix: str = "heroku.modules.",
-    ) -> typing.Optional[dict]:
+    ) -> dict | None:
         return self._get_pack_raw(pack.read_text(encoding="utf-8"), pack.suffix, prefix)
 
     def _get_pack_raw(
@@ -63,7 +99,7 @@ class BaseTranslator:
         content: str,
         suffix: str,
         prefix: str = "heroku.modules.",
-    ) -> typing.Optional[dict]:
+    ) -> dict | None:
         match suffix:
             case ".json":
                 return json.loads(content)
@@ -104,22 +140,49 @@ class BaseTranslator:
     def gettext(self, text: str) -> typing.Any:
         return self.getkey(text) or text
 
-    async def load_module_translations(self, pack_url: str) -> typing.Union[bool, dict]:
+    async def load_module_translations(
+        self, pack_url: str, cache_path: Path = None
+    ) -> bool | dict:
         try:
-            data = yaml.load((await utils.run_sync(requests.get, pack_url)).text)
+            content = (await utils.run_sync(requests.get, pack_url)).text
+            data = yaml.load(content)
         except Exception:
             logger.exception("Unable to decode %s", pack_url)
-            return False
+            data = None
+            content = None
 
         if not isinstance(data, dict):
-            return {}
+            if cache_path and cache_path.exists():
+                try:
+                    data = yaml.load(cache_path.read_text(encoding="utf-8"))
+                except Exception:
+                    logger.exception("Unable to decode cached %s", cache_path)
+                    return False
+
+                if not isinstance(data, dict):
+                    return {}
+
+            else:
+                return {}
+
+        if cache_path and content is not None:
+            try:
+                cache_path.parent.mkdir(parents=True, exist_ok=True)
+                cache_path.write_text(content, encoding="utf-8")
+            except Exception:
+                logger.exception("Failed to save `%s`'s cache copy", pack_url)
 
         if any(len(key) != 2 for key in data):
             return data
 
         if lang := self.db.get(__name__, "lang", False):
             return next(
-                (data[language] for language in lang.split() if language in data),
+                (
+                    data[code]
+                    for language in lang.split()
+                    for code in iter_language_codes(language)
+                    if code in data
+                ),
                 data.get("en", {}),
             )
 
@@ -138,7 +201,7 @@ class Translator(BaseTranslator):
         self.raw_data["en"] = self._data.copy()
         any_ = False
         if lang := self.db.get(__name__, "lang", False):
-            for language in lang.split():
+            for language in map(normalize_language_token, lang.split()):
                 if utils.check_url(language):
                     try:
                         data = self._get_pack_raw(
@@ -154,21 +217,17 @@ class Translator(BaseTranslator):
                     any_ = True
                     continue
 
-                for possible_path in [
-                    PACKS / f"{language}.json",
-                    PACKS / f"{language}.yml",
-                ]:
-                    if possible_path.exists():
-                        data = self._get_pack_content(possible_path)
-                        self._data.update(data)
-                        self.raw_data[language] = data
-                        any_ = True
+                if possible_path := get_language_pack_path(language):
+                    data = self._get_pack_content(possible_path)
+                    self._data.update(data)
+                    self.raw_data[language] = data
+                    any_ = True
 
         for language in SUPPORTED_LANGUAGES:
-            if language not in self.raw_data and (PACKS / f"{language}.yml").exists():
-                self.raw_data[language] = self._get_pack_content(
-                    PACKS / f"{language}.yml"
-                )
+            if language not in self.raw_data and (
+                possible_path := get_language_pack_path(language)
+            ):
+                self.raw_data[language] = self._get_pack_content(possible_path)
 
         return any_
 
@@ -177,7 +236,10 @@ class ExternalTranslator(BaseTranslator):
     def __init__(self):
         self.data = {}
         for lang in SUPPORTED_LANGUAGES:
-            self.data[lang] = self._get_pack_content(PACKS / f"{lang}.yml", prefix="")
+            pack_path = get_language_pack_path(lang)
+            self.data[lang] = (
+                self._get_pack_content(pack_path, prefix="") if pack_path else {}
+            )
 
     def get(self, key: str, lang: str) -> str:
         return self.data[lang].get(key, False) or key
@@ -200,7 +262,7 @@ class Strings:
         self._base_strings = mod.strings  # Back 'em up, bc they will get replaced
         self.external_strings = {}
 
-    def get(self, key: str, lang: typing.Optional[str] = None) -> str:
+    def get(self, key: str, lang: str | None = None) -> str:
         try:
             return self._translator.raw_data[lang][f"{self._mod.__module__}.{key}"]
         except KeyError:
@@ -230,7 +292,7 @@ class Strings:
                                 else ["en"]
                             )
                             for lang in (
-                                [original_lang]
+                                list(iter_language_codes(original_lang))
                                 + (
                                     ["en"]
                                     if original_lang in ["leet", "uwu", "neofit"]
@@ -248,13 +310,13 @@ class Strings:
                 if self._translator is not None
                 else self._base_strings.get(key)
             )
-            or self._base_strings.get(key, "Unknown strings")
+            or self._base_strings.get(key, f"Unknown strings: {key}")
         )
 
     def __call__(
         self,
         key: str,
-        _: typing.Optional[typing.Any] = None,  # Compatibility tweak for FTG\GeekTG
+        _: typing.Any | None = None,  # Compatibility tweak for FTG\GeekTG
     ) -> str:
         return self.__getitem__(key)
 

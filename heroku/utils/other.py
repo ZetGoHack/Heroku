@@ -12,7 +12,6 @@ import logging
 import random
 import signal
 import typing
-import inspect
 
 import herokutl
 from herokutl import hints
@@ -60,8 +59,8 @@ async def invite_inline_bot(
         await client(InviteToChannelRequest(peer, [client.loader.inline.bot_username]))
     except Exception as e:
         raise RuntimeError(
-            "Can't invite inline bot to old asset chat, which is required by module"
-        ) from e
+            f"Can't invite inline bot to old asset chat, which is required by module: {e}"
+        )
 
     with contextlib.suppress(Exception):
         await client(
@@ -129,7 +128,7 @@ def merge(
     return b
 
 
-def chunks(_list: ListLike, n: int, /) -> typing.List[typing.List[typing.Any]]:
+def chunks(_list: ListLike, n: int, /) -> list[list[typing.Any]]:
     """
     Split provided `_list` into chunks of `n`
     :param _list: List to split
@@ -141,7 +140,7 @@ def chunks(_list: ListLike, n: int, /) -> typing.List[typing.List[typing.Any]]:
 
 def atexit(
     func: typing.Callable,
-    use_signal: typing.Optional[int] = None,
+    use_signal: int | None = None,
     *args,
     **kwargs,
 ) -> None:

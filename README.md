@@ -60,8 +60,6 @@
 
 ### VPS/VDS
 > **Note for VPS/VDS Users:**  
-> Add `--proxy-pass` to enable SSH tunneling  
-> Add `--no-web` for console-only setup  
 > Add `--root` for root users (to avoid entering force_insecure)
 <details> <summary><b>Ubuntu / Debian</b></summary>
 
@@ -155,7 +153,7 @@ python3 -m heroku
 <details>
 <summary><b>🌘 HikkaHost</b></summary>
   
-  1. Go to [@hikkahost_bot](https://.me/hikkahost_bot)
+  1. Go to [@hikkahost_bot](https://t.me/hikkahost_bot)
   2. Press "Install"
   3. Choose "🪐 Heroku"
   And continue installation.
@@ -173,15 +171,6 @@ To install, just go to [@lavhostbot](https://t.me/lavhostbot) and follow these s
 3. After payment confirmation, type `/install` and select Heroku
 4. Follow the bot's instructions
 
-</details>
-
-<details>
-  <summary><b>🧃Jamhost</b></summary>
-    
-  1. Go to [@jamhostbot](https://t.me/jamhostbot) and write the command <code>/pay</code>
-  2. Pay for the subscription on the website
-  3. After payment, write the command <code>/install</code> to the bot, select " <b>🪐 Heroku</b> " in the list of userbots and select the desired server
-  4. Log in using the link provided by the bot
 </details>
 
 

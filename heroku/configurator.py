@@ -13,7 +13,6 @@
 import re
 import string
 import sys
-import typing
 
 
 def tty_print(text: str, tty: bool):
@@ -32,7 +31,7 @@ def tty_input(text: str, tty: bool) -> str:
     return input(text if tty else re.sub(r"\033\[[0-9;]*m", "", text))
 
 
-def api_config(tty: typing.Optional[bool] = None):
+def api_config(tty: bool | None = None):
     """Request API config from user and set"""
     from . import main
     from ._internal import print_banner

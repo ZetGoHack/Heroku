@@ -62,7 +62,7 @@ heroku_security:
   seconds: "seconds"
   _cmd_doc_inlinesec: "[command] - Configure inline command's security settings"
   _cmd_doc_querysec: "Toggle permission to execute inline queries for external users"
-  _cmd_doc_owneradd: "<user> - Add user to `owner`"
+  _cmd_doc_owneradd: "[-f|--force] [-n|--nonick] <user> - Add user to `owner`"
   _cmd_doc_ownerlist: "List users in `owner`"
   _cmd_doc_ownerrm: "<user> - Remove user from `owner`"
   _cmd_doc_security: "[command] - Configure command's security settings"
@@ -98,28 +98,28 @@ heroku_security:
 
 heroku_plugin_security:
   name: "HikkaPluginSecurity"
-  no_hash: "<emoji document_id=5210952531676504517>🚫</emoji> <b>You must specify a module name</b>"
-  hash_not_found: "<emoji document_id=5210952531676504517>🚫</emoji> <b>Module with this name not found</b>"
-  hash_not_found_suggest: "<emoji document_id=5312383351217201533>⚠️</emoji> <b>No matches. Closest:</b> <code>{}</code>"
-  hash_list: "<emoji document_id=5118861066981344121>✅</emoji> <b>Module hashes:</b>\n\n<blockquote expandable>{}</blockquote>"
-  no_hashes: "<emoji document_id=5210952531676504517>🚫</emoji> <b>No module hashes found</b>"
-  external_removed: "<emoji document_id=5118861066981344121>✅</emoji> <b>is_external removed for</b> <code>{}</code>"
-  external_restored: "<emoji document_id=5118861066981344121>✅</emoji> <b>is_external restored for</b> <code>{}</code>"
-  already_internal: "<emoji document_id=5312383351217201533>⚠️</emoji> <b>Module</b> <code>{}</code> <b>is already internal</b>"
-  already_external: "<emoji document_id=5312383351217201533>⚠️</emoji> <b>Module</b> <code>{}</code> <b>is already external</b>"
-  session_allowed: "<emoji document_id=5118861066981344121>✅</emoji> <b>.session access allowed for</b> <code>{}</code>"
-  session_denied: "<emoji document_id=5118861066981344121>✅</emoji> <b>.session access denied for</b> <code>{}</code>"
-  already_allowed: "<emoji document_id=5312383351217201533>⚠️</emoji> <b>.session access already allowed for</b> <code>{}</code>"
-  already_denied: "<emoji document_id=5312383351217201533>⚠️</emoji> <b>.session access already denied for</b> <code>{}</code>"
-  no_permissions: "<emoji document_id=5870450390679425417>🗒</emoji> <b>No permissions</b>"
-  permissions_list: "<emoji document_id=5870450390679425417>🗒</emoji> <b>Permissions:</b>\n{}\n"
-  sgroup_li: "<emoji document_id=4974264756668990388>▫️</emoji> <code>{}</code> · <b>{} user(-s)</b> · <b>{} rule(-s)</b>"
-  sgroups_list: "<emoji document_id=5870704313440932932>🔒</emoji> <b>Security groups:</b>\n\n{}"
-  deleted_sgroup: "<emoji document_id=5870704313440932932>🔒</emoji> <b>Security group</b> <code>{}</code> <b>deleted</b>"
-  user_already_in_sgroup: "<emoji document_id=5210952531676504517>🚫</emoji> <b>User</b> <code>{}</code> <b>already is in security group</b> <code>{}</code>"
-  user_added_to_sgroup: "<emoji document_id=5870704313440932932>🔒</emoji> <b>User</b> <code>{}</code> <b>added to security group</b> <code>{}</code>"
-  user_not_in_sgroup: "<emoji document_id=5210952531676504517>🚫</emoji> <b>User</b> <code>{}</code> <b>is not in security group</b> <code>{}</code>"
-  user_removed_from_sgroup: "<emoji document_id=5870704313440932932>🔒</emoji> <b>User</b> <code>{}</code> <b>removed from security group</b> <code>{}</code>"
+  no_hash: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>You must specify a module name</b>"
+  hash_not_found: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Module with this name not found</b>"
+  hash_not_found_suggest: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>No matches. Closest:</b> <code>{}</code>"
+  hash_list: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>Module hashes:</b>\n\n<blockquote expandable>{}</blockquote>"
+  no_hashes: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>No module hashes found</b>"
+  external_removed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>is_external removed for</b> <code>{}</code>"
+  external_restored: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>is_external restored for</b> <code>{}</code>"
+  already_internal: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Module</b> <code>{}</code> <b>is already internal</b>"
+  already_external: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Module</b> <code>{}</code> <b>is already external</b>"
+  session_allowed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>.session access allowed for</b> <code>{}</code>"
+  session_denied: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>.session access denied for</b> <code>{}</code>"
+  already_allowed: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>.session access already allowed for</b> <code>{}</code>"
+  already_denied: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>.session access already denied for</b> <code>{}</code>"
+  no_permissions: "<tg-emoji emoji-id=5870450390679425417>🗒</tg-emoji> <b>No permissions</b>"
+  permissions_list: "<tg-emoji emoji-id=5870450390679425417>🗒</tg-emoji> <b>Permissions:</b>\n{}\n"
+  sgroup_li: "<tg-emoji emoji-id=4974264756668990388>▫️</tg-emoji> <code>{}</code> · <b>{} user(-s)</b> · <b>{} rule(-s)</b>"
+  sgroups_list: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>Security groups:</b>\n\n{}"
+  deleted_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>Security group</b> <code>{}</code> <b>deleted</b>"
+  user_already_in_sgroup: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>User</b> <code>{}</code> <b>already is in security group</b> <code>{}</code>"
+  user_added_to_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>User</b> <code>{}</code> <b>added to security group</b> <code>{}</code>"
+  user_not_in_sgroup: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>User</b> <code>{}</code> <b>is not in security group</b> <code>{}</code>"
+  user_removed_from_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>User</b> <code>{}</code> <b>removed from security group</b> <code>{}</code>"
   _cmd_doc_delsgroup: "<name> - Delete security group"
   _cmd_doc_sgroup: "<name> - Show security group info"
   _cmd_doc_sgroups: "List security groups"
@@ -127,6 +127,9 @@ heroku_plugin_security:
   _cmd_doc_sgroupadd: "<name> [user or reply] - Add user to security group"
   _cmd_doc_sgroupdel: "<name> [user or reply] - Remove user from security group"
 
+  _cls_doc: Manage external module security overrides
+  _cmd_doc_external: <module> - Deny full userbot access for module
+  _cmd_doc_unexternal: <module> - Grant full userbot access for module
 heroku_settings:
   name: "HerokuSettings"
   watchers: "<tg-emoji emoji-id=5424885441100782420>👀</tg-emoji> <b>Watchers:</b>\n\n<blockquote expandable><b>{}</b></blockquote>"
@@ -149,8 +152,6 @@ heroku_settings:
   btn_restart: "🔄 Restart"
   btn_update: "🧭 Update"
   close_menu: "😌 Close menu"
-  custom_emojis: "✅ Custom emojis"
-  no_custom_emojis: "🚫 Custom emojis"
   suggest_subscribe: "✅ Suggest subscribe to channel"
   do_not_suggest_subscribe: "🚫 Suggest subscribe to channel"
   private_not_allowed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>This command must be executed in chat</b>"
@@ -165,7 +166,7 @@ heroku_settings:
   deauth_cancel: "🚫 Cancel"
   deauth_confirm_btn: "😢 Delete"
   uninstall: "😢 <b>Uninstalling Heroku...</b>"
-  uninstalled: "😢 <b>Heroku uninstalled. Web interface is still active, you can add another account</b>"
+  uninstalled: "😢 <b>Heroku uninstalled.</b>"
   cmd_nn_list: "<tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>NoNick is enabled for these commands:</b>\n\n<blockquote expandable>{}</blockquote>"
   user_nn_list: "<tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>NoNick is enabled for these users:</b>\n\n<blockquote expandable>{}</blockquote>"
   chat_nn_list: "<tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>NoNick is enabled for these chats:</b>\n\n<blockquote expandable>{}</blockquote>"
@@ -197,6 +198,7 @@ heroku_settings:
 terminal:
   name: "Terminal"
   fw_protect: "How long to wait in seconds between edits in commands"
+  command_protect: "Block clearly destructive terminal commands before execution"
   what_to_kill: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Reply to a terminal command to terminate it</b>"
   kill_fail: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Could not kill process</b>"
   killed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Killed</b>"
@@ -218,18 +220,18 @@ terminal:
   _cmd_doc_terminal: "<command> - Execute bash command"
   _cmd_doc_terminate: "[-f to force kill] - Use in reply to send SIGTERM to a process"
   _cls_doc: "Runs commands"
+  exec_confirm: "<b>System command:</b> <code>{}</code>"
+  exec_running: "<b>Executing...</b>"
+  btn_execute: "Execute"
+  btn_continue: "Continue input"
+  inline_hint: "Terminal"
+  inline_hint_desc: "Start typing a command"
 
+  exec_error: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Execution error:</b>\n<code>{}</code>"
 heroku_web:
-  privacy_leak: "⚠️ <b>This command gives access to your Heroku web interface. It's not recommended to run it in public group chats. Consider using it in <a href='tg://openmessage?user_id={}'>Saved messages</a>. Type</b> <code>{}proxypass force_insecure</code> <b>to ignore this warning</b>"
-  privacy_leak_nowarn: "⚠️ <b>This command gives access to your Heroku web interface. It's not recommended to run it in public group chats. Consider using it in <a href='tg://openmessage?user_id={}'>Saved messages</a>.</b>"
-  opening_tunnel: "🔁 <b>Opening tunnel to Heroku web interface...</b>"
-  tunnel_opened: "🎉 <b>Tunnel opened. This link is valid for about 20 minutes</b>"
   host_denied: "<tg-emoji emoji-id=6037254263187443802>💬</tg-emoji> Session addition commands are not available on your hosting, please contact your hosting administration."
-  web_btn: "🌍 Web interface"
-  _cmd_doc_weburl: "Opens web tunnel to your Heroku web interface"
   btn_yes: "🚸 Confirm anyway"
   btn_no: "🔻 Close"
-  lavhost_web: "✌️ <b>This link leads to your Heroku web interface on lavHost</b>\n\n<i>💡 You'll need to authorize using lavHost credentials, specified on registration</i>"
   invalid_target: "Reply to the message of the person you want to add, or specify their correct @username/id."
   cant_add_self: "You can't add yourself."
   add_user_confirm: "Do you really want to add an account {} ({})?"
@@ -250,7 +252,15 @@ heroku_web:
   2fa_enabled: "You have two-factor authentication enabled. Enter the password."
   request_code: "🔃 Request the code again"
   code_expired: "The code has expired."
+  invalid_code_digits: "The code must contain digits only. Please try again."
+  switch_confirm: "⚠️ <b>Transfer this userbot to another Telegram account?</b>\nThe current session will be archived, config will be moved, and inline bot data will be recreated for the new account."
+  switch_insecure: "🚫 <b>Account transfer failed:</b> inline menu is unavailable. Type <code>{}switchacc force_insecure</code> to force."
+  switch_failed: "🚫 <b>Account transfer failed:</b> <code>{}</code>"
+  _cmd_doc_switchacc: "Transfer userbot to another Telegram account"
 
+  name: HerokuAccounts
+  _cls_doc: Inline account management
+  _cmd_doc_addacc: '[user/id/reply] - Add another account through inline login'
 heroku_backup:
   period: "⌚️ <b>The unit «ALPHA»</b> creates regular backups. These settings can be changed later.\n\nPlease select the backup frequency\n\n<b>🚫 It is thus impossible to restore modules downloaded from files with the .lm command! Be careful and do .backupmods before restoring.</b>"
   saved: "✅ The periodicity is saved! It can be changed with <code>{prefix}set_backup_period</code>"
@@ -260,6 +270,7 @@ heroku_backup:
   invalid_args: "🚫 <b>Please specify the correct frequency in hours, or `0` to disable</b>"
   backup_caption: '<tg-emoji emoji-id=5469718869536940860>👆</tg-emoji> <b>This is your database backup. Do not share it with anyone, it contains personal information. If you need to restore it, use</b> <pre><code class="language-heroku">{prefix}restoredb</code></pre> <b>in response to this file.</b>'
   backupall_info: '👆 <b>This is your backup of the database and modules. Do not give it to anyone, it contains personal information. If you need to restore it, use</b> <pre><code class="language-heroku">{prefix}restoreall</code></pre> <b>in response to this file.</b>'
+  restoring_backup: "<tg-emoji emoji-id=5774134533590880843>🔄</tg-emoji> <b>Restoring backup, installing dependencies and modules...</b>"
   all_restored_bot: "Your full backup has been restored, restarting..."
   all_restored: "<tg-emoji emoji-id=5774134533590880843>🔄</tg-emoji> <b>Your full backup has been restored, restarting...</b>"
   reply_to_file: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Reply with .json or .zip file</b>"
@@ -281,6 +292,7 @@ heroku_backup:
   _cmd_doc_backupall: "Creates a general backup copy (modules + database)"
   _cmd_doc_restoreall: "Restores a common backup (base + modules)"
 
+  name: HerokuBackup
 presets:
   name: "Presets"
   _fun_title: "🪩 Entertainment modules"
@@ -310,6 +322,13 @@ presets:
   remove_from_folder_usage: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Specify folder and module to remove. </b> <code>{prefix}removefromfolder <folder> <module></code>"
   removed_from_folder: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Module {} removed from folder</b> <code>{}</code>"
   module_not_in_folder: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Module {} is not in folder {}</b>"
+  _cmd_doc_presets: "| Packs of modules to load"
+  _cmd_doc_loadpreset: "Custom preset loader. Reply to a file or send a file with the command."
+  _cmd_doc_addtofolder: "<folder> <module> - Add module to a custom folder"
+  _cmd_doc_folderload: "<folder> - Send a custom folder as a preset file"
+  _cmd_doc_removefromfolder: "<folder> <module> - Remove module from a custom folder"
+  _cmd_doc_loadaliases: "Load aliases from file. Send a file with the command or reply to a file."
+  _cmd_doc_aliasload: "Send aliases as a file"
   _cls_doc: "Suggests new Heroku users a packs of modules to load"
 
 settings:
@@ -324,7 +343,6 @@ settings:
   vds_install: "<tg-emoji emoji-id=5471952986970267163>💎</tg-emoji> The installation process on a VDS is done with a single command:\n<pre><code class=\"language-shell\">sudo apt update &amp;&amp; sudo apt upgrade -y &amp;&amp; sudo apt install git python3-pip &amp;&amp; git clone https://github.com/coddrago/Heroku &amp;&amp; cd Heroku &amp;&amp; pip install -r requirements.txt &amp;&amp; python3 -m heroku</code></pre>\n<i>Note: If you do not have sudo privileges, omit the corresponding part of the command.</i>"
   wsl_install: "<b>Download WSL.</b> To do this, open PowerShell as administrator and type <code>wsl --install -d Ubuntu-22.04</code> \n⚠️ <i>To install WSL, you need Windows 10 build 2004 or Windows 11 of any version and a PC with virtualization support. For installation on earlier versions of the OS, refer to</i> <a href=\"https://learn.microsoft.com/ru-ru/windows/wsl/install-manual\">this page</a>\n\n⬜️ <b>Restart your PC and launch the Ubuntu 22.04.x application</b> \n\n⬜️ <b>Paste the command into it (RMB):</b> <code>curl -Ss https://bootstrap.pypa.io/get-pip.py | python3</code> \n⚠️ <i>If yellow warnings appear, type</i> <code>export PATH=\"/home/username/.local/bin:$PATH\"</code> <i>replacing /home/username/.local/bin with the path mentioned in the message</i>\n\n⬜️ <b>Paste the command (RMB):</b> \n<pre><code class=\"language-bash\">clear &amp;&amp; git clone https://github.com/coddrago/Heroku &amp;&amp; cd Heroku &amp;&amp; pip install -r requirements.txt &amp;&amp; python3 -m heroku</code></pre>\n🔗 <b>Where to get API_ID and API_HASH?</b>: <a href=\"https://youtu.be/DcqDA249Lhg?t=24\">Video</a>"
   userland_install: "<b>Install UserLAnd from this</b> <a href=\"https://play.google.com/store/apps/details?id=tech.ula\">link</a>\n\n<b>Open it, select Ubuntu —&gt; Minimal —&gt; Terminal</b>\n\n<b>Wait for the distribution to install, you can pour some tea</b>\n\n<b>After successful installation, a terminal will open in front of you, type there:</b>\n<pre><code class=\"language-bash\">sudo apt update &amp;&amp; sudo apt upgrade -y &amp;&amp; sudo apt install python3 git python3-pip -y &amp;&amp; git clone https://github.com/coddrago/Heroku &amp;&amp; cd Heroku &amp;&amp; sudo pip install -r requirements.txt &amp;&amp; python3 -m heroku</code></pre>\n\n<b>At the end of the installation, a link will appear, follow it and enter your account details to log in.\n\nVoilà! You have installed Heroku on UserLAnd.</b>"
-  jamhost_install: "🪐 <b>Installation on 🧃 JamHost:</b>\n\n<b>Proceed to @jamhostbot, type </b><code>/pay</code><b> and follow its instructions.</b>"
   hikkahost_install: "<b>🌘 How to install Heroku on HikkaHost?</b>\n\n1. Go to @hikkahost_bot\n2. Select \"Install\"\n3. Select \"🪐 Heroku\"\n\nAnd continue with the installation.\n\n<b>After that, you will receive a link, open it and log into your account.</b>"
   lavhost_install: "⬇️ To install, simply go to @lavhostbot and follow these steps:\n\n• Enter the /buy command, select and pay the invoice\n• If necessary, send the payment receipt\n• After payment confirmation, enter /install and select Heroku\n• Follow the bot's instructions"
   too_many_args: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Too many args</b>"
@@ -339,15 +357,21 @@ settings:
   id_not_found_scgroup: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> This entity does not exist in any security group. Therefore, adding a prefix for it is pointless"
   invalid_id_or_username: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> Invalid id/username was given"
   alias_created: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Alias created. Access it with</b> <code>{}</code>"
+  aliases_created: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Added {count} aliases:</b>\n<blockquote expandable>{aliases}</blockquote>"
+  aliases_created_line: "{aliases} for {command}"
   aliases_list: "<b>🔗 Imported aliases:</b>\n\n<blockquote expandable>{}</blockquote>"
   aliases_file: "<tg-emoji emoji-id=5256113064821926998>📁</tg-emoji> <b>Your aliases</b>\n\n<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>{prefix}la in reply to this message to import aliases</b>"
   aliases: "<b>🔗 Aliases:</b>\n"
+  happy_beta: "\n\n<tg-emoji emoji-id=5465188915990255885>🌟</tg-emoji> <b>You are a happy owner of the <code>{}</code> version!</b>"
   no_command: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Command</b> <code>{}</code> <b>does not exist</b>"
   no_command_loaded: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Command</b> <code>{}</code> <b>does not exist</b>\n\n<b>Loaded aliases:</b> <blockquote expandable>{}</blockquote>"
+  alias_exists: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Alias</b> <code>{alias}</code> <b>already exists for command</b> <code>{command}</code>"
   alias_args: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>You must provide a command and the alias for it</b>"
   unstable: "\n\n<tg-emoji emoji-id=5355133243773435190>❕</tg-emoji> <b>You are using an unstable branch</b> <code>{}</code><b>!</b>"
   delalias_args: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>You must provide the alias name</b>"
   alias_removed: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Alias</b> <code>{}</code> <b>removed</b>."
+  aliases_removed: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Removed {count} aliases:</b>\n<blockquote expandable>{aliases}</blockquote>"
+  aliases_cleared: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>All aliases removed</b>."
   no_alias: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Alias</b> <code>{}</code> <b>does not exist</b>"
   db_cleared: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Database cleared</b>"
   heroku: "{} <b>{}.{}.{}</b> <i>{}</i>\n\n<b><tg-emoji emoji-id=5289608677244811430>📁</tg-emoji> <b>heroku-tl:</b> <i>{}</i>\n\n<tg-emoji emoji-id=5228879218363872764>⌨</tg-emoji> <b>Developers: <a href=\"t.me/codrago\">@codrago</a>, <a href=\"t.me/zetgo\">@zetgo</a></b>"
@@ -356,9 +380,13 @@ settings:
   cancel: "🚫 Cancel"
   wrong_usage_tcc: "Usage: togglecmd <module> <command> or togglecmd <command>"
   wrong_usage_tmc: "Usage: togglemod <module>"
-  wrong_usage_cmc: "Cleared DB for module {}"
+  wrong_usage_cmc: "Usage: clearmodule <module>"
+  cmc_done: "<b>Cleared DB for module {}</b>"
   mod_enabled: "Module {} enabled"
   mod_disabled: "Module {} disabled"
+  cmd_enabled: "Command {} enabled in module {}"
+  cmd_disabled: "Command {} disabled in module {}"
+  not_a_user: "<tg-emoji emoji-id=5447644880824181073>⚠️</tg-emoji> <b>The entity {} is not a user</b>"
   who_to_blacklist: "<tg-emoji emoji-id=5382187118216879236>❓</tg-emoji> <b>Who to blacklist?</b>"
   who_to_unblacklist: "<tg-emoji emoji-id=5382187118216879236>❓</tg-emoji> <b>Who to unblacklist?</b>"
   _cmd_doc_addalias: "Set an alias for a command"
@@ -366,14 +394,19 @@ settings:
   _cmd_doc_blacklist: "[chat_id] [module] - Blacklist the bot from operating somewhere"
   _cmd_doc_blacklistuser: "[user_id] - Prevent this user from running any commands"
   _cmd_doc_cleardb: "Clear the entire database, effectively performing a factory reset"
-  _cmd_doc_delalias: "Remove an alias for a command"
+  _cmd_doc_delalias: "<alias|-c|--clear> - Remove an alias or clear all aliases"
   _cmd_doc_heroku: "Get Heroku version"
   _cmd_doc_setprefix: "<prefix> [owner] - Sets command prefix"
+  _cmd_doc_togglecmd: "<module> <command> or <command> - Enable or disable a command"
+  _cmd_doc_togglemod: "<module> - Enable or disable an entire module"
+  _cmd_doc_clearmodule: "<module> - Clear all database entries for a module"
   _cmd_doc_unblacklist: "<chat_id> - Unblacklist the bot from operating somewhere"
   _cmd_doc_unblacklistuser: "[user_id] - Allow this user to run permitted commands"
   _cfg_nonstandart_prefixes: "Allow non-standart prefixes like flags or more than one symbol"
   _cls_doc: "Control core userbot settings"
 
+  cmd404: <tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>Command not found</b>
+  mod404: <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Watcher {} not found</b>
 heroku_config:
   name: "HerokuConfig"
   choose_core: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Choose a category</b>"
@@ -382,6 +415,11 @@ heroku_config:
   configuring_mod: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Choose config option for mod</b> <code>{}</code>\n\n<b>Current options:</b>\n\n{}"
   configuring_lib: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Choose config option for library</b> <code>{}</code>\n\n<b>Current options:</b>\n\n{}"
   configuring_folder: "<tg-emoji emoji-id=5433653135799228968>📁</tg-emoji> <b>Choose config option for folder</b> <code>{}</code>\n\n<b>Current options:</b>\n\n{}"
+  configuring_category: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Choose config option for mod</b> <code>{}</code> <b>in category</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Current options:</b>\n{}"
+  configuring_category_lib: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Choose config option for library</b> <code>{}</code> <b>in category</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Current options:</b>\n{}"
+  category_header: "\n<b>📂 {}</b>"
+  category_header_doc: "\n<b>📂 {}</b>\n<i>{}</i>"
+  category_uncategorized: "\n<b>▫️ Other</b>"
   configuring_option: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Configuring option</b> <code>{}</code> <b>of mod</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Default: {}</b>\n\n<b>Current: {}</b>\n\n{}"
   configuring_option_lib: "<tg-emoji emoji-id=5431736674147114227>📦</tg-emoji> <b>Configuring option</b> <code>{}</code> <b>of library</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Default: {}</b>\n\n<b>Current: {}</b>\n\n{}"
   option_saved: "<tg-emoji emoji-id=5318933532825888187>⚙️</tg-emoji> <b>Option</b> <code>{}</code> <b>of module</b> <code>{}</code><b> saved!</b>\n<b>Current: {}</b>"
@@ -427,6 +465,7 @@ inline_stuff:
   _cmd_doc_ch_heroku_bot: "<username> - Change your Heroku inline bot username"
   _cls_doc: "Provides support for inline stuff"
 
+  _cmd_doc_ch_bot_token: <token> - Change inline bot token
 test:
   name: "Tester"
   set_loglevel: "<tg-emoji emoji-id=5355133243773435190>🚫</tg-emoji> <b>Please specify verbosity as an integer or string</b>"
@@ -441,7 +480,7 @@ test:
   suspend_invalid_time: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Invalid time to suspend</b>"
   suspended: "<tg-emoji emoji-id=5452023368054216810>🥶</tg-emoji> <b>Bot  suspended for {}</b>"
   confidential: "⚠️ <b>Log level</b> <code>{}</code> <b>may reveal your confidential info, be careful</b>"
-  confidential_text: "⚠️ <b>Log level</b> <code>{0}</code> <b>may reveal your confidential info, be careful</b>\n<b>Type</b> <code>.logs {0} force_insecure</code> <b>to ignore this warning</b>"
+  confidential_text: "⚠️ <b>Log level</b> <code>{0}</code> <b>may reveal your confidential info, be careful</b>\n<b>Type</b> <code>.logs {0} -f</code> <b>to ignore this warning</b>"
   choose_loglevel: "💁‍♂️ <b>Choose log level</b>"
   bad_module: "<tg-emoji emoji-id=5355133243773435190>🚫</tg-emoji> <b>Module not found</b>"
   debugging_enabled: "<tg-emoji emoji-id=5332533929020761310>✅</tg-emoji> <b>Debugging mode enabled for module</b> <code>{0}</code>\n<i>Go to directory named `debug_modules`, edit file named `{0}.py` and see changes in real time</i>"
@@ -452,7 +491,7 @@ test:
   _cmd_doc_clearlogs: "Clear logs"
   _cmd_doc_debugmod: "[module] - For developers: Open module for debugging\nYou will be able to track changes in real-time"
   _cmd_doc_dump: "Use in reply to get a dump of a message"
-  _cmd_doc_logs: "<level> - Dump logs"
+  _cmd_doc_logs: "<level> [-f] - Dump logs"
   _cmd_doc_ping: "Test your userbot ping"
   _cmd_doc_suspend: "<time> - Suspends the bot for N seconds"
   _cls_doc: "Perform operations based on userbot self-testing"
@@ -472,6 +511,7 @@ updater:
   update_confirm: "<tg-emoji emoji-id=5382187118216879236>❓</tg-emoji> <b>Are you sure you want to update?\n\n<a href=\"https://github.com/coddrago/Heroku/commit/{}\">{}</a> ⤑ <a href=\"https://github.com/coddrago/Heroku/commit/{}\">{}</a></b>"
   no_update: "<tg-emoji emoji-id=5465496001856950230>🌟</tg-emoji> <b>You are on the latest version, pull updates anyway?</b>"
   cancel: "🚫 Cancel"
+  stop_ub_confirm: "Your {} will be stopped, are you sure?"
   full_success: "<tg-emoji emoji-id=6028215594707324419>👍</tg-emoji> <b>Userbot is fully loaded! {}</b>\n<i>Full restart took {}s</i>"
   ub_stop: "Your {emoji} has been stopped"
   full_fail: "<tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> <b>Userbot is fully loaded, but an error occurred! {}\n<i>Full restart took {}s\nFailed to load {} modules</i>"
@@ -500,6 +540,9 @@ updater:
   ignore: "🚫 Ignore"
   changelog: '<tg-emoji emoji-id=5434144690511290129>📰</tg-emoji> <b>Changelog of the last major update:</b><blockquote expandable>{}</blockquote>'
 
+  _cmd_doc_autoupdate: Toggle automatic updates
+  _cmd_doc_changelog: Show changelog of the last major update
+  _cmd_doc_ubstop: Stop your userbot
 api_protection:
   name: "APILimiter"
   warning: "⚠️ <b>WARNING!</b>\n\nYour account exceeded the limit of requests, specified in config. In order to prevent Telegram API Flood, userbot has been <b>fully frozen</b> for {} seconds. Further info is provided in attached file. \n\nIt is recommended to get help in <code>{prefix}support</code> group!\n\nIf you think, that it is an intended behavior, then wait until userbot gets unlocked and next time, when you will be going to perform such an operation, use <code>{prefix}suspend_api_protect</code> &lt;time in seconds&gt;"
@@ -534,6 +577,11 @@ help:
   request_join: "You requested link for Heroku support chat"
   core_notice: "<tg-emoji emoji-id=5355133243773435190>☝️</tg-emoji> <b>This is a core module. You can't unload it nor replace</b>"
 
+  _cls_doc: Shows help for modules and commands
+  _cmd_doc_help: '[module] - Show help for modules and commands'
+  _cmd_doc_helphide: <module ...> - Hide or show modules in help
+  _cmd_doc_support: Show support chat link
+  show_preview_in_help: 'Show # meta banner in help preview [module]'
 heroku_info:
   info_message: "{}\n<blockquote>┌\n├  【<tg-emoji emoji-id=5883964170268840032>👤</tg-emoji>】 <b>𝙾𝚠𝚗𝚎𝚛</b>: {me}\n├  【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>𝚅𝚎𝚛𝚜𝚒𝚘𝚗</b>: {version}\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5778335621491723621>📷</tg-emoji>】 <b>𝙿𝚛𝚎𝚏𝚒𝚡</b>: {prefix}⠀ ⠀ \n├  【<tg-emoji emoji-id=5843799474362652262>🔄</tg-emoji>】 <b>𝚄𝚙𝚝𝚒𝚖𝚎</b>: {uptime}\n├  【<tg-emoji emoji-id=5879770735999717115>👤</tg-emoji>】 <b>𝙱𝚛𝚊𝚗𝚌𝚑</b>: {branch}\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5775887550262546277>❗️</tg-emoji>】 <b>𝙲𝙿𝚄</b>: {cpu_usage}\n├  【<tg-emoji emoji-id=5931409969613116639>🛡</tg-emoji>】 <b>𝚁𝙰𝙼</b>: {ram_usage}\n├  【<tg-emoji emoji-id=5931472654660800739>📊</tg-emoji>】 <b>𝙿𝚒𝚗𝚐</b>: {ping}\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5926783847453692661>🛡</tg-emoji>】 <b>𝚄𝚙𝚍𝚊𝚝𝚎</b>: {upd}\n├  【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>𝙷𝚘𝚜𝚝</b>: {platform}\n├  【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>𝙾𝚂</b>: {os}\n├  【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>𝙿𝚢𝚝𝚑𝚘𝚗 𝚅𝚎𝚛𝚜𝚒𝚘𝚗</b>: {python_ver}\n└</blockquote>"
   non_detectable: "<tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> <b>This component cannot be detected on your server!</b>"
@@ -559,7 +607,9 @@ heroku_info:
   _cmd_doc_setinfo: "<text> - Change text in .info"
   _ihandle_doc_info: "Send userbot info"
   _cls_doc: "Show userbot info"
+  show_preview_in_help: "Show # meta banner like preview in help [module] ?"
 
+  name: HerokuInfo
 loader:
   name: "Loader"
   link: "<tg-emoji emoji-id=5256113064821926998>📁</tg-emoji> <b>File of</b> {class_name}\n\n<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>{prefix}lm in reply to this message to install</b>\n\n<tg-emoji emoji-id=4916086774649848789>🔗</tg-emoji> <code>{prefix}dlm {url}</code>\n\n{not_exact}"
@@ -567,6 +617,7 @@ loader:
   finding_module_in_repos: "<tg-emoji emoji-id=5873204392429096339>🔄</tg-emoji> Looking for modules in repositories."
   loading_module_via_file: "<tg-emoji emoji-id=5873204392429096339>🔄</tg-emoji> Loading the module."
   ml_load_module: "<tg-emoji emoji-id=5873204392429096339>🔄</tg-emoji> I'm downloading the module as a file."
+  no_ml: "<tg-emoji emoji-id=5454225457916420314>😖</tg-emoji> <b>Module</b> <code>{}</code> <b>cannot be exported as a file</b>"
   not_exact: "<tg-emoji emoji-id=5355133243773435190>⚠️</tg-emoji> <i>No exact match has been found, so the closest result is shown instead</i>"
   args: "<tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> <b>You must specify arguments</b>"
   repo_config_doc: "URL to a module repo"
@@ -579,12 +630,13 @@ loader:
   loaded: "<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>Module</b> <code>{}</code>{} <b>loaded {}</b>{}{}{}{}{}{}{}{}"
   no_class: "<b>What class needs to be unloaded?</b>"
   unloaded: "{} <b>Module {} unloaded.</b>"
+  unload_suggestions: "<tg-emoji emoji-id=5253780051471642059>❌</tg-emoji> <b>Module</b> <code>{}</code> <b>not found.</b>\n\n<b>Maybe you meant:</b>"
   modules_unloaded: "<tg-emoji emoji-id=5784993237412351403>✅</tg-emoji> <b>Unloaded {unloaded_num} modules:</b>\n<blockquote expandable>{unloaded}</blockquote>"
-  not_unloaded: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Module not unloaded.</b>"
-  modules_not_unloaded: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Failed to unload {not_unloaded} modules.</b>\n<blockquote expandable>{errors}</blockquote>"
+  not_unloaded: "<tg-emoji emoji-id=5253780051471642059>❌</tg-emoji> <b>Module not unloaded.</b>"
+  modules_not_unloaded: "<tg-emoji emoji-id=5253780051471642059>❌</tg-emoji> <b>Failed to unload {not_unloaded} modules.</b>\n<blockquote expandable>{errors}</blockquote>"
   requirements_failed: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Requirements installation failed</b>"
   requirements_restarted: "🚀 <b>Your userbot is restarted, after restart, install the module again.</b>"
-  requirements_installing: "<tg-emoji emoji-id=5328311576736833844>🚀</tg-emoji> <b>Installing requirements:\n\n{}</b>"
+  requirements_installing: "<tg-emoji emoji-id=5873225338984599714>🚀</tg-emoji> <b>Installing requirements:\n\n{}</b>"
   requirements_restart: "<tg-emoji emoji-id=5875145601682771643>🚀</tg-emoji> <b>Requirements installed, but a restart is required for</b> <code>{}</code> <b>to apply</b>"
   all_modules_deleted: "<tg-emoji emoji-id=5784993237412351403>✅</tg-emoji> <b>All modules deleted</b>"
   undoc: "<tg-emoji emoji-id=5427052514094619126>🤷‍♀️</tg-emoji> No docs"
@@ -633,7 +685,17 @@ loader:
   _cmd_doc_unloadmod: "Unload module by class name"
   _cls_doc: "Loads modules"
   basic_auth_doc: "Basic auth for module repo"
+  choose_repo: "<tg-emoji emoji-id=5873153278023307367>🗂️</tg-emoji> <b>Choose a repository to install all modules from:</b>"
+  installing_all_from_repo: "<tg-emoji emoji-id=5873204392429096339>⏳</tg-emoji> <b>Installing all modules from repository...</b>"
+  installed_all_from_repo: "<tg-emoji emoji-id=5429092129638980960>🪐</tg-emoji> <b>All modules from repository installed successfully!</b>"
+  dlm_all_from_repo_error_nomods: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>No modules found in this repository!</b>"
+  dlm_all_from_repo_error_somemods: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Some modules failed to install:</b>\n"
+  show_banner_doc: "Show # meta banner like preview?"
 
+  '404': <tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Module not found</b>
+  _cmd_doc_dlmall: Install all modules from selected repository
+  _cmd_doc_ml: <module> - Send module as a file
+  result: "<tg-emoji emoji-id=5337183664630709422>🔎</tg-emoji> <b>Search result for</b> <code>{query}</code>\n\n<tg-emoji emoji-id=5258270535710317499>📦</tg-emoji> <b>{name}</b> by <b>{dev}</b>\n<tg-emoji emoji-id=5879813604068298387>ℹ️</tg-emoji> <i>{cls_doc}</i>\n<tg-emoji emoji-id=5372981976804366741>🤖</tg-emoji> <b>Commands:</b>\n{commands}\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <code>{prefix}dlmod {mhash}</code>"
 translations:
   name: "Translations"
   lang_saved: "{} <b>Language saved!</b>"
@@ -650,10 +712,20 @@ translations:
   requested_join: "💫 <b>Module</b> <code>{}</code> <b>requested to join channel <a href='https://t.me/{}'>{}</a></b>\n\n<b>❓ Reason:</b> <i>{}</i>"
   fw_error: "<tg-emoji emoji-id=5877458226823302157>🕒</tg-emoji> <b>Call</b> <code>{}</code> <b>caused FloodWait of {} on method</b> <code>{}</code>"
   rpc_error: "<tg-emoji emoji-id=5877477244938489129>🚫</tg-emoji> <b>Call</b> <code>{}</code> <b>failed due to RPC error:</b> <code>{}</code>"
-  _cmd_doc_dllangpack: "[link to a langpack | empty to remove] - Change Heroku translate pack (external)"
-  _cmd_doc_setlang: "[languages in the order of priority] - Change default language"
-  _cls_doc: "Processes internal translations"
+  _cmd_doc_dllangpack: "[link to pack] - add external translation pack"
+  _cmd_doc_setlang: "[language] - change default language"
+  downloaded_langs: "Downloaded"
+  btn_yes: "Yes"
+  btn_cancel: "Cancel"
+  btn_delete: "Delete"
+  btn_back: "Back"
+  no_downloaded: "<b>List is empty</b>"
+  choose_downloaded: "<b>Downloaded languages</b>"
+  confirm_lang: "<b>Install this language?</b>"
+  action_cancelled: "<b>Action cancelled</b>"
+  lang_deleted: "<b>Language successfully deleted</b>"
 
+  _cls_doc: Processes internal translations
 eval:
   name: "Evaluator"
   eval: "<tg-emoji emoji-id={}>💻</tg-emoji><b> Code:</b>\n<pre><code class=\"language-{}\">{}</code></pre>\n\n<tg-emoji emoji-id=5197688912457245639>✅</tg-emoji><b> Result:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"
@@ -668,6 +740,8 @@ eval:
   _cmd_doc_ebf: "Evaluates Brainf*ck code"
   _cmd_doc_ec: "Evaluates C code"
   _cmd_doc_ecpp: "Evaluates C++ code"
+  _cmd_doc_ers: "Evaluates Rust code"
+  _cmd_doc_eg: "Evaluates Go code"
   _cmd_doc_enode: "Evaluates Node.js code"
   _cmd_doc_ephp: "Evaluates PHP code"
   _cmd_doc_eruby: "Evaluates Ruby code"

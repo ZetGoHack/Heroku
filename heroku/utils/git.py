@@ -4,11 +4,9 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-import asyncio
 import logging
 import os
 import subprocess
-import typing
 
 import git
 import herokutl
@@ -24,7 +22,7 @@ def _is_no_git() -> bool:
 
 
 # GeekTG Compatibility
-def get_git_info() -> typing.Tuple[str, str]:
+def get_git_info() -> tuple[str, str]:
     """
     Get git info
     :return: Git info
@@ -38,7 +36,7 @@ def get_git_info() -> typing.Tuple[str, str]:
     )
 
 
-def get_git_hash() -> typing.Union[str, bool]:
+def get_git_hash() -> str | bool:
     """
     Get current Heroku git hash
     :return: Git commit hash
