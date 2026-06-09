@@ -12,6 +12,7 @@
 
 import ast
 import contextlib
+import difflib
 import functools
 import typing
 from math import ceil
@@ -1166,6 +1167,45 @@ class HerokuConfigMod(loader.Module):
             ],
         )
 
+    def _fuzzy_lookup_configurable(self, query: str) -> tuple[str | None, bool]:
+        query_lower = query.lower()
+        best_score = -1.0
+        best_name: str | None = None
+
+        for mod in self.allmodules.modules:
+            if not hasattr(mod, "config") or not mod.config:
+                continue
+            try:
+                mod_name = mod.strings("name") if callable(mod.strings) else mod.__class__.__name__
+            except Exception:
+                mod_name = mod.__class__.__name__
+
+            cls_name = mod.__class__.__name__
+            names = {mod_name, cls_name}
+            if cls_name.endswith("Mod"):
+                names.add(cls_name[:-3])
+
+            for name in names:
+                if name.lower() == query_lower:
+                    return mod_name, True
+                score = difflib.SequenceMatcher(None, query_lower, name.lower()).ratio()
+                if score > best_score:
+                    best_score = score
+                    best_name = mod_name
+
+        for lib in self.allmodules.libraries:
+            if not hasattr(lib, "config") or not lib.config:
+                continue
+            lib_name = getattr(lib, "name", lib.__class__.__name__)
+            if lib_name.lower() == query_lower:
+                return lib_name, True
+            score = difflib.SequenceMatcher(None, query_lower, lib_name.lower()).ratio()
+            if score > best_score:
+                best_score = score
+                best_name = lib_name
+
+        return best_name, False
+
     def _get_all_folders(self) -> dict:
         folders = {}
         for mod in self.allmodules.modules:
@@ -1463,6 +1503,33 @@ class HerokuConfigMod(loader.Module):
             else:
                 await self.inline__choose_category(message)
             return
+
+        if args_s:
+            fuzzy_name, exact = self._fuzzy_lookup_configurable(args_s[0])
+            if fuzzy_name and (mod_inst := self.lookup(fuzzy_name)):
+                if hasattr(mod_inst, "config") and mod_inst.config:
+                    if isinstance(mod_inst, loader.Library):
+                        type_ = "library"
+                    else:
+                        type_ = mod_inst.__origin__.startswith("<core")
+
+                    if len(args_s) >= 2 and args_s[1] in mod_inst.config.keys():
+                        await self._send_initial_config_form(
+                            message,
+                            self.inline__configure_option,
+                            mod=fuzzy_name,
+                            config_opt=args_s[1],
+                            obj_type=type_,
+                        )
+                        return
+
+                    await self._send_initial_config_form(
+                        message,
+                        self.inline__configure,
+                        fuzzy_name,
+                        obj_type=type_,
+                    )
+                    return
 
         await self.inline__choose_category(message)
 

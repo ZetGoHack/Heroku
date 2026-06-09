@@ -240,10 +240,12 @@ class List(InlineUnit):
         self._units[unit_id]["message_id"] = m.id
 
         if isinstance(message, Message) and message.out:
-            await message.delete()
+            with contextlib.suppress(Exception):
+                await message.delete()
 
         if status_message and not message.out:
-            await status_message.delete()
+            with contextlib.suppress(Exception):
+                await status_message.delete()
 
         if first_page_needs_premium_emoji_pre_edit:
             await self._bot_client.edit_message(

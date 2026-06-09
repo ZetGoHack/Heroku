@@ -378,10 +378,12 @@ class Form(InlineUnit):
         self._units[unit_id]["message_id"] = m.id
 
         if isinstance(message, Message) and message.out:
-            await message.delete()
+            with contextlib.suppress(Exception):
+                await message.delete()
 
         if status_message and not message.out:
-            await status_message.delete()
+            with contextlib.suppress(Exception):
+                await status_message.delete()
 
         inline_message_id = self._units[unit_id]["inline_message_id"]
 
