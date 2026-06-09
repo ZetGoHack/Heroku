@@ -58,24 +58,24 @@ class Form(InlineUnit):
     async def form(
         self: "InlineManager",
         text: str,
-        message: typing.Union[Message, int],
-        reply_markup: typing.Optional[HerokuReplyMarkup] = None,
+        message: Message | int,
+        reply_markup: HerokuReplyMarkup | None = None,
         *,
         force_me: bool = False,
-        always_allow: typing.Optional[typing.List[int]] = None,
+        always_allow: list[int] | None = None,
         manual_security: bool = False,
         disable_security: bool = False,
-        ttl: typing.Optional[int] = None,
-        on_unload: typing.Optional[callable] = None,
-        photo: typing.Optional[str] = None,
-        gif: typing.Optional[str] = None,
-        file: typing.Optional[str] = None,
-        mime_type: typing.Optional[str] = None,
-        video: typing.Optional[str] = None,
-        location: typing.Optional[str] = None,
-        audio: typing.Optional[typing.Union[dict, str]] = None,
+        ttl: int | None = None,
+        on_unload: callable | None = None,
+        photo: str | None = None,
+        gif: str | None = None,
+        file: str | None = None,
+        mime_type: str | None = None,
+        video: str | None = None,
+        location: str | None = None,
+        audio: dict | str | None = None,
         silent: bool = False,
-    ) -> typing.Union[InlineMessage, bool]:
+    ) -> InlineMessage | bool:
         """
         Send inline form to chat
         :param text: Content of inline form. HTML markdown supported

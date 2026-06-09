@@ -196,7 +196,7 @@ class LoaderMod(loader.Module):
             },
         )
 
-    def _get_banner_url(self, doc: str) -> typing.Optional[str]:
+    def _get_banner_url(self, doc: str) -> str | None:
         match = re.search(r"# ?meta banner: ?(.+)", doc)
         return match.group(1).strip() if match else None
 
@@ -226,9 +226,7 @@ class LoaderMod(loader.Module):
                 case _:
                     not_installed = []
 
-                    await utils.answer(
-                        message, "Installing {} modules...".format(len(args))
-                    )
+                    await utils.answer(message, f"Installing {len(args)} modules...")
 
                     for arg in args:
                         result = await self.download_and_install(arg)
@@ -385,12 +383,12 @@ class LoaderMod(loader.Module):
             if repo.startswith("http")
         }
 
-    async def get_links_list(self) -> typing.List[str]:
+    async def get_links_list(self) -> list[str]:
         links = await self.get_repo_list()
         main_repo = list(links.pop(self.config["MODULES_REPO"]).values())
         return main_repo + list(dict(ChainMap(*list(links.values()))).values())
 
-    async def _find_link(self, module_name: str) -> typing.Union[str, bool]:
+    async def _find_link(self, module_name: str) -> str | bool:
         return next(
             filter(
                 lambda link: link.lower().endswith(f"/{module_name.lower()}.py"),
@@ -402,7 +400,7 @@ class LoaderMod(loader.Module):
     async def download_and_install(
         self,
         module_name: str,
-        message: typing.Optional[Message] = None,
+        message: Message | None = None,
         force_pm: bool = False,
     ) -> int:
         try:
@@ -639,7 +637,7 @@ class LoaderMod(loader.Module):
         self,
         doc: str,
         message: Message,
-        name: typing.Optional[str] = None,
+        name: str | None = None,
         origin: str = "<string>",
         did_requirements: bool = False,
         save_fs: bool = True,

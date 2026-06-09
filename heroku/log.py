@@ -81,7 +81,7 @@ def getlines(filename: str, module_globals=None) -> str:
 linecache.getlines = getlines
 
 
-def override_text(exception: Exception) -> typing.Optional[str]:
+def override_text(exception: Exception) -> str | None:
     """Returns error-specific description if available, else `None`"""
 
     match exception:
@@ -117,9 +117,7 @@ class HerokuException:
         self,
         message: str,
         full_stack: str,
-        sysinfo: typing.Optional[
-            typing.Tuple[object, Exception, traceback.TracebackException]
-        ] = None,
+        sysinfo: None | (tuple[object, Exception, traceback.TracebackException]) = None,
     ):
         self.message = message
         self.full_stack = full_stack
@@ -132,8 +130,8 @@ class HerokuException:
         exc_type: object,
         exc_value: Exception,
         tb: traceback.TracebackException,
-        stack: typing.Optional[typing.List[inspect.FrameInfo]] = None,
-        comment: typing.Optional[typing.Any] = None,
+        stack: list[inspect.FrameInfo] | None = None,
+        comment: typing.Any | None = None,
     ) -> "HerokuException":
         def to_hashable(dictionary: dict) -> dict:
             dictionary = dictionary.copy()
@@ -286,8 +284,8 @@ class TelegramLogsHandler(logging.Handler):
     def dumps(
         self,
         lvl: int = 0,
-        client_id: typing.Optional[int] = None,
-    ) -> typing.List[str]:
+        client_id: int | None = None,
+    ) -> list[str]:
         """Return all entries of minimum level as list of strings"""
         return [
             self.targets[0].format(record)
@@ -322,7 +320,7 @@ class TelegramLogsHandler(logging.Handler):
     def get_logid_by_client(self, client_id: int) -> int:
         return self._mods[client_id].logchat
 
-    async def get_logs_topic_id_by_client(self, client_id: int) -> typing.Optional[int]:
+    async def get_logs_topic_id_by_client(self, client_id: int) -> int | None:
         """Get logs topic ID from database"""
         allmods = self._mods[client_id]
         topic_id = await utils.get_topic_id(allmods.db, "Logs")

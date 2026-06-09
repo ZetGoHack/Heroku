@@ -3,9 +3,7 @@ import typing
 
 from herokutl.tl import types
 
-HerokuReplyMarkup = typing.Union[
-    typing.List[typing.List[dict]], typing.List[dict], dict
-]
+HerokuReplyMarkup = typing.Union[list[list[dict]], list[dict], dict]
 
 logger = logging.getLogger(__name__)
 
@@ -61,12 +59,12 @@ class InlineMessage:
 
 
 class _User:
-    def __init__(self, user_id: typing.Optional[int]):
+    def __init__(self, user_id: int | None):
         self.id = user_id
 
 
 class _Chat:
-    def __init__(self, chat_id: typing.Optional[int], type_: str = "private"):
+    def __init__(self, chat_id: int | None, type_: str = "private"):
         self.id = chat_id
         self.type = type_
 
@@ -76,9 +74,9 @@ class _MessageProxy:
         self,
         inline_manager: "InlineManager",
         *,
-        chat_id: typing.Optional[int],
-        message_id: typing.Optional[int],
-        sender_id: typing.Optional[int] = None,
+        chat_id: int | None,
+        message_id: int | None,
+        sender_id: int | None = None,
         text: str = "",
         message=None,
     ):
@@ -130,9 +128,9 @@ class BotInlineMessage:
     def __init__(
         self,
         inline_manager: "InlineManager",
-        unit_id: typing.Optional[str] = None,
-        chat_id: typing.Optional[int] = None,
-        message_id: typing.Optional[int] = None,
+        unit_id: str | None = None,
+        chat_id: int | None = None,
+        message_id: int | None = None,
         message=None,
     ):
         if message is not None:
@@ -238,10 +236,10 @@ class _CallbackMixin:
 
     async def answer(
         self,
-        text: typing.Optional[str] = None,
+        text: str | None = None,
         *,
         show_alert: bool = False,
-        alert: typing.Optional[bool] = None,
+        alert: bool | None = None,
         **kwargs,
     ):
         return await self.original_call.answer(
@@ -259,7 +257,7 @@ class InlineCall(_CallbackMixin, InlineMessage):
         self,
         call,
         inline_manager: "InlineManager",
-        unit_id: typing.Optional[str],
+        unit_id: str | None,
     ):
         self._init_callback(call, inline_manager)
         InlineMessage.__init__(
@@ -277,7 +275,7 @@ class BotInlineCall(_CallbackMixin, BotInlineMessage):
         self,
         call,
         inline_manager: "InlineManager",
-        unit_id: typing.Optional[str],
+        unit_id: str | None,
     ):
         self._init_callback(call, inline_manager)
         BotInlineMessage.__init__(

@@ -100,12 +100,10 @@ class Evaluator(loader.Module):
                     utils.escape_html(args),
                     "error",
                     self.censor(
-                        (
-                            "\n".join(item.full_stack.splitlines()[:-1])
-                            + "\n\n"
-                            + "🚫 "
-                            + item.full_stack.splitlines()[-1]
-                        )
+                        "\n".join(item.full_stack.splitlines()[:-1])
+                        + "\n\n"
+                        + "🚫 "
+                        + item.full_stack.splitlines()[-1]
                     ),
                 )
                 + (

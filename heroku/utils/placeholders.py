@@ -12,7 +12,7 @@ custom_placeholders = {}
 def register_placeholder(
     placeholder: str,
     callback: typing.Callable,
-    description: typing.Optional[str] = None,
+    description: str | None = None,
 ):
     """
     Register placeholder
@@ -36,7 +36,7 @@ async def get_placeholder(placeholder: str, data: dict | None = None):
     callback = custom_placeholders[placeholder]["callback"]
     try:
         callback_data = str(await callback(data))
-    except:
+    except Exception:
         callback_data = str(await callback())
     return callback_data
 

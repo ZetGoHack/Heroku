@@ -36,18 +36,18 @@ logger = logging.getLogger(__name__)
 class List(InlineUnit):
     async def list(
         self: "InlineManager",
-        message: typing.Union[Message, int],
-        strings: typing.List[str],
+        message: Message | int,
+        strings: list[str],
         *,
         force_me: bool = False,
-        always_allow: typing.Optional[typing.List[int]] = None,
+        always_allow: list[int] | None = None,
         manual_security: bool = False,
         disable_security: bool = False,
-        ttl: typing.Union[int, bool] = False,
-        on_unload: typing.Optional[typing.Callable[[], typing.Any]] = None,
+        ttl: int | bool = False,
+        on_unload: typing.Callable[[], typing.Any] | None = None,
         silent: bool = False,
-        custom_buttons: typing.Optional[HerokuReplyMarkup] = None,
-    ) -> typing.Union[bool, InlineMessage]:
+        custom_buttons: HerokuReplyMarkup | None = None,
+    ) -> bool | InlineMessage:
         """
         Send inline list to chat
         :param message: Where to send list. Can be either `Message` or `int`
@@ -258,7 +258,7 @@ class List(InlineUnit):
     async def _list_page(
         self: "InlineManager",
         call,
-        page: typing.Union[int, str],
+        page: int | str,
         unit_id: str = None,
     ):
         match True:

@@ -68,7 +68,7 @@ def iter_language_codes(language: str) -> typing.Iterator[str]:
     yield from LANGUAGE_COMPAT_ALIASES.get(language, ())
 
 
-def get_language_pack_path(language: str) -> typing.Optional[Path]:
+def get_language_pack_path(language: str) -> Path | None:
     for code in iter_language_codes(language):
         for suffix in (".json", ".yml"):
             path = PACKS / f"{code}{suffix}"
@@ -91,7 +91,7 @@ class BaseTranslator:
         self,
         pack: Path,
         prefix: str = "heroku.modules.",
-    ) -> typing.Optional[dict]:
+    ) -> dict | None:
         return self._get_pack_raw(pack.read_text(encoding="utf-8"), pack.suffix, prefix)
 
     def _get_pack_raw(
@@ -99,7 +99,7 @@ class BaseTranslator:
         content: str,
         suffix: str,
         prefix: str = "heroku.modules.",
-    ) -> typing.Optional[dict]:
+    ) -> dict | None:
         match suffix:
             case ".json":
                 return json.loads(content)
@@ -142,7 +142,7 @@ class BaseTranslator:
 
     async def load_module_translations(
         self, pack_url: str, cache_path: Path = None
-    ) -> typing.Union[bool, dict]:
+    ) -> bool | dict:
         try:
             content = (await utils.run_sync(requests.get, pack_url)).text
             data = yaml.load(content)
@@ -262,7 +262,7 @@ class Strings:
         self._base_strings = mod.strings  # Back 'em up, bc they will get replaced
         self.external_strings = {}
 
-    def get(self, key: str, lang: typing.Optional[str] = None) -> str:
+    def get(self, key: str, lang: str | None = None) -> str:
         try:
             return self._translator.raw_data[lang][f"{self._mod.__module__}.{key}"]
         except KeyError:
@@ -316,7 +316,7 @@ class Strings:
     def __call__(
         self,
         key: str,
-        _: typing.Optional[typing.Any] = None,  # Compatibility tweak for FTG\GeekTG
+        _: typing.Any | None = None,  # Compatibility tweak for FTG\GeekTG
     ) -> str:
         return self.__getitem__(key)
 

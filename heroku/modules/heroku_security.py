@@ -149,7 +149,7 @@ class HerokuSecurityMod(loader.Module):
         self,
         command: callable,
         is_inline: bool = False,
-    ) -> typing.List[typing.List[dict]]:
+    ) -> list[list[dict]]:
         perms = self._get_current_perms(command, is_inline)
         return (
             utils.chunks(
@@ -199,7 +199,7 @@ class HerokuSecurityMod(loader.Module):
     def _build_markup_global(
         self,
         is_inline: bool = False,
-    ) -> typing.List[typing.List[dict]]:
+    ) -> list[list[dict]]:
         return utils.chunks(
             [
                 {
@@ -571,7 +571,7 @@ class HerokuSecurityMod(loader.Module):
 
     async def _add_to_group(
         self,
-        message: typing.Union[Message, InlineCall],
+        message: Message | InlineCall,
         group: str,
         confirmed: bool = False,
         user: int = None,
@@ -719,7 +719,7 @@ class HerokuSecurityMod(loader.Module):
             await utils.answer(message, self.strings["no_owner"])
             return
 
-        prefixes = self._db.get(main.__name__, f"command_prefixes", {})
+        prefixes = self._db.get(main.__name__, "command_prefixes", {})
         for user in _resolved_users:
             _and_prefixes += [prefixes.get(str(user.id), None)]
 
@@ -832,7 +832,7 @@ class HerokuSecurityMod(loader.Module):
         self,
         call: InlineCall,
         target_type: str,
-        target: typing.Union[EntityLike, str],
+        target: EntityLike | str,
         rule: str,
         duration: int,
     ):
@@ -887,9 +887,9 @@ class HerokuSecurityMod(loader.Module):
 
     async def _confirm(
         self,
-        obj: typing.Union[Message, InlineMessage],
+        obj: Message | InlineMessage,
         target_type: str,
-        target: typing.Union[EntityLike, str],
+        target: EntityLike | str,
         rule: str,
         duration: int,
     ):

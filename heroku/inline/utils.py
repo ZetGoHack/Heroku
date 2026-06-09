@@ -55,14 +55,14 @@ class Utils(InlineUnit):
             getattr(getattr(self._client, "heroku_me", None), "premium", False)
         )
 
-    def _get_button_style(self, button: dict) -> typing.Optional[str]:
+    def _get_button_style(self, button: dict) -> str | None:
         """Extract and validate button style from button dict"""
         style = button.get("style")
         if style and style in VALID_BUTTON_STYLES:
             return style
         return None
 
-    def _get_button_emoji_id(self, button: dict) -> typing.Optional[str]:
+    def _get_button_emoji_id(self, button: dict) -> str | None:
         """Extract button custom emoji ID (for premium emoji support)"""
 
         emoji_id = button.get("emoji_id")
@@ -73,8 +73,8 @@ class Utils(InlineUnit):
 
     def _generate_markup(
         self: "InlineManager",
-        markup_obj: typing.Optional[typing.Union[HerokuReplyMarkup, str]],
-    ) -> typing.Optional[typing.List[typing.List[typing.Any]]]:
+        markup_obj: HerokuReplyMarkup | str | None,
+    ) -> list[list[typing.Any]] | None:
         """Generate markup for form or list of `dict`s"""
         if not markup_obj:
             return None
@@ -160,7 +160,8 @@ class Utils(InlineUnit):
                             if setup_callbacks:
                                 self._custom_map[button["_callback_data"]] = {
                                     "handler": button["callback"],
-                                    "always_allow": button.get("always_allow", []) or [],
+                                    "always_allow": button.get("always_allow", [])
+                                    or [],
                                     "args": button.get("args", {}),
                                     "kwargs": button.get("kwargs", {}),
                                     "force_me": button.get("force_me", False),
@@ -257,7 +258,7 @@ class Utils(InlineUnit):
 
     def _reverse_method_lookup(
         self: "InlineManager", needle: callable, /
-    ) -> typing.Optional[str]:
+    ) -> str | None:
         return next(
             (
                 name
@@ -283,7 +284,7 @@ class Utils(InlineUnit):
 
     def _find_caller_sec_map(
         self: "InlineManager",
-    ) -> typing.Optional[typing.Callable[[], int]]:
+    ) -> typing.Callable[[], int] | None:
         try:
             caller = utils.find_caller()
             if not caller:
@@ -301,7 +302,7 @@ class Utils(InlineUnit):
 
     def _normalize_markup(
         self: "InlineManager", reply_markup: HerokuReplyMarkup
-    ) -> typing.List[typing.List[typing.Dict[str, typing.Any]]]:
+    ) -> list[list[dict[str, typing.Any]]]:
         if isinstance(reply_markup, dict):
             return [[reply_markup]]
 
@@ -317,24 +318,24 @@ class Utils(InlineUnit):
 
     async def _edit_unit(
         self: "InlineManager",
-        text: typing.Optional[str] = None,
-        reply_markup: typing.Optional[HerokuReplyMarkup] = None,
+        text: str | None = None,
+        reply_markup: HerokuReplyMarkup | None = None,
         *,
-        photo: typing.Optional[str] = None,
-        file: typing.Optional[str] = None,
-        video: typing.Optional[str] = None,
-        audio: typing.Optional[typing.Union[dict, str]] = None,
-        gif: typing.Optional[str] = None,
-        mime_type: typing.Optional[str] = None,
-        force_me: typing.Optional[bool] = None,
-        disable_security: typing.Optional[bool] = None,
-        always_allow: typing.Optional[typing.List[int]] = None,
+        photo: str | None = None,
+        file: str | None = None,
+        video: str | None = None,
+        audio: dict | str | None = None,
+        gif: str | None = None,
+        mime_type: str | None = None,
+        force_me: bool | None = None,
+        disable_security: bool | None = None,
+        always_allow: list[int] | None = None,
         disable_web_page_preview: bool = True,
-        query: typing.Optional[typing.Any] = None,
-        unit_id: typing.Optional[str] = None,
-        inline_message_id: typing.Optional[str] = None,
-        chat_id: typing.Optional[int] = None,
-        message_id: typing.Optional[int] = None,
+        query: typing.Any | None = None,
+        unit_id: str | None = None,
+        inline_message_id: str | None = None,
+        chat_id: int | None = None,
+        message_id: int | None = None,
     ) -> bool:
         """
         Edits unit message
@@ -529,10 +530,10 @@ class Utils(InlineUnit):
 
     async def _delete_unit_message(
         self: "InlineManager",
-        call: typing.Optional[typing.Any] = None,
-        unit_id: typing.Optional[str] = None,
-        chat_id: typing.Optional[int] = None,
-        message_id: typing.Optional[int] = None,
+        call: typing.Any | None = None,
+        unit_id: str | None = None,
+        chat_id: int | None = None,
+        message_id: int | None = None,
     ) -> bool:
         """Params `self`, `unit_id` are for internal use only, do not try to pass them"""
         if getattr(getattr(call, "message", None), "chat", None):
@@ -588,9 +589,9 @@ class Utils(InlineUnit):
         self: "InlineManager",
         callback: typing.Callable[[int], typing.Awaitable[typing.Any]],
         total_pages: int,
-        unit_id: typing.Optional[str] = None,
-        current_page: typing.Optional[int] = None,
-    ) -> typing.List[typing.List[typing.Dict[str, typing.Any]]]:
+        unit_id: str | None = None,
+        current_page: int | None = None,
+    ) -> list[list[dict[str, typing.Any]]]:
         # Based on https://github.com/pystorage/pykeyboard/blob/master/pykeyboard/inline_pagination_keyboard.py#L4
         if current_page is None:
             current_page = self._units[unit_id]["current_index"] + 1
@@ -703,8 +704,8 @@ class Utils(InlineUnit):
 
     def _validate_markup(
         self: "InlineManager",
-        buttons: typing.Optional[HerokuReplyMarkup],
-    ) -> typing.List[typing.List[typing.Dict[str, typing.Any]]]:
+        buttons: HerokuReplyMarkup | None,
+    ) -> list[list[dict[str, typing.Any]]]:
         if buttons is None:
             buttons = []
 

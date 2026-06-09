@@ -16,7 +16,6 @@ import logging
 import os
 import string
 import time
-import typing
 from pathlib import Path
 
 from herokutl.errors import (
@@ -114,7 +113,7 @@ class HerokuWebMod(loader.Module):
 
     async def _inline_login(
         self,
-        call: typing.Union[Message, InlineCall],
+        call: Message | InlineCall,
         user: User,
         after_fail: bool = False,
         is_switch: bool = False,
@@ -172,7 +171,7 @@ class HerokuWebMod(loader.Module):
 
         return data
 
-    def _archive_identity_file(self, path: Path, suffix: int) -> typing.Optional[Path]:
+    def _archive_identity_file(self, path: Path, suffix: int) -> Path | None:
         if not path.exists():
             return None
 
@@ -186,7 +185,7 @@ class HerokuWebMod(loader.Module):
     def _restore_identity_file(
         self,
         original: Path,
-        archived: typing.Optional[Path],
+        archived: Path | None,
         created: bool = False,
     ) -> None:
         if archived and archived.exists():

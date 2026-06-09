@@ -77,7 +77,7 @@ class HerokuInfoMod(loader.Module):
 
     def _get_os_name(self):
         try:
-            with open("/etc/os-release", "r") as f:
+            with open("/etc/os-release") as f:
                 for line in f:
                     if line.startswith("PRETTY_NAME"):
                         return line.split("=")[1].strip().strip('"')

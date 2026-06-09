@@ -43,7 +43,7 @@ parser = herokutl.utils.sanitize_parse_mode("html")
 logger = logging.getLogger(__name__)
 
 
-def get_topic(message: Message) -> typing.Optional[int]:
+def get_topic(message: Message) -> int | None:
     """
     Get topic id of message
     :param message: Message to get topic of
@@ -79,7 +79,7 @@ def mime_type(message: Message) -> str:
 
 async def get_message_link(
     message: Message,
-    chat: typing.Optional[typing.Union[Chat, Channel]] = None,
+    chat: Chat | Channel | None = None,
 ) -> str:
     """
     Get link to message
@@ -110,7 +110,7 @@ async def get_message_link(
 
 def smart_split(
     text: str,
-    entities: typing.List[FormattingEntity],
+    entities: list[FormattingEntity],
     length: int = 4096,
     split_on: ListLike = ("\n", " "),
     min_length: int = 1,
@@ -253,9 +253,7 @@ def smart_split(
         bytes_offset += len(current_text.encode("utf-16le"))
 
 
-def array_sum(
-    array: typing.List[typing.List[typing.Any]], /
-) -> typing.List[typing.Any]:
+def array_sum(array: list[list[typing.Any]], /) -> list[typing.Any]:
     """
     Performs basic sum operation on array
     :param array: Array to sum
@@ -269,12 +267,12 @@ def array_sum(
 
 
 async def answer(
-    message: typing.Union[Message, InlineCall, InlineMessage],
+    message: Message | InlineCall | InlineMessage,
     response: str,
     *,
-    reply_markup: typing.Optional[HerokuReplyMarkup] = None,
+    reply_markup: HerokuReplyMarkup | None = None,
     **kwargs,
-) -> typing.Union[InlineCall, InlineMessage, Message]:
+) -> InlineCall | InlineMessage | Message:
     """
     Use this to give the response to a command
     :param message: Message to answer to. Can be a tl message or heroku inline object
@@ -473,9 +471,9 @@ async def answer(
 
 
 async def answer_file(
-    message: typing.Union[Message, InlineCall, InlineMessage],
-    file: typing.Union[str, bytes, io.IOBase, InputDocument],
-    caption: typing.Optional[str] = None,
+    message: Message | InlineCall | InlineMessage,
+    file: str | bytes | io.IOBase | InputDocument,
+    caption: str | None = None,
     **kwargs,
 ):
     """
@@ -524,7 +522,7 @@ async def answer_file(
 
 def censor(
     obj: typing.Any,
-    to_censor: typing.Optional[typing.Iterable[str]] = None,
+    to_censor: typing.Iterable[str] | None = None,
     replace_with: str = "redacted_{count}_chars",
 ):
     """
@@ -559,7 +557,7 @@ def is_serializable(x: typing.Any, /) -> bool:
         return False
 
 
-def extract_urls(text: str) -> typing.List[str]:
+def extract_urls(text: str) -> list[str]:
     """
     Extract all URLs from text
     :param text: Text to extract URLs from

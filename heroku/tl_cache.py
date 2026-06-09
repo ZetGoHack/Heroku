@@ -17,7 +17,6 @@ import time
 import typing
 
 from herokutl import TelegramClient
-from herokutl import __name__ as __base_name__
 from herokutl import helpers
 from herokutl._updates import ChannelState, Entity, EntityType, SessionState
 from herokutl.errors.rpcerrorlist import TopicDeletedError
@@ -75,34 +74,34 @@ class CustomTelegramClient(TelegramClient):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._heroku_entity_cache: typing.Dict[
-            typing.Union[str, int],
+        self._heroku_entity_cache: dict[
+            str | int,
             CacheRecordEntity,
         ] = {}
 
-        self._heroku_perms_cache: typing.Dict[
-            typing.Union[str, int],
+        self._heroku_perms_cache: dict[
+            str | int,
             CacheRecordPerms,
         ] = {}
 
-        self._heroku_fullchannel_cache: typing.Dict[
-            typing.Union[str, int],
+        self._heroku_fullchannel_cache: dict[
+            str | int,
             CacheRecordFullChannel,
         ] = {}
 
-        self._heroku_fulluser_cache: typing.Dict[
-            typing.Union[str, int],
+        self._heroku_fulluser_cache: dict[
+            str | int,
             CacheRecordFullUser,
         ] = {}
 
-        self._forbidden_constructors: typing.List[int] = []
+        self._forbidden_constructors: list[int] = []
 
-        self._raw_updates_processor: typing.Optional[
+        self._raw_updates_processor: None | (
             typing.Callable[
-                [typing.Union[Updates, UpdatesCombined, UpdateShort]],
+                [Updates | UpdatesCombined | UpdateShort],
                 typing.Any,
             ]
-        ] = None
+        ) = None
         self.dispatcher: "CommandDispatcher"
         self.tg_id: int
         self._tg_id: int
@@ -112,7 +111,7 @@ class CustomTelegramClient(TelegramClient):
         self.loader: "Modules"
         self.heroku_inline: "InlineManager"
 
-    async def connect(self, unix_socket_path: typing.Optional[str] = None):
+    async def connect(self, unix_socket_path: str | None = None):
         if self.session is None:
             raise ValueError(
                 "TelegramClient instance cannot be reused after logging out"
@@ -201,7 +200,7 @@ class CustomTelegramClient(TelegramClient):
         self._keepalive_handle = self.loop.create_task(self._keepalive_loop())
 
     @property
-    def raw_updates_processor(self) -> typing.Optional[callable]:
+    def raw_updates_processor(self) -> callable | None:
         return self._raw_updates_processor
 
     @raw_updates_processor.setter
@@ -215,23 +214,23 @@ class CustomTelegramClient(TelegramClient):
         self._raw_updates_processor = value
 
     @property
-    def heroku_entity_cache(self) -> typing.Dict[int, CacheRecordEntity]:
+    def heroku_entity_cache(self) -> dict[int, CacheRecordEntity]:
         return self._heroku_entity_cache
 
     @property
-    def heroku_perms_cache(self) -> typing.Dict[int, CacheRecordPerms]:
+    def heroku_perms_cache(self) -> dict[int, CacheRecordPerms]:
         return self._heroku_perms_cache
 
     @property
-    def heroku_fullchannel_cache(self) -> typing.Dict[int, CacheRecordFullChannel]:
+    def heroku_fullchannel_cache(self) -> dict[int, CacheRecordFullChannel]:
         return self._heroku_fullchannel_cache
 
     @property
-    def heroku_fulluser_cache(self) -> typing.Dict[int, CacheRecordFullUser]:
+    def heroku_fulluser_cache(self) -> dict[int, CacheRecordFullUser]:
         return self._heroku_fulluser_cache
 
     @property
-    def forbidden_constructors(self) -> typing.List[str]:
+    def forbidden_constructors(self) -> list[str]:
         return self._forbidden_constructors
 
     async def force_get_entity(self, *args, **kwargs):
@@ -317,7 +316,7 @@ class CustomTelegramClient(TelegramClient):
     async def get_perms_cached(
         self,
         entity: EntityLike,
-        user: typing.Optional[EntityLike] = None,
+        user: EntityLike | None = None,
         exp: int = 5 * 60,
         force: bool = False,
     ):
@@ -404,7 +403,7 @@ class CustomTelegramClient(TelegramClient):
             ] = cache_record
             logger.debug("Saved hashable_entity %s perms to cache", hashable_entity)
 
-            def save_user(key: typing.Union[str, int]):
+            def save_user(key: str | int):
                 nonlocal self, cache_record, user, hashable_user
                 if getattr(user, "id", None):
                     self._heroku_perms_cache.setdefault(key, {})[user.id] = cache_record
@@ -539,7 +538,7 @@ class CustomTelegramClient(TelegramClient):
     def _find_message_obj_in_frame(
         chat_id: int,
         frame: inspect.FrameInfo,
-    ) -> typing.Optional[Message]:
+    ) -> Message | None:
         """
         Finds the message object from the frame
         """
@@ -558,8 +557,8 @@ class CustomTelegramClient(TelegramClient):
     async def _find_message_obj_in_stack(
         self,
         chat: EntityLike,
-        stack: typing.List[inspect.FrameInfo],
-    ) -> typing.Optional[Message]:
+        stack: list[inspect.FrameInfo],
+    ) -> Message | None:
         """
         Finds the message object from the stack
         """
@@ -577,8 +576,8 @@ class CustomTelegramClient(TelegramClient):
     async def _find_topic_in_stack(
         self,
         chat: EntityLike,
-        stack: typing.List[inspect.FrameInfo],
-    ) -> typing.Optional[Message]:
+        stack: list[inspect.FrameInfo],
+    ) -> Message | None:
         """
         Finds the message object from the stack
         """
@@ -592,7 +591,7 @@ class CustomTelegramClient(TelegramClient):
     async def _topic_guesser(
         self,
         native_method: typing.Callable[..., typing.Awaitable[Message]],
-        stack: typing.List[inspect.FrameInfo],
+        stack: list[inspect.FrameInfo],
         *args,
         **kwargs,
     ):
@@ -637,7 +636,7 @@ class CustomTelegramClient(TelegramClient):
         sender: MTProtoSender,
         request: TLRequest,
         ordered: bool = False,
-        flood_sleep_threshold: typing.Optional[int] = None,
+        flood_sleep_threshold: int | None = None,
     ):
         """
         Calls the given request and handles user-side forbidden constructors
@@ -721,7 +720,7 @@ class CustomTelegramClient(TelegramClient):
 
     def _handle_update(
         self: "CustomTelegramClient",
-        update: typing.Union[Updates, UpdatesCombined, UpdateShort],
+        update: Updates | UpdatesCombined | UpdateShort,
     ):
         if self._raw_updates_processor is not None:
             self._raw_updates_processor(update)

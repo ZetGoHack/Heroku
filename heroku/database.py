@@ -68,7 +68,7 @@ class Database(dict):
         super().__init__()
         self._client: CustomTelegramClient = client
         self._next_revision_call: int = 0
-        self._revisions: typing.List[dict] = []
+        self._revisions: list[dict] = []
         self._me: User = None
         self._redis: redis.Redis = None
         self._saving_task: asyncio.Future = None
@@ -314,7 +314,7 @@ class Database(dict):
             ).id
         )
 
-    async def fetch_asset(self, asset_id: int) -> typing.Optional[Message]:
+    async def fetch_asset(self, asset_id: int) -> Message | None:
         """Fetch previously saved asset by its asset_id"""
 
         if not (_content_channel_id := self.get("heroku.forums", "channel_id", None)):
@@ -339,7 +339,7 @@ class Database(dict):
         self,
         owner: str,
         key: str,
-        default: typing.Optional[JSONSerializable] = None,
+        default: JSONSerializable | None = None,
     ) -> JSONSerializable:
         """Get database key snapshot"""
         return copy.deepcopy(self._get_raw(owner, key, default))
@@ -348,7 +348,7 @@ class Database(dict):
         self,
         owner: str,
         key: str,
-        default: typing.Optional[JSONSerializable] = None,
+        default: JSONSerializable | None = None,
     ) -> JSONSerializable:
         """Get database key"""
         try:
@@ -407,9 +407,9 @@ class Database(dict):
         self,
         owner: str,
         key: str,
-        default: typing.Optional[JSONSerializable] = None,
-        item_type: typing.Optional[typing.Any] = None,
-    ) -> typing.Union[JSONSerializable, PointerList, PointerDict]:
+        default: JSONSerializable | None = None,
+        item_type: typing.Any | None = None,
+    ) -> JSONSerializable | PointerList | PointerDict:
         """Get a pointer to database key"""
         value = self._get_raw(owner, key, default)
         mapping = {

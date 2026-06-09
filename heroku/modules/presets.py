@@ -384,7 +384,7 @@ class Presets(loader.Module):
         await message.delete()
         try:
             description = data["description"]
-        except:
+        except Exception:
             description = self.lookup("help").strings["undoc"]
 
         modules_list = []

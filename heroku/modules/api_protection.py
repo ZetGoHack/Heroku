@@ -16,7 +16,6 @@ import json
 import logging
 import random
 import time
-import typing
 
 from herokutl.tl import functions
 from herokutl.tl.tlobject import TLRequest
@@ -70,7 +69,7 @@ class APIRatelimiterMod(loader.Module):
     strings = {"name": "APILimiter"}
 
     def __init__(self):
-        self._ratelimiter: typing.List[tuple] = []
+        self._ratelimiter: list[tuple] = []
         self._suspend_until = 0
         self._lock = False
         self.config = loader.ModuleConfig(

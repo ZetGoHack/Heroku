@@ -37,14 +37,14 @@ class _InlineFormDraft:
     inline_message_id = None
 
     def __init__(self):
-        self.text: typing.Optional[str] = None
-        self.reply_markup: typing.Optional[HerokuReplyMarkup] = None
-        self.kwargs: typing.Dict[str, typing.Any] = {}
+        self.text: str | None = None
+        self.reply_markup: HerokuReplyMarkup | None = None
+        self.kwargs: dict[str, typing.Any] = {}
 
     async def edit(
         self,
-        text: typing.Optional[str] = None,
-        reply_markup: typing.Optional[HerokuReplyMarkup] = None,
+        text: str | None = None,
+        reply_markup: HerokuReplyMarkup | None = None,
         *args: typing.Any,
         **kwargs: typing.Any,
     ) -> None:
@@ -115,7 +115,7 @@ class HerokuConfigMod(loader.Module):
         self,
         mod: str,
         option: str,
-        obj_type: typing.Union[bool, str] = False,
+        obj_type: bool | str = False,
     ) -> dict:
         kwargs = {"obj_type": obj_type}
         cat = self.lookup(mod).config.get_category(option)
@@ -129,8 +129,8 @@ class HerokuConfigMod(loader.Module):
         query: str,
         mod: str,
         option: str,
-        inline_message_id: typing.Optional[str] = None,
-        obj_type: typing.Union[bool, str] = False,
+        inline_message_id: str | None = None,
+        obj_type: bool | str = False,
     ):
         try:
             self.lookup(mod).config[option] = query
@@ -177,7 +177,7 @@ class HerokuConfigMod(loader.Module):
         call: InlineCall,
         mod: str,
         option: str,
-        obj_type: typing.Union[bool, str] = False,
+        obj_type: bool | str = False,
     ):
         mod_instance = self.lookup(mod)
         mod_instance.config[option] = mod_instance.config.getdef(option)
@@ -214,7 +214,7 @@ class HerokuConfigMod(loader.Module):
         mod: str,
         option: str,
         value: bool,
-        obj_type: typing.Union[bool, str] = False,
+        obj_type: bool | str = False,
     ):
         try:
             self.lookup(mod).config[option] = value
@@ -279,7 +279,7 @@ class HerokuConfigMod(loader.Module):
         self,
         mod: str,
         option: str,
-        obj_type: typing.Union[bool, str] = False,
+        obj_type: bool | str = False,
     ) -> list:
         return [
             [
@@ -340,8 +340,8 @@ class HerokuConfigMod(loader.Module):
         query: str,
         mod: str,
         option: str,
-        inline_message_id: typing.Optional[str] = None,
-        obj_type: typing.Union[bool, str] = False,
+        inline_message_id: str | None = None,
+        obj_type: bool | str = False,
     ):
         try:
             with contextlib.suppress(Exception):
@@ -398,8 +398,8 @@ class HerokuConfigMod(loader.Module):
         query: str,
         mod: str,
         option: str,
-        inline_message_id: typing.Optional[str] = None,
-        obj_type: typing.Union[bool, str] = False,
+        inline_message_id: str | None = None,
+        obj_type: bool | str = False,
     ):
         try:
             with contextlib.suppress(Exception):
@@ -467,7 +467,7 @@ class HerokuConfigMod(loader.Module):
         call: InlineCall,
         mod: str,
         option: str,
-        obj_type: typing.Union[bool, str] = False,
+        obj_type: bool | str = False,
     ) -> list:
         return [
             [
@@ -538,7 +538,7 @@ class HerokuConfigMod(loader.Module):
         mod: str,
         option: str,
         value: bool,
-        obj_type: typing.Union[bool, str] = False,
+        obj_type: bool | str = False,
     ):
         try:
             self.lookup(mod).config[option] = value
@@ -587,7 +587,7 @@ class HerokuConfigMod(loader.Module):
         mod: str,
         option: str,
         value: bool,
-        obj_type: typing.Union[bool, str] = False,
+        obj_type: bool | str = False,
     ):
         try:
             if value in self.lookup(mod).config._config[option].value:
@@ -617,7 +617,7 @@ class HerokuConfigMod(loader.Module):
         call: InlineCall,
         mod: str,
         option: str,
-        obj_type: typing.Union[bool, str] = False,
+        obj_type: bool | str = False,
     ) -> list:
         possible_values = list(
             self.lookup(mod)
@@ -691,7 +691,7 @@ class HerokuConfigMod(loader.Module):
         call: InlineCall,
         mod: str,
         option: str,
-        obj_type: typing.Union[bool, str] = False,
+        obj_type: bool | str = False,
     ) -> list:
         possible_values = list(
             self.lookup(mod)
@@ -767,7 +767,7 @@ class HerokuConfigMod(loader.Module):
         mod: str = "",
         config_opt: str = "",
         force_hidden: bool = False,
-        obj_type: typing.Union[bool, str] = False,
+        obj_type: bool | str = False,
     ):
         module = self.lookup(mod)
         args = [
@@ -972,9 +972,9 @@ class HerokuConfigMod(loader.Module):
         self,
         call: InlineCall,
         mod: str,
-        obj_type: typing.Union[bool, str] = False,
-        folder: typing.Optional[str] = None,
-        category: typing.Optional[str] = None,
+        obj_type: bool | str = False,
+        folder: str | None = None,
+        category: str | None = None,
     ):
 
         module = self.lookup(mod)
@@ -995,7 +995,7 @@ class HerokuConfigMod(loader.Module):
         if category is not None:
             params = list(grouped.get(category, []))
             option_lines = [
-                "▫️ <code>{}</code>: {}".format(utils.escape_html(p), fmt_value(p))
+                f"▫️ <code>{utils.escape_html(p)}</code>: {fmt_value(p)}"
                 for p in params
             ]
             options_text = "\n".join(option_lines) if option_lines else "No options"
@@ -1052,7 +1052,7 @@ class HerokuConfigMod(loader.Module):
         elif folder is not None:
             params = list(module.config)
             option_lines = [
-                "▫️ <code>{}</code>: {}".format(utils.escape_html(p), fmt_value(p))
+                f"▫️ <code>{utils.escape_html(p)}</code>: {fmt_value(p)}"
                 for p in params
             ]
             text = "\n".join(option_lines) if option_lines else "No options"
@@ -1216,7 +1216,7 @@ class HerokuConfigMod(loader.Module):
 
         return folders
 
-    async def inline__choose_category(self, call: typing.Union[Message, InlineCall]):
+    async def inline__choose_category(self, call: Message | InlineCall):
         all_folders = self._get_all_folders()
 
         folder_btns = [
@@ -1353,7 +1353,7 @@ class HerokuConfigMod(loader.Module):
         self,
         call: InlineCall,
         page: int = 0,
-        obj_type: typing.Union[bool, str] = False,
+        obj_type: bool | str = False,
     ):
         if isinstance(obj_type, bool):
             to_config = [

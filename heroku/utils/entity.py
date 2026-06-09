@@ -133,7 +133,7 @@ def get_lang_flag(countrycode: str) -> str:
 
 
 def get_entity_url(
-    entity: typing.Union[User, Channel],
+    entity: User | Channel,
     openmessage: bool = False,
 ) -> str:
     """
@@ -201,7 +201,7 @@ def check_url(url: str) -> bool:
         return False
 
 
-def get_link(user: typing.Union[User, Channel], /) -> str:
+def get_link(user: User | Channel, /) -> str:
     """
     Get telegram permalink to entity
     :param user: User or channel
@@ -227,12 +227,12 @@ async def asset_channel(
     silent: bool = False,
     archive: bool = False,
     invite_bot: bool = False,
-    avatar: typing.Optional[str] = None,
-    ttl: typing.Optional[int] = None,
+    avatar: str | None = None,
+    ttl: int | None = None,
     forum: bool = False,
     hide_general: bool = False,
-    _folder: typing.Optional[str] = None,
-) -> typing.Tuple[Channel, bool]:
+    _folder: str | None = None,
+) -> tuple[Channel, bool]:
     """
     Create new channel (if needed) and return its entity
     :param client: Telegram client to create channel by
@@ -351,8 +351,8 @@ async def asset_forum_topic(
     db: "Database",
     peer: hints.Entity,
     title: str,
-    description: typing.Optional[str] = None,
-    icon_emoji_id: typing.Optional[int] = None,
+    description: str | None = None,
+    icon_emoji_id: int | None = None,
     invite_bot: bool = False,
 ) -> ForumTopic:
     entity = await client.get_entity(peer)
@@ -457,7 +457,7 @@ async def wait_for_content_channel(db: "Database", delay: float = 10) -> int:
     return cid
 
 
-async def get_topic_id(db: "Database", topic_name: str) -> typing.Optional[int]:
+async def get_topic_id(db: "Database", topic_name: str) -> int | None:
     """
     Get forum topic ID from database
     :param db: Database instance
@@ -522,7 +522,7 @@ async def set_avatar(
     return True
 
 
-async def get_target(message: Message, arg_no: int = 0) -> typing.Optional[int]:
+async def get_target(message: Message, arg_no: int = 0) -> int | None:
     """
     Get target from message
     :param message: Message to get target from
@@ -559,7 +559,7 @@ async def get_target(message: Message, arg_no: int = 0) -> typing.Optional[int]:
             return entity.id
 
 
-async def get_user(message: Message) -> typing.Optional[User]:
+async def get_user(message: Message) -> User | None:
     """
     Get user who sent message, searching if not found easily
     :param message: Message to get user from
@@ -651,10 +651,10 @@ def escape_quotes(text: str, /) -> str:
 
 
 def relocate_entities(
-    entities: typing.List[FormattingEntity],
+    entities: list[FormattingEntity],
     offset: int,
-    text: typing.Optional[str] = None,
-) -> typing.List[FormattingEntity]:
+    text: str | None = None,
+) -> list[FormattingEntity]:
     """
     Move all entities by offset (truncating at text)
     :param entities: List of entities
@@ -678,7 +678,7 @@ def relocate_entities(
 
 
 def find_caller(
-    stack: typing.Optional[typing.List[inspect.FrameInfo]] = None,
+    stack: list[inspect.FrameInfo] | None = None,
 ) -> typing.Any:
     """
     Attempts to find command in stack

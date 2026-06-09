@@ -64,7 +64,7 @@ class InlineStuff(loader.Module):
         try:
             await self._client.get_entity(username)
             return False
-        except:
+        except Exception:
             return True
 
     @loader.command()

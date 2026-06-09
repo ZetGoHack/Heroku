@@ -72,8 +72,8 @@ BASE_DIR = (
 
 BASE_PATH = Path(BASE_DIR)
 CONFIG_PATH = BASE_PATH / "config.json"
-_CONFIG_CACHE: typing.Optional[dict] = None
-_CONFIG_MTIME_NS: typing.Optional[int] = None
+_CONFIG_CACHE: dict | None = None
+_CONFIG_MTIME_NS: int | None = None
 
 # fmt: off
 LATIN_MOCK = [
@@ -313,7 +313,7 @@ def _read_config() -> dict:
     return _CONFIG_CACHE
 
 
-def get_config_key(key: str) -> typing.Union[str, bool]:
+def get_config_key(key: str) -> str | bool:
     """
     Parse and return key from config
     :param key: Key name in config
@@ -760,7 +760,7 @@ class Heroku:
 
         try:
             await client.get_entity(f"{username}")
-        except:
+        except Exception:
             return True
 
     async def _initial_setup(self) -> bool:
@@ -1161,7 +1161,7 @@ class Heroku:
                 try:
                     await inline._dp.stop_polling()
                     await inline.bot.session.close()
-                except:
+                except Exception:
                     pass
         for c in self.clients:
             await c.disconnect()
@@ -1193,7 +1193,7 @@ class Heroku:
             logging.info("Bye!")
             try:
                 self.loop.run_until_complete(self._shutdown_handler())
-            except:
+            except Exception:
                 pass
 
 

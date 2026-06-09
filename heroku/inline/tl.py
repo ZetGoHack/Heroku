@@ -47,7 +47,7 @@ class TelethonBot:
         return file
 
     @staticmethod
-    def _thread_kwargs(message_thread_id: typing.Optional[int]) -> dict:
+    def _thread_kwargs(message_thread_id: int | None) -> dict:
         return {"reply_to": message_thread_id} if message_thread_id else {}
 
     @staticmethod
@@ -155,8 +155,8 @@ class TelethonBot:
         text: str = "",
         *,
         reply_markup=None,
-        message_thread_id: typing.Optional[int] = None,
-        disable_notification: typing.Optional[bool] = None,
+        message_thread_id: int | None = None,
+        disable_notification: bool | None = None,
         **kwargs,
     ):
         return self._with_message_id_alias(
@@ -180,9 +180,9 @@ class TelethonBot:
         chat_id,
         document,
         *,
-        caption: typing.Optional[str] = None,
+        caption: str | None = None,
         reply_markup=None,
-        message_thread_id: typing.Optional[int] = None,
+        message_thread_id: int | None = None,
         **kwargs,
     ):
         return self._with_message_id_alias(
@@ -203,9 +203,9 @@ class TelethonBot:
         chat_id,
         photo,
         *,
-        caption: typing.Optional[str] = None,
+        caption: str | None = None,
         reply_markup=None,
-        message_thread_id: typing.Optional[int] = None,
+        message_thread_id: int | None = None,
         **kwargs,
     ):
         return self._with_message_id_alias(
@@ -225,12 +225,12 @@ class TelethonBot:
         chat_id,
         audio,
         *,
-        title: typing.Optional[str] = None,
-        performer: typing.Optional[str] = None,
-        duration: typing.Optional[int] = None,
+        title: str | None = None,
+        performer: str | None = None,
+        duration: int | None = None,
         thumbnail=None,
         reply_markup=None,
-        message_thread_id: typing.Optional[int] = None,
+        message_thread_id: int | None = None,
         **kwargs,
     ):
         attributes = [
@@ -245,7 +245,9 @@ class TelethonBot:
                 chat_id,
                 self._normalise_file(audio),
                 attributes=attributes,
-                thumb=self._normalise_file(thumbnail) if thumbnail is not None else None,
+                thumb=(
+                    self._normalise_file(thumbnail) if thumbnail is not None else None
+                ),
                 buttons=reply_markup,
                 silent=kwargs.get("disable_notification"),
                 **self._thread_kwargs(message_thread_id),
@@ -262,7 +264,7 @@ class TelethonBot:
         *,
         cache_time: int = 0,
         is_personal: bool = False,
-        next_offset: typing.Optional[str] = None,
+        next_offset: str | None = None,
         **kwargs,
     ):
         prepared = []
@@ -370,12 +372,12 @@ class TelethonBot:
 
 
 def web_document(
-    url: typing.Optional[str],
+    url: str | None,
     *,
     mime_type: str = "image/jpeg",
     width: int = 128,
     height: int = 128,
-) -> typing.Optional[types.InputWebDocument]:
+) -> types.InputWebDocument | None:
     if not url:
         return None
 
@@ -395,14 +397,14 @@ def web_document(
 def make_button(
     *,
     text: str,
-    style: typing.Optional[str] = None,
-    icon: typing.Optional[str] = None,
-    url: typing.Optional[str] = None,
-    data: typing.Optional[typing.Union[str, bytes]] = None,
-    switch_inline_query_current_chat: typing.Optional[str] = None,
-    switch_inline_query: typing.Optional[str] = None,
-    web_app: typing.Optional[typing.Union[str, dict]] = None,
-    copy_text: typing.Optional[str] = None,
+    style: str | None = None,
+    icon: str | None = None,
+    url: str | None = None,
+    data: str | bytes | None = None,
+    switch_inline_query_current_chat: str | None = None,
+    switch_inline_query: str | None = None,
+    web_app: str | dict | None = None,
+    copy_text: str | None = None,
 ):
     if url is not None:
         return Button.url(text, url, style=style, icon=icon)

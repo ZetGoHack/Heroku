@@ -87,7 +87,6 @@ def print_banner(banner: str):
                 banner,
             )
         ),
-        "r",
     ) as f:
         print(f.read())
 
@@ -132,7 +131,7 @@ def get_branch_name(repo_path):
     if not branch_name:
         try:
             head_path = os.path.join(repo_path, ".git", "HEAD")
-            with open(head_path, "r", encoding="utf-8") as f:
+            with open(head_path, encoding="utf-8") as f:
                 content = f.read().strip()
             if content.startswith("ref:"):
                 branch_name = content.split("/")[-1]

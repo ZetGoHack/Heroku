@@ -34,19 +34,19 @@ class Translations(loader.Module):
         await call.edit(self.strings["lang_saved"].format(self._get_flag(lang)))
 
     def _get_downloaded_langs(self) -> list:
-        lang = self._db.get(translations.__name__, "lang", None)
-        if not lang:
+        langs = self._db.get(translations.__name__, "lang", None)
+        if not langs:
             return []
-        return [l for l in lang.split() if utils.check_url(l)]
+        return [lang for lang in langs.split() if utils.check_url(lang)]
 
     def _get_non_downloaded_langs(self) -> str:
-        lang = self._db.get(translations.__name__, "lang", None)
-        if not lang:
+        langs = self._db.get(translations.__name__, "lang", None)
+        if not langs:
             return None
         result = " ".join(
-            translations.normalize_language(l)
-            for l in lang.split()
-            if not utils.check_url(l)
+            translations.normalize_language(lang)
+            for lang in langs.split()
+            if not utils.check_url(lang)
         )
         return result if result else None
 
@@ -165,7 +165,7 @@ class Translations(loader.Module):
 
     async def _delete_downloaded(self, call: InlineCall, url: str):
         downloaded = self._get_downloaded_langs()
-        downloaded = [l for l in downloaded if l != url]
+        downloaded = [lang for lang in downloaded if lang != url]
         non_downloaded = self._get_non_downloaded_langs()
 
         parts = []
@@ -194,7 +194,6 @@ class Translations(loader.Module):
             "🇯🇵": "<tg-emoji emoji-id=5456261908069885892>🇯🇵</tg-emoji>",
             "🇫🇷": "<tg-emoji emoji-id=5202132623060640759>🇫🇷</tg-emoji>",
             "🏴‍☠️": "<tg-emoji emoji-id=5386372293263892965>🏴‍☠️</tg-emoji>",
-            "🇺🇿": "<tg-emoji emoji-id=5449829434334912605>🇺🇿</tg-emoji>",
         }
 
         lang2country = {

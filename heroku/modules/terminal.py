@@ -427,7 +427,7 @@ class TerminalMod(loader.Module):
     ]
 
     @staticmethod
-    def _split_command(cmd: str) -> typing.List[str]:
+    def _split_command(cmd: str) -> list[str]:
         try:
             lexer = shlex.shlex(cmd, posix=True, punctuation_chars=True)
             lexer.whitespace_split = True
@@ -508,13 +508,13 @@ class TerminalMod(loader.Module):
             ),
         )
         self.activecmds = {}
-        self._inline_pending: typing.Dict[str, str] = {}
-        self._inline_sessions: typing.Dict[str, InlineMessageEditor] = {}
+        self._inline_pending: dict[str, str] = {}
+        self._inline_sessions: dict[str, InlineMessageEditor] = {}
 
     def _build_inline_exec_markup(
         self,
-        uid: typing.Optional[str] = None,
-    ) -> typing.List[typing.List[typing.Dict[str, str]]]:
+        uid: str | None = None,
+    ) -> list[list[dict[str, str]]]:
         if not uid:
             return []
 
@@ -531,7 +531,7 @@ class TerminalMod(loader.Module):
         self,
         editor: InlineMessageEditor,
         session_uid: str,
-    ) -> typing.List[typing.List[typing.Dict[str, typing.Any]]]:
+    ) -> list[list[dict[str, typing.Any]]]:
         if editor.rc is None:
             return []
 
@@ -761,7 +761,7 @@ class TerminalMod(loader.Module):
         self,
         message: herokutl.tl.types.Message,
         cmd: str,
-        editor: typing.Optional[MessageEditor] = None,
+        editor: MessageEditor | None = None,
     ):
 
         if self._is_dangerous(cmd):
@@ -819,7 +819,7 @@ class TerminalMod(loader.Module):
     def _find_inline_editor_by_message(
         self,
         message: herokutl.tl.types.Message,
-    ) -> typing.Optional[InlineMessageEditor]:
+    ) -> InlineMessageEditor | None:
         text = getattr(message, "raw_text", None) or getattr(message, "text", "")
         running_editors = [
             editor

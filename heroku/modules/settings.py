@@ -211,7 +211,7 @@ class CoreMod(loader.Module):
                 args[1] = int(args[1])
             try:
                 entity = await self.client.get_entity(args[1])
-            except:
+            except Exception:
                 return await utils.answer(
                     message, self.strings["invalid_id_or_username"]
                 )

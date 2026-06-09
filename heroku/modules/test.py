@@ -17,7 +17,6 @@ import os
 import platform as lib_platform
 import random
 import time
-import typing
 from io import BytesIO
 
 from herokutl.tl.types import Message
@@ -161,9 +160,9 @@ class TestMod(loader.Module):
     @loader.command()
     async def logs(
         self,
-        message: typing.Union[Message, InlineCall],
+        message: Message | InlineCall,
         force: bool = False,
-        lvl: typing.Union[int, None] = None,
+        lvl: int | None = None,
     ):
         raw_args = utils.get_args_raw(message) if isinstance(message, Message) else ""
         args = raw_args.split()

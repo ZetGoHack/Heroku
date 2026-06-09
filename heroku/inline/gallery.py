@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 class ListGalleryHelper:
-    def __init__(self, lst: typing.List[str]):
+    def __init__(self, lst: list[str]):
         self.lst = lst
         self._current_index = -1
 
@@ -51,22 +51,22 @@ class ListGalleryHelper:
 class Gallery(InlineUnit):
     async def gallery(
         self: "InlineManager",
-        message: typing.Union[Message, int],
-        next_handler: typing.Union[callable, typing.List[str]],
-        caption: typing.Union[typing.List[str], str, callable] = "",
+        message: Message | int,
+        next_handler: callable | list[str],
+        caption: list[str] | str | callable = "",
         *,
-        custom_buttons: typing.Optional[HerokuReplyMarkup] = None,
+        custom_buttons: HerokuReplyMarkup | None = None,
         force_me: bool = False,
-        always_allow: typing.Optional[typing.List[int]] = None,
+        always_allow: list[int] | None = None,
         manual_security: bool = False,
         disable_security: bool = False,
-        ttl: typing.Union[int, bool] = False,
-        on_unload: typing.Optional[callable] = None,
-        preload: typing.Union[bool, int] = False,
+        ttl: int | bool = False,
+        on_unload: callable | None = None,
+        preload: bool | int = False,
         gif: bool = False,
         silent: bool = False,
         _reattempt: bool = False,
-    ) -> typing.Union[bool, InlineMessage]:
+    ) -> bool | InlineMessage:
         """
         Send inline gallery to chat
         :param caption: Caption for photo, or callable, returning caption
@@ -327,12 +327,12 @@ class Gallery(InlineUnit):
 
     async def _call_photo(
         self: "InlineManager",
-        callback: typing.Union[
-            typing.Callable[[], typing.Awaitable[str]],
-            typing.Callable[[], str],
-            typing.List[str],
-        ],
-    ) -> typing.Union[str, bool]:
+        callback: (
+            typing.Callable[[], typing.Awaitable[str]]
+            | typing.Callable[[], str]
+            | list[str]
+        ),
+    ) -> str | bool:
         """Parses photo url from `callback`. Returns url on success, otherwise `False`"""
         match True:
             case _ if isinstance(callback, str):
@@ -385,7 +385,7 @@ class Gallery(InlineUnit):
     async def _gallery_slideshow_loop(
         self: "InlineManager",
         call,
-        unit_id: typing.Optional[str] = None,
+        unit_id: str | None = None,
     ):
         while True:
             await asyncio.sleep(7)
@@ -411,7 +411,7 @@ class Gallery(InlineUnit):
     async def _gallery_slideshow(
         self: "InlineManager",
         call,
-        unit_id: typing.Optional[str] = None,
+        unit_id: str | None = None,
     ):
         if not self._units[unit_id].get("slideshow", False):
             self._units[unit_id]["slideshow"] = True
@@ -443,7 +443,7 @@ class Gallery(InlineUnit):
     async def _gallery_back(
         self: "InlineManager",
         call,
-        unit_id: typing.Optional[str] = None,
+        unit_id: str | None = None,
     ):
         queue = self._units[unit_id]["photos"]
 
@@ -481,7 +481,7 @@ class Gallery(InlineUnit):
     def _get_current_media(
         self: "InlineManager",
         unit_id: str,
-    ) -> typing.Tuple[str, str, bool]:
+    ) -> tuple[str, str, bool]:
         """Return current media, which should be updated in gallery"""
         media = self._get_next_photo(unit_id)
         try:
@@ -512,8 +512,8 @@ class Gallery(InlineUnit):
     async def _gallery_page(
         self: "InlineManager",
         call,
-        page: typing.Union[int, str],
-        unit_id: typing.Optional[str] = None,
+        page: int | str,
+        unit_id: str | None = None,
     ):
         match True:
             case _ if page == "slideshow":
@@ -608,63 +608,55 @@ class Gallery(InlineUnit):
         unit = self._units[unit_id]
         return self.generate_markup(
             (
-                (
-                    unit.get("custom_buttons", [])
-                    + self.build_pagination(
-                        unit_id=unit_id,
-                        callback=callback,
-                        total_pages=len(unit["photos"]),
-                    )
-                    + [
-                        [
-                            *(
-                                [
-                                    {
-                                        "text": "⏪",
-                                        "callback": callback,
-                                        "args": (unit["current_index"] - 1,),
-                                    }
-                                ]
-                                if unit["current_index"] > 0
-                                else []
-                            ),
-                            *(
-                                [
-                                    {
-                                        "text": (
-                                            "🛑"
-                                            if unit.get("slideshow", False)
-                                            else "⏱"
-                                        ),
-                                        "callback": callback,
-                                        "args": ("slideshow",),
-                                    }
-                                ]
-                                if unit["current_index"] < len(unit["photos"]) - 1
-                                or not isinstance(
-                                    unit["next_handler"], ListGalleryHelper
-                                )
-                                else []
-                            ),
-                            *(
-                                [
-                                    {
-                                        "text": "⏩",
-                                        "callback": callback,
-                                        "args": (unit["current_index"] + 1,),
-                                    }
-                                ]
-                                if unit["current_index"] < len(unit["photos"]) - 1
-                                or not isinstance(
-                                    unit["next_handler"], ListGalleryHelper
-                                )
-                                else []
-                            ),
-                        ]
-                    ]
+                unit.get("custom_buttons", [])
+                + self.build_pagination(
+                    unit_id=unit_id,
+                    callback=callback,
+                    total_pages=len(unit["photos"]),
                 )
-                + [[{"text": "🔻 Close", "callback": callback, "args": ("close",)}]]
+                + [
+                    [
+                        *(
+                            [
+                                {
+                                    "text": "⏪",
+                                    "callback": callback,
+                                    "args": (unit["current_index"] - 1,),
+                                }
+                            ]
+                            if unit["current_index"] > 0
+                            else []
+                        ),
+                        *(
+                            [
+                                {
+                                    "text": (
+                                        "🛑" if unit.get("slideshow", False) else "⏱"
+                                    ),
+                                    "callback": callback,
+                                    "args": ("slideshow",),
+                                }
+                            ]
+                            if unit["current_index"] < len(unit["photos"]) - 1
+                            or not isinstance(unit["next_handler"], ListGalleryHelper)
+                            else []
+                        ),
+                        *(
+                            [
+                                {
+                                    "text": "⏩",
+                                    "callback": callback,
+                                    "args": (unit["current_index"] + 1,),
+                                }
+                            ]
+                            if unit["current_index"] < len(unit["photos"]) - 1
+                            or not isinstance(unit["next_handler"], ListGalleryHelper)
+                            else []
+                        ),
+                    ]
+                ]
             )
+            + [[{"text": "🔻 Close", "callback": callback, "args": ("close",)}]]
         )
 
     async def _gallery_inline_handler(self: "InlineManager", inline_query):

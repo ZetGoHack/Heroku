@@ -200,7 +200,7 @@ class InfiniteLoop:
         interval: int,
         autostart: bool,
         wait_before: bool,
-        stop_clause: typing.Union[str, None],
+        stop_clause: str | None,
     ):
         self.func = func
         self.interval = interval
@@ -281,9 +281,9 @@ class InfiniteLoop:
 
 def loop(
     interval: int = 5,
-    autostart: typing.Optional[bool] = False,
-    wait_before: typing.Optional[bool] = False,
-    stop_clause: typing.Optional[str] = None,
+    autostart: bool | None = False,
+    wait_before: bool | None = False,
+    stop_clause: str | None = None,
 ) -> FunctionType:
     """
     Create new infinite loop from class method
@@ -321,11 +321,11 @@ MODULES_LANGPACKS_PATH.mkdir(parents=True, exist_ok=True)
 
 
 def _iter_module_files(
-    directory: typing.Union[str, Path],
+    directory: str | Path,
     *,
     suffix: str = ".py",
-    include: typing.Optional[typing.Callable[[str], bool]] = None,
-) -> typing.List[str]:
+    include: typing.Callable[[str], bool] | None = None,
+) -> list[str]:
     with os.scandir(directory) as entries:
         return [
             entry.path
@@ -573,7 +573,7 @@ class Modules:
         self.inline_handlers = {}
         self.callback_handlers = {}
         self.aliases = {}
-        self.modules: typing.List[typing.Optional["Module"]] = []  # skipcq: PTC-W0052
+        self.modules: list["Module" | None] = []  # skipcq: PTC-W0052
         self.libraries = []
         self.watchers = []
         self._log_handlers = []
@@ -626,9 +626,9 @@ class Modules:
 
     async def register_all(
         self,
-        mods: typing.Optional[typing.List[str]] = None,
+        mods: list[str] | None = None,
         no_external: bool = False,
-    ) -> typing.List[Module]:
+    ) -> list[Module]:
         """Load all modules in the module directory"""
         external_mods = []
 
@@ -661,7 +661,7 @@ class Modules:
         self,
         modules: list,
         origin: str = "<core>",
-    ) -> typing.List[Module]:
+    ) -> list[Module]:
         with contextlib.suppress(AttributeError):
             _heroku_client_id_logging_tag = copy.copy(self.client.tg_id)  # noqa: F841
 
@@ -979,7 +979,7 @@ class Modules:
     def lookup(
         self,
         modname: str,
-    ) -> typing.Union[bool, Module, Library]:
+    ) -> bool | Module | Library:
         return next(
             (lib for lib in self.libraries if lib.name.lower() == modname.lower()),
             False,
@@ -1005,7 +1005,7 @@ class Modules:
         default = "."
 
         if ent_id:
-            prefixes = self._db.get(key, f"command_prefixes", {})
+            prefixes = self._db.get(key, "command_prefixes", {})
             result = prefixes.get(str(ent_id), default)
         else:
             result = self._db.get(key, "command_prefix", default)
@@ -1019,7 +1019,7 @@ class Modules:
         default = "."
 
         prefixes = ()
-        prefixes += tuple(self._db.get(key, f"command_prefixes", {}).values())
+        prefixes += tuple(self._db.get(key, "command_prefixes", {}).values())
         prefixes += tuple(self._db.get(key, "command_prefix", default))
 
         return set(prefixes)
@@ -1064,7 +1064,7 @@ class Modules:
         self,
         alias: str,
         include_legacy: bool = False,
-    ) -> typing.Optional[str]:
+    ) -> str | None:
         if not alias:
             return None
 
@@ -1090,7 +1090,7 @@ class Modules:
 
         return None
 
-    def dispatch(self, _command: str) -> typing.Tuple[str, typing.Optional[str]]:
+    def dispatch(self, _command: str) -> tuple[str, str | None]:
         """Dispatch command to appropriate module"""
 
         resolved = next(
@@ -1297,7 +1297,7 @@ class Modules:
             name,
         )
 
-    async def unload_module(self, classname: str) -> typing.List[str]:
+    async def unload_module(self, classname: str) -> list[str]:
         """Remove module and all stuff from it"""
         worked = []
 

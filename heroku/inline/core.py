@@ -70,26 +70,26 @@ if typing.TYPE_CHECKING:
     from ..loader import Modules
 
 
-_BOT_UPDATE_EVENTS: typing.Dict[str, typing.Callable[[], object]] = {
-
-# Default updates 
-
+_BOT_UPDATE_EVENTS: dict[str, typing.Callable[[], object]] = {
+    # Default updates
     "message": lambda: events.NewMessage(),
     "edited_message": lambda: events.MessageEdited(),
     "channel_post": lambda: events.NewMessage(),
     "edited_channel_post": lambda: events.MessageEdited(),
     "inline_query": lambda: events.InlineQuery(),
     "callback_query": lambda: events.CallbackQuery(),
-
-# Raw-based
-
+    # Raw-based
     "chosen_inline_result": lambda: events.Raw(types=UpdateBotInlineSend),
     "shipping_query": lambda: events.Raw(types=UpdateBotShippingQuery),
     "pre_checkout_query": lambda: events.Raw(types=UpdateBotPrecheckoutQuery),
     "poll": lambda: events.Raw(types=UpdateMessagePoll),
     "poll_answer": lambda: events.Raw(types=UpdateMessagePollVote),
-    "my_chat_member": lambda: events.Raw(types=(UpdateChatParticipant, UpdateChannelParticipant)),
-    "chat_member": lambda: events.Raw(types=(UpdateChatParticipant, UpdateChannelParticipant)),
+    "my_chat_member": lambda: events.Raw(
+        types=(UpdateChatParticipant, UpdateChannelParticipant)
+    ),
+    "chat_member": lambda: events.Raw(
+        types=(UpdateChatParticipant, UpdateChannelParticipant)
+    ),
     "chat_join_request": lambda: events.Raw(types=UpdateBotChatInviteRequester),
     "message_reaction": lambda: events.Raw(types=UpdateBotMessageReaction),
     "message_reaction_count": lambda: events.Raw(types=UpdateBotMessageReactions),
@@ -130,10 +130,10 @@ class InlineManager(
         self._allmodules = allmodules
         self.translator: Translator = allmodules.translator
 
-        self._units: typing.Dict[str, dict] = {}
-        self._custom_map: typing.Dict[str, callable] = {}
-        self.fsm: typing.Dict[str, str] = {}
-        self._error_events: typing.Dict[str, asyncio.Event] = {}
+        self._units: dict[str, dict] = {}
+        self._custom_map: dict[str, callable] = {}
+        self.fsm: dict[str, str] = {}
+        self._error_events: dict[str, asyncio.Event] = {}
 
         self._markup_ttl = 60 * 60 * 24
         self.init_complete = False
@@ -149,12 +149,8 @@ class InlineManager(
         self.bot_id: int = None
         self.bot_username: str = None
 
-        self._bot_update_handlers: typing.Dict[
-            str, typing.Tuple[str, typing.Callable]
-        ] = {}
-        self._bot_handler_refs: typing.Dict[
-            str, typing.Tuple[typing.Callable, object]
-        ] = {}
+        self._bot_update_handlers: dict[str, tuple[str, typing.Callable]] = {}
+        self._bot_handler_refs: dict[str, tuple[typing.Callable, object]] = {}
 
     async def _cleaner(self):
         """Cleans outdated inline units"""
@@ -166,7 +162,7 @@ class InlineManager(
             await asyncio.sleep(5)
 
     @staticmethod
-    def _web_document(url: typing.Optional[str], **kwargs):
+    def _web_document(url: str | None, **kwargs):
         return web_document(url, **kwargs)
 
     def _register_bot_handler(
@@ -174,7 +170,7 @@ class InlineManager(
         handler: typing.Callable,
         event_builder,
         *,
-        handler_id: typing.Optional[str] = None,
+        handler_id: str | None = None,
     ):
         self._bot_client.add_event_handler(handler, event_builder)
         if handler_id:
@@ -183,7 +179,9 @@ class InlineManager(
     def _register_builtin_handlers(self):
         self._register_bot_handler(self._inline_handler, events.InlineQuery())
         self._register_bot_handler(self._callback_query_handler, events.CallbackQuery())
-        self._register_bot_handler(self._chosen_inline_handler, events.Raw(types=UpdateBotInlineSend))
+        self._register_bot_handler(
+            self._chosen_inline_handler, events.Raw(types=UpdateBotInlineSend)
+        )
         self._register_bot_handler(self._message_handler, events.NewMessage())
 
         for handler_id, (update_type, handler) in self._bot_update_handlers.items():

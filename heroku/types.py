@@ -157,9 +157,9 @@ class Module:
     async def invoke(
         self,
         command: str,
-        args: typing.Optional[str] = None,
-        peer: typing.Optional[EntityLike] = None,
-        message: typing.Optional[Message] = None,
+        args: str | None = None,
+        peer: EntityLike | None = None,
+        message: Message | None = None,
         edit: bool = False,
     ) -> Message:
         """
@@ -187,42 +187,42 @@ class Module:
         return message
 
     @property
-    def commands(self) -> typing.Dict[str, Command]:
+    def commands(self) -> dict[str, Command]:
         """List of commands that module supports"""
         return get_commands(self)
 
     @property
-    def heroku_commands(self) -> typing.Dict[str, Command]:
+    def heroku_commands(self) -> dict[str, Command]:
         """List of commands that module supports"""
         return get_commands(self)
 
     @property
-    def inline_handlers(self) -> typing.Dict[str, Command]:
+    def inline_handlers(self) -> dict[str, Command]:
         """List of inline handlers that module supports"""
         return get_inline_handlers(self)
 
     @property
-    def heroku_inline_handlers(self) -> typing.Dict[str, Command]:
+    def heroku_inline_handlers(self) -> dict[str, Command]:
         """List of inline handlers that module supports"""
         return get_inline_handlers(self)
 
     @property
-    def callback_handlers(self) -> typing.Dict[str, Command]:
+    def callback_handlers(self) -> dict[str, Command]:
         """List of callback handlers that module supports"""
         return get_callback_handlers(self)
 
     @property
-    def heroku_callback_handlers(self) -> typing.Dict[str, Command]:
+    def heroku_callback_handlers(self) -> dict[str, Command]:
         """List of callback handlers that module supports"""
         return get_callback_handlers(self)
 
     @property
-    def watchers(self) -> typing.Dict[str, Command]:
+    def watchers(self) -> dict[str, Command]:
         """List of watchers that module supports"""
         return get_watchers(self)
 
     @property
-    def heroku_watchers(self) -> typing.Dict[str, Command]:
+    def heroku_watchers(self) -> dict[str, Command]:
         """List of watchers that module supports"""
         return get_watchers(self)
 
@@ -260,9 +260,9 @@ class Module:
 
     async def animate(
         self,
-        message: typing.Union[Message, InlineMessage],
-        frames: typing.List[str],
-        interval: typing.Union[float, int],
+        message: Message | InlineMessage,
+        frames: list[str],
+        interval: float | int,
         *,
         inline: bool = False,
     ) -> None:
@@ -309,7 +309,7 @@ class Module:
     def get(
         self,
         key: str,
-        default: typing.Optional[JSONSerializable] = None,
+        default: JSONSerializable | None = None,
     ) -> JSONSerializable:
         return self._db.get(self.__class__.__name__, key, default)
 
@@ -319,9 +319,9 @@ class Module:
     def pointer(
         self,
         key: str,
-        default: typing.Optional[JSONSerializable] = None,
-        item_type: typing.Optional[typing.Any] = None,
-    ) -> typing.Union[JSONSerializable, PointerList, PointerDict]:
+        default: JSONSerializable | None = None,
+        item_type: typing.Any | None = None,
+    ) -> JSONSerializable | PointerList | PointerDict:
         return self._db.pointer(self.__class__.__name__, key, default, item_type)
 
     async def _decline(
@@ -351,7 +351,7 @@ class Module:
         self,
         peer: EntityLike,
         reason: str,
-        assure_joined: typing.Optional[bool] = False,
+        assure_joined: bool | None = False,
     ) -> bool:
         """
         Request to join a channel.
@@ -457,7 +457,7 @@ class Module:
         self,
         url: str,
         *,
-        suspend_on_error: typing.Optional[bool] = False,
+        suspend_on_error: bool | None = False,
         _did_requirements: bool = False,
     ) -> "Library":
         """
@@ -693,7 +693,7 @@ class Library:
     def _lib_get(
         self,
         key: str,
-        default: typing.Optional[JSONSerializable] = None,
+        default: JSONSerializable | None = None,
     ) -> JSONSerializable:
         return self._db.get(self.__class__.__name__, key, default)
 
@@ -703,8 +703,8 @@ class Library:
     def _lib_pointer(
         self,
         key: str,
-        default: typing.Optional[JSONSerializable] = None,
-    ) -> typing.Union[JSONSerializable, PointerDict, PointerList]:
+        default: JSONSerializable | None = None,
+    ) -> JSONSerializable | PointerDict | PointerList:
         return self._db.pointer(self.__class__.__name__, key, default)
 
 
@@ -723,8 +723,8 @@ class CoreOverwriteError(LoadError):
 
     def __init__(
         self,
-        module: typing.Optional[str] = None,
-        command: typing.Optional[str] = None,
+        module: str | None = None,
+        command: str | None = None,
     ):
         self.type = "module" if module else "command"
         self.target = module or command
@@ -821,7 +821,7 @@ class ModuleConfig(dict):
             {option: config.value for option, config in self._config.items()}
         )
 
-    def getdoc(self, key: str, message: typing.Optional[Message] = None) -> str:
+    def getdoc(self, key: str, message: Message | None = None) -> str:
         """Get the documentation by key"""
         ret = self._config[key].doc
 
@@ -899,15 +899,11 @@ def syncwrap(func: typing.Callable[[], typing.Any]) -> typing.Any:
 class ConfigValue:
     option: str
     default: typing.Any = None
-    doc: typing.Union[typing.Callable[[], str], str] = "No description"
+    doc: typing.Callable[[], str] | str = "No description"
     value: typing.Any = field(default_factory=_Placeholder)
-    validator: typing.Optional[
-        typing.Callable[[JSONSerializable], JSONSerializable]
-    ] = None
-    on_change: typing.Optional[
-        typing.Union[typing.Callable[[], typing.Awaitable], typing.Callable]
-    ] = None
-    folder: typing.Optional[str] = None
+    validator: None | (typing.Callable[[JSONSerializable], JSONSerializable]) = None
+    on_change: None | (typing.Callable[[], typing.Awaitable] | typing.Callable) = None
+    folder: str | None = None
 
     def __post_init__(self):
         if isinstance(self.value, _Placeholder):
@@ -1021,7 +1017,7 @@ class ConfigCategory(list):
 def _get_members(
     mod: Module,
     ending: str,
-    attribute: typing.Optional[str] = None,
+    attribute: str | None = None,
     strict: bool = False,
 ) -> dict:
     """Get method of module, which end with ending"""

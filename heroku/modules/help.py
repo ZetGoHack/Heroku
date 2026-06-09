@@ -179,7 +179,8 @@ class Help(loader.Module):
         )
 
         reply = "{} <b>{}</b>:".format(
-            "<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji>", _name, ""
+            "<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji>",
+            _name,
         )
         inline_cmd = ""
         cmds = ""

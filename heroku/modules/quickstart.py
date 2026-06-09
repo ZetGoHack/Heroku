@@ -33,7 +33,7 @@ class Quickstart(loader.Module):
                 else "Heroku"
             )
             + (
-                "\n" + ((self.strings["lavhost"] if "LAVHOST" in os.environ else ""))
+                "\n" + (self.strings["lavhost"] if "LAVHOST" in os.environ else "")
             ).rstrip()
         )
 
@@ -78,7 +78,7 @@ class Quickstart(loader.Module):
             if existing_forum_id:
                 try:
                     forum_entity = await self.client.get_entity(existing_forum_id)
-                except Exception as e:
+                except Exception:
                     forum_entity = None
 
             if not forum_entity:
@@ -102,7 +102,7 @@ class Quickstart(loader.Module):
 
                     forum_entity = content_channel
                     self.db.set("heroku.forums", "forum_id", int(content_channel.id))
-                except Exception as e:
+                except Exception:
                     forum_entity = content_channel
 
             required_topics = [

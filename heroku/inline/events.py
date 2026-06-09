@@ -200,9 +200,7 @@ class Events(InlineUnit):
     async def _callback_query_handler(
         self: "InlineManager",
         call,
-        reply_markup: typing.Optional[
-            typing.List[typing.List[typing.Dict[str, typing.Any]]]
-        ] = None,
+        reply_markup: None | (list[list[dict[str, typing.Any]]]) = None,
     ):
         """Callback query handler (buttons' presses)"""
         if reply_markup is None:

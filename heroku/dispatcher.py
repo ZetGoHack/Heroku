@@ -21,7 +21,6 @@ import logging
 import re
 import sys
 import traceback
-import typing
 
 from herokutl import events
 from herokutl.errors import FloodWaitError, RPCError
@@ -263,9 +262,9 @@ class CommandDispatcher:
 
     async def _handle_command(
         self,
-        event: typing.Union[events.NewMessage, events.MessageDeleted],
+        event: events.NewMessage | events.MessageDeleted,
         watcher: bool = False,
-    ) -> typing.Union[bool, typing.Tuple[Message, str, str, callable]]:
+    ) -> bool | tuple[Message, str, str, callable]:
         if not hasattr(event, "message") or not hasattr(event.message, "message"):
             return False
 
@@ -432,7 +431,7 @@ class CommandDispatcher:
 
     async def handle_command(
         self,
-        event: typing.Union[events.NewMessage, events.MessageDeleted],
+        event: events.NewMessage | events.MessageDeleted,
     ):
         """Handle all commands"""
         message = await self._handle_command(event)
@@ -510,14 +509,14 @@ class CommandDispatcher:
 
     async def _handle_tags(
         self,
-        event: typing.Union[events.NewMessage, events.MessageDeleted],
+        event: events.NewMessage | events.MessageDeleted,
         func: callable,
     ) -> bool:
         return bool(await self._handle_tags_ext(event, func))
 
     async def _handle_tags_ext(
         self,
-        event: typing.Union[events.NewMessage, events.MessageDeleted],
+        event: events.NewMessage | events.MessageDeleted,
         func: callable,
     ) -> str:
         """
@@ -619,7 +618,7 @@ class CommandDispatcher:
 
     async def handle_incoming(
         self,
-        event: typing.Union[events.NewMessage, events.MessageDeleted],
+        event: events.NewMessage | events.MessageDeleted,
     ):
         """Handle all incoming messages"""
         message = utils.censor(getattr(event, "message", event))

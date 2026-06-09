@@ -182,7 +182,7 @@ else:
 
     prev_hash = None
     if os.path.exists(".requirements_hash"):
-        with open(".requirements_hash", "r") as f:
+        with open(".requirements_hash") as f:
             prev_hash = f.read().strip()
 
     if prev_hash != get_file_hash("requirements.txt"):

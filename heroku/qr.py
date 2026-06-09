@@ -8,7 +8,7 @@ import math
 import re
 import sys
 from bisect import bisect_left
-from typing import Dict, List, NamedTuple, Optional, cast
+from typing import NamedTuple, Optional, cast
 
 ERROR_CORRECT_L = 1
 ERROR_CORRECT_M = 0
@@ -996,7 +996,7 @@ class QRData:
 
 class BitBuffer:
     def __init__(self):
-        self.buffer: List[int] = []
+        self.buffer: list[int] = []
         self.length = 0
 
     def __repr__(self):
@@ -1022,14 +1022,14 @@ class BitBuffer:
         self.length += 1
 
 
-def create_bytes(buffer: BitBuffer, rs_blocks: List[RSBlock]):
+def create_bytes(buffer: BitBuffer, rs_blocks: list[RSBlock]):
     offset = 0
 
     maxDcCount = 0
     maxEcCount = 0
 
-    dcdata: List[List[int]] = []
-    ecdata: List[List[int]] = []
+    dcdata: list[list[int]] = []
+    ecdata: list[list[int]] = []
 
     for rs_block in rs_blocks:
         dcCount = rs_block.data_count
@@ -1115,9 +1115,9 @@ class DataOverflowError(Exception):
     pass
 
 
-ModulesType = List[List[Optional[bool]]]
+ModulesType = list[list[Optional[bool]]]
 # Cache modules generated just based on the QR Code version
-precomputed_qr_blanks: Dict[int, ModulesType] = {}
+precomputed_qr_blanks: dict[int, ModulesType] = {}
 
 
 def _check_box_size(size):
@@ -1164,7 +1164,7 @@ class ActiveWithNeighbors(NamedTuple):
 
 class QRCode:
     modules: ModulesType
-    _version: Optional[int] = None
+    _version: int | None = None
 
     def __init__(
         self,
@@ -1553,13 +1553,13 @@ class QRCode:
         code = [[False] * width] * self.border
         x_border = [False] * self.border
         for module in self.modules:
-            code.append(x_border + cast(List[bool], module) + x_border)
+            code.append(x_border + cast(list[bool], module) + x_border)
         code += [[False] * width] * self.border
 
         return code
 
     def active_with_neighbors(self, row: int, col: int) -> ActiveWithNeighbors:
-        context: List[bool] = []
+        context: list[bool] = []
         for r in range(row - 1, row + 2):
             for c in range(col - 1, col + 2):
                 context.append(self.is_constrained(r, c) and bool(self.modules[r][c]))

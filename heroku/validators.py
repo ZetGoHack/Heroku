@@ -54,8 +54,8 @@ class Validator:
     def __init__(
         self,
         validator: callable,
-        doc: typing.Optional[typing.Union[str, dict]] = None,
-        _internal_id: typing.Optional[int] = None,
+        doc: str | dict | None = None,
+        _internal_id: int | None = None,
     ):
         self.validate = validator
 
@@ -106,9 +106,9 @@ class Integer(Validator):
     def __init__(
         self,
         *,
-        digits: typing.Optional[int] = None,
-        minimum: typing.Optional[int] = None,
-        maximum: typing.Optional[int] = None,
+        digits: int | None = None,
+        minimum: int | None = None,
+        maximum: int | None = None,
     ):
         _signs = (
             translator.getdict("validators.positive")
@@ -189,7 +189,7 @@ class Integer(Validator):
         digits: int,
         minimum: int,
         maximum: int,
-    ) -> typing.Union[int, None]:
+    ) -> int | None:
         try:
             value = int(str(value).strip())
         except ValueError:
@@ -218,7 +218,7 @@ class Choice(Validator):
 
     def __init__(
         self,
-        possible_values: typing.List[ConfigAllowedTypes],
+        possible_values: list[ConfigAllowedTypes],
         /,
     ):
         super().__init__(
@@ -235,7 +235,7 @@ class Choice(Validator):
         value: ConfigAllowedTypes,
         /,
         *,
-        possible_values: typing.List[ConfigAllowedTypes],
+        possible_values: list[ConfigAllowedTypes],
     ) -> ConfigAllowedTypes:
         if value not in possible_values:
             raise ValidationError(
@@ -254,7 +254,7 @@ class MultiChoice(Validator):
 
     def __init__(
         self,
-        possible_values: typing.List[ConfigAllowedTypes],
+        possible_values: list[ConfigAllowedTypes],
         /,
     ):
         possible = " / ".join(list(map(str, possible_values)))
@@ -266,11 +266,11 @@ class MultiChoice(Validator):
 
     @staticmethod
     def _validate(
-        value: typing.List[ConfigAllowedTypes],
+        value: list[ConfigAllowedTypes],
         /,
         *,
-        possible_values: typing.List[ConfigAllowedTypes],
-    ) -> typing.List[ConfigAllowedTypes]:
+        possible_values: list[ConfigAllowedTypes],
+    ) -> list[ConfigAllowedTypes]:
         if not isinstance(value, (list, tuple)):
             value = [value]
 
@@ -296,10 +296,10 @@ class Series(Validator):
 
     def __init__(
         self,
-        validator: typing.Optional[Validator] = None,
-        min_len: typing.Optional[int] = None,
-        max_len: typing.Optional[int] = None,
-        fixed_len: typing.Optional[int] = None,
+        validator: Validator | None = None,
+        min_len: int | None = None,
+        max_len: int | None = None,
+        fixed_len: int | None = None,
     ):
         def trans(lang: str) -> str:
             return validator.doc.get(lang, validator.doc["en"])
@@ -348,11 +348,11 @@ class Series(Validator):
         value: ConfigAllowedTypes,
         /,
         *,
-        validator: typing.Optional[Validator] = None,
-        min_len: typing.Optional[int] = None,
-        max_len: typing.Optional[int] = None,
-        fixed_len: typing.Optional[int] = None,
-    ) -> typing.List[ConfigAllowedTypes]:
+        validator: Validator | None = None,
+        min_len: int | None = None,
+        max_len: int | None = None,
+        fixed_len: int | None = None,
+    ) -> list[ConfigAllowedTypes]:
         if not isinstance(value, (list, tuple, set)):
             value = str(value).split(",")
 
@@ -422,9 +422,9 @@ class String(Validator):
 
     def __init__(
         self,
-        length: typing.Optional[int] = None,
-        min_len: typing.Optional[int] = None,
-        max_len: typing.Optional[int] = None,
+        length: int | None = None,
+        min_len: int | None = None,
+        max_len: int | None = None,
     ):
         if length is not None:
             doc = translator.getdict("validators.string_fixed_len", length=length)
@@ -462,9 +462,9 @@ class String(Validator):
         value: ConfigAllowedTypes,
         /,
         *,
-        length: typing.Optional[int],
-        min_len: typing.Optional[int],
-        max_len: typing.Optional[int],
+        length: int | None,
+        min_len: int | None,
+        max_len: int | None,
     ) -> str:
         if (
             isinstance(length, int)
@@ -504,8 +504,8 @@ class RegExp(Validator):
     def __init__(
         self,
         regex: str,
-        flags: typing.Optional[re.RegexFlag] = None,
-        description: typing.Optional[typing.Union[dict, str]] = None,
+        flags: re.RegexFlag | None = None,
+        description: dict | str | None = None,
     ):
         if not flags:
             flags = 0
@@ -535,7 +535,7 @@ class RegExp(Validator):
         /,
         *,
         regex: str,
-        flags: typing.Optional[re.RegexFlag],
+        flags: re.RegexFlag | None,
     ) -> str:
         if not re.match(regex, str(value), flags=flags):
             raise ValidationError(f"Passed value ({value}) must follow pattern {regex}")
@@ -552,8 +552,8 @@ class Float(Validator):
 
     def __init__(
         self,
-        minimum: typing.Optional[float] = None,
-        maximum: typing.Optional[float] = None,
+        minimum: float | None = None,
+        maximum: float | None = None,
     ):
         _signs = (
             translator.getdict("validators.positive")
@@ -608,8 +608,8 @@ class Float(Validator):
         value: ConfigAllowedTypes,
         /,
         *,
-        minimum: typing.Optional[float] = None,
-        maximum: typing.Optional[float] = None,
+        minimum: float | None = None,
+        maximum: float | None = None,
     ) -> float:
         try:
             value = float(str(value).strip().replace(",", "."))
@@ -704,7 +704,7 @@ class NoneType(Validator):
 
 
 class Hidden(Validator):
-    def __init__(self, validator: typing.Optional[Validator] = None):
+    def __init__(self, validator: Validator | None = None):
         if not validator:
             validator = String()
 
@@ -734,9 +734,9 @@ class Emoji(Validator):
 
     def __init__(
         self,
-        length: typing.Optional[int] = None,
-        min_len: typing.Optional[int] = None,
-        max_len: typing.Optional[int] = None,
+        length: int | None = None,
+        min_len: int | None = None,
+        max_len: int | None = None,
     ):
         match True:
             case _ if length is not None:
@@ -768,9 +768,9 @@ class Emoji(Validator):
         value: ConfigAllowedTypes,
         /,
         *,
-        length: typing.Optional[int],
-        min_len: typing.Optional[int],
-        max_len: typing.Optional[int],
+        length: int | None,
+        min_len: int | None,
+        max_len: int | None,
     ) -> str:
         value = str(value)
         passed_length = len(list(grapheme.graphemes(value)))
@@ -819,8 +819,8 @@ class EntityLike(RegExp):
         /,
         *,
         regex: str,
-        flags: typing.Optional[re.RegexFlag],
-    ) -> typing.Union[str, int]:
+        flags: re.RegexFlag | None,
+    ) -> str | int:
         value = super()._validate(value, regex=regex, flags=flags)
 
         if value.isdigit():

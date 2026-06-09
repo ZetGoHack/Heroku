@@ -24,7 +24,7 @@ class PointerList(list):
         db: "Database",  # type: ignore  # noqa: F821
         module: str,
         key: str,
-        default: typing.Optional[typing.Any] = None,
+        default: typing.Any | None = None,
     ):
         self._db = db
         self._module = module
@@ -48,14 +48,14 @@ class PointerList(list):
     def __str__(self):
         return f"PointerList({list(self)})"
 
-    def __delitem__(self, __i: typing.Union[typing.SupportsIndex, slice]) -> None:
+    def __delitem__(self, __i: typing.SupportsIndex | slice) -> None:
         a = super().__delitem__(__i)
         self._save()
         return a
 
     def __setitem__(
         self,
-        __i: typing.Union[typing.SupportsIndex, slice],
+        __i: typing.SupportsIndex | slice,
         __v: typing.Any,
     ) -> None:
         a = super().__setitem__(__i, __v)
@@ -112,7 +112,7 @@ class PointerDict(dict):
         db: "Database",  # type: ignore  # noqa: F821
         module: str,
         key: str,
-        default: typing.Optional[typing.Any] = None,
+        default: typing.Any | None = None,
     ):
         self._db = db
         self._module = module
@@ -296,7 +296,7 @@ class BaseSerializingMiddlewareList:
 
 
 class NamedTupleMiddlewareList(BaseSerializingMiddlewareList):
-    def __init__(self, pointer: PointerList, item_type: typing.Type[typing.Any]):
+    def __init__(self, pointer: PointerList, item_type: type[typing.Any]):
         super().__init__(pointer)
         self._item_type = item_type
 
@@ -308,7 +308,7 @@ class NamedTupleMiddlewareList(BaseSerializingMiddlewareList):
 
 
 class NamedTupleMiddlewareDict(BaseSerializingMiddlewareDict):
-    def __init__(self, pointer: PointerList, item_type: typing.Type[typing.Any]):
+    def __init__(self, pointer: PointerList, item_type: type[typing.Any]):
         super().__init__(pointer)
         self._item_type = item_type
 

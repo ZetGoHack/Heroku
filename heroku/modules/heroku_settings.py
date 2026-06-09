@@ -281,10 +281,7 @@ class HerokuSettingsMod(loader.Module):
                     main.__name__,
                     "nonickusers",
                     list(
-                        (
-                            set(self._db.get(main.__name__, "nonickusers", []))
-                            - {user_id}
-                        )
+                        set(self._db.get(main.__name__, "nonickusers", [])) - {user_id}
                     ),
                 )
 
@@ -317,9 +314,7 @@ class HerokuSettingsMod(loader.Module):
                 self._db.set(
                     main.__name__,
                     "nonickchats",
-                    list(
-                        (set(self._db.get(main.__name__, "nonickchats", [])) - {chat})
-                    ),
+                    list(set(self._db.get(main.__name__, "nonickchats", [])) - {chat}),
                 )
 
                 logger.warning("Chat %s removed from nonickchats list", chat)

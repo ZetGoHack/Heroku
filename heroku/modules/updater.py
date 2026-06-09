@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 NO_GIT = os.environ.get("HEROKU_NO_GIT") == "1"
 
 os.environ["GIT_TERMINAL_PROMPT"] = "0"
-os.environ["GIT_ASKPASS"] ="echo"
+os.environ["GIT_ASKPASS"] = "echo"
 
 
 @loader.tds
@@ -192,7 +192,7 @@ class UpdaterMod(loader.Module):
                     else:
                         logger.info("Got a major update, updating manually")
                         manual_update = True
-                except:
+                except Exception:
                     manual_update = True
 
             if manual_update:
@@ -266,7 +266,7 @@ class UpdaterMod(loader.Module):
     @loader.command()
     async def changelog(self, message: Message):
         """Shows the changelog of the last major update"""
-        with open("CHANGELOG.md", mode="r", encoding="utf-8") as f:
+        with open("CHANGELOG.md", encoding="utf-8") as f:
             changelog = f.read().split("##")[1].strip()
         if (await self._client.get_me()).premium:
             changelog.replace(
@@ -313,11 +313,7 @@ class UpdaterMod(loader.Module):
 
     @staticmethod
     def _serialize_inline_message_id(
-        inline_message_id: typing.Union[
-            str,
-            InputBotInlineMessageID,
-            InputBotInlineMessageID64,
-        ],
+        inline_message_id: str | InputBotInlineMessageID | InputBotInlineMessageID64,
     ) -> str:
         if isinstance(
             inline_message_id,
@@ -330,7 +326,7 @@ class UpdaterMod(loader.Module):
     @staticmethod
     def _deserialize_inline_message_id(
         inline_message_id: str,
-    ) -> typing.Union[str, InputBotInlineMessageID, InputBotInlineMessageID64]:
+    ) -> str | InputBotInlineMessageID | InputBotInlineMessageID64:
         try:
             data = json.loads(inline_message_id)
         except (TypeError, ValueError):
@@ -359,7 +355,7 @@ class UpdaterMod(loader.Module):
     @staticmethod
     def _parse_legacy_update_message_ref(
         message_ref: typing.Any,
-    ) -> typing.Optional[typing.Tuple[int, int]]:
+    ) -> tuple[int, int] | None:
         if not isinstance(message_ref, str):
             return None
 
@@ -372,7 +368,7 @@ class UpdaterMod(loader.Module):
         except ValueError:
             return None
 
-    async def process_restart_message(self, msg_obj: typing.Union[InlineCall, Message]):
+    async def process_restart_message(self, msg_obj: InlineCall | Message):
         inline_message_id = getattr(msg_obj, "inline_message_id", None)
         self.set(
             "selfupdatemsg",
@@ -385,7 +381,7 @@ class UpdaterMod(loader.Module):
 
     async def restart_common(
         self,
-        msg_obj: typing.Union[InlineCall, Message],
+        msg_obj: InlineCall | Message,
         secure_boot: bool = False,
     ):
         if (
@@ -546,7 +542,7 @@ class UpdaterMod(loader.Module):
 
     async def inline_update(
         self,
-        msg_obj: typing.Union[InlineCall, Message],
+        msg_obj: InlineCall | Message,
         hard: bool = False,
     ):
         # We don't really care about asyncio at this point, as we are shutting down
@@ -648,7 +644,7 @@ class UpdaterMod(loader.Module):
                     [
                         [
                             {
-                                "text": f"✅ Turn on",
+                                "text": "✅ Turn on",
                                 "callback": self._set_autoupdate_state,
                                 "args": (True,),
                                 "style": "success",
@@ -859,7 +855,7 @@ class UpdaterMod(loader.Module):
         )
         await self.restart_common(call)
 
-    async def ubstop_func(self, call: typing.Union[Message, InlineCall]):
+    async def ubstop_func(self, call: Message | InlineCall):
         await utils.answer(
             call,
             self.strings["ub_stop"].format(emoji=utils.get_platform_emoji()),

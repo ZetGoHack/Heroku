@@ -28,11 +28,11 @@ class QueryGallery(InlineUnit):
     async def query_gallery(
         self: "InlineManager",
         query,
-        items: typing.List[typing.Dict[str, typing.Any]],
+        items: list[dict[str, typing.Any]],
         *,
         force_me: bool = False,
         disable_security: bool = False,
-        always_allow: typing.Optional[typing.List[int]] = None,
+        always_allow: list[int] | None = None,
     ) -> bool:
         """
         Answer inline query with a bunch of inline galleries

@@ -78,8 +78,8 @@ class SecurityGroup(typing.NamedTuple):
     """Represents a security group"""
 
     name: str
-    users: typing.List[int]
-    permissions: typing.List[dict]
+    users: list[int]
+    permissions: list[dict]
 
 
 def owner(func: Command) -> Command:
@@ -158,9 +158,9 @@ class SecurityManager:
     def __init__(self, client: CustomTelegramClient, db: Database):
         self._client = client
         self._db = db
-        self._cache: typing.Dict[int, dict] = {}
+        self._cache: dict[int, dict] = {}
         self._last_warning: int = 0
-        self._sgroups: typing.Dict[str, SecurityGroup] = {}
+        self._sgroups: dict[str, SecurityGroup] = {}
         self._rights_last_reload: float = 0.0
         self._rights_reload_interval: float = 1.0
 
@@ -173,7 +173,7 @@ class SecurityManager:
 
         self._reload_rights(force=True)
 
-    def apply_sgroups(self, sgroups: typing.Dict[str, SecurityGroup]):
+    def apply_sgroups(self, sgroups: dict[str, SecurityGroup]):
         """Apply security groups"""
         self._sgroups = sgroups
 
@@ -339,7 +339,7 @@ class SecurityManager:
 
         return any_
 
-    def get_flags(self, func: typing.Union[Command, int]) -> int:
+    def get_flags(self, func: Command | int) -> int:
         """
         Gets the security flags for the given function
 
@@ -410,12 +410,12 @@ class SecurityManager:
 
     async def check(
         self,
-        message: typing.Optional[Message],
-        func: typing.Union[Command, int],
-        user_id: typing.Optional[int] = None,
-        inline_cmd: typing.Optional[str] = None,
+        message: Message | None,
+        func: Command | int,
+        user_id: int | None = None,
+        inline_cmd: str | None = None,
         *,
-        usernames: typing.Optional[typing.Set[str]] = None,
+        usernames: set[str] | None = None,
     ) -> bool:
         """
         Checks if message sender is permitted to execute certain function
