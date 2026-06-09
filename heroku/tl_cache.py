@@ -15,6 +15,7 @@ import inspect
 import logging
 import time
 import typing
+from collections.abc import Callable
 
 from herokutl import TelegramClient
 from herokutl import helpers
@@ -200,11 +201,11 @@ class CustomTelegramClient(TelegramClient):
         self._keepalive_handle = self.loop.create_task(self._keepalive_loop())
 
     @property
-    def raw_updates_processor(self) -> callable | None:
+    def raw_updates_processor(self) -> Callable | None:
         return self._raw_updates_processor
 
     @raw_updates_processor.setter
-    def raw_updates_processor(self, value: callable):
+    def raw_updates_processor(self, value: Callable):
         if self._raw_updates_processor is not None:
             raise ValueError("raw_updates_processor is already set")
 

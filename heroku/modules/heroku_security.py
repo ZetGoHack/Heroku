@@ -14,6 +14,7 @@ import contextlib
 import datetime
 import time
 import typing
+from collections.abc import Callable
 
 from herokutl.custom import Message
 from herokutl.hints import EntityLike
@@ -147,7 +148,7 @@ class HerokuSecurityMod(loader.Module):
 
     def _build_markup(
         self,
-        command: callable,
+        command: Callable,
         is_inline: bool = False,
     ) -> list[list[dict]]:
         perms = self._get_current_perms(command, is_inline)
@@ -242,7 +243,7 @@ class HerokuSecurityMod(loader.Module):
 
     def _get_current_perms(
         self,
-        command: callable,
+        command: Callable,
         is_inline: bool = False,
     ) -> dict:
         return self._perms_map(

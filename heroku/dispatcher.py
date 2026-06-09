@@ -18,6 +18,7 @@ import contextlib
 import copy
 import inspect
 import logging
+from collections.abc import Callable
 import re
 import sys
 import traceback
@@ -130,7 +131,7 @@ class CommandDispatcher:
 
         self.raw_handlers = []
 
-    async def _handle_ratelimit(self, message: Message, func: callable) -> bool:
+    async def _handle_ratelimit(self, message: Message, func: Callable) -> bool:
         if await self.security.check(message, security.OWNER):
             return True
 
@@ -510,14 +511,14 @@ class CommandDispatcher:
     async def _handle_tags(
         self,
         event: events.NewMessage | events.MessageDeleted,
-        func: callable,
+        func: Callable,
     ) -> bool:
         return bool(await self._handle_tags_ext(event, func))
 
     async def _handle_tags_ext(
         self,
         event: events.NewMessage | events.MessageDeleted,
-        func: callable,
+        func: Callable,
     ) -> str:
         """
         Handle tags.
@@ -680,9 +681,9 @@ class CommandDispatcher:
 
     async def future_dispatcher(
         self,
-        func: callable,
+        func: Callable,
         message: Message,
-        exception_handler: callable,
+        exception_handler: Callable,
         *args,
     ):
         # Will be used to determine, which client caused logging messages

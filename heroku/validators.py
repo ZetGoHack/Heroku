@@ -13,6 +13,7 @@
 import functools
 import re
 import typing
+from collections.abc import Callable
 
 import grapheme
 from emoji import get_emoji_unicode_dict
@@ -53,7 +54,7 @@ class Validator:
 
     def __init__(
         self,
-        validator: callable,
+        validator: Callable,
         doc: str | dict | None = None,
         _internal_id: int | None = None,
     ):

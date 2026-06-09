@@ -15,6 +15,7 @@
 import logging
 import time
 import typing
+from collections.abc import Callable
 
 from herokutl.hints import EntityLike
 from herokutl.tl.functions.messages import GetFullChatRequest
@@ -86,7 +87,7 @@ def owner(func: Command) -> Command:
     return _sec(func, OWNER)
 
 
-def _deprecated(name: str) -> callable:
+def _deprecated(name: str) -> Callable:
     def decorator(func: Command) -> Command:
         logger.debug("Using deprecated decorator `%s`, which will have no effect", name)
         return func

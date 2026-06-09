@@ -18,13 +18,14 @@ import random
 import signal
 import sys
 import subprocess
+from collections.abc import Callable
 
 
 async def fw_protect():
     await asyncio.sleep(random.randint(1000, 2000) / 1000)
 
 
-def get_startup_callback() -> callable:
+def get_startup_callback() -> Callable:
     return lambda *_: os.execl(
         sys.executable,
         sys.executable,

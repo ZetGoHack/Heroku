@@ -19,6 +19,7 @@ import logging
 import os
 import re
 import typing
+from collections.abc import Callable
 from copy import deepcopy
 from urllib.parse import urlparse
 
@@ -257,7 +258,7 @@ class Utils(InlineUnit):
         await call.answer(text, show_alert=show_alert)
 
     def _reverse_method_lookup(
-        self: "InlineManager", needle: callable, /
+        self: "InlineManager", needle: Callable, /
     ) -> str | None:
         return next(
             (

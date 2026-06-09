@@ -19,6 +19,7 @@ import os
 import time
 import traceback
 import typing
+from collections.abc import Callable
 from urllib.parse import urlparse
 
 from herokutl.errors.rpcerrorlist import FloodWaitError, MediaPrevInvalidError
@@ -52,8 +53,8 @@ class Gallery(InlineUnit):
     async def gallery(
         self: "InlineManager",
         message: Message | int,
-        next_handler: callable | list[str],
-        caption: list[str] | str | callable = "",
+        next_handler: Callable | list[str],
+        caption: list[str] | str | Callable = "",
         *,
         custom_buttons: HerokuReplyMarkup | None = None,
         force_me: bool = False,
@@ -61,7 +62,7 @@ class Gallery(InlineUnit):
         manual_security: bool = False,
         disable_security: bool = False,
         ttl: int | bool = False,
-        on_unload: callable | None = None,
+        on_unload: Callable | None = None,
         preload: bool | int = False,
         gif: bool = False,
         silent: bool = False,
@@ -69,7 +70,7 @@ class Gallery(InlineUnit):
     ) -> bool | InlineMessage:
         """
         Send inline gallery to chat
-        :param caption: Caption for photo, or callable, returning caption
+        :param caption: Caption for photo, or Callable, returning caption
         :param message: Where to send inline. Can be either `Message` or `int`
         :param next_handler: Callback function, which must return url for next photo or list with photo urls
         :param custom_buttons: Custom buttons to add above native ones
@@ -101,11 +102,11 @@ class Gallery(InlineUnit):
             isinstance(caption, str)
             or isinstance(caption, list)
             and all(isinstance(item, str) for item in caption)
-        ) and not callable(caption):
+        ) and not Callable(caption):
             logger.error(
                 (
                     "Invalid type for `caption`. Expected `str` or `list` or"
-                    " `callable`, got `%s`"
+                    " `Callable`, got `%s`"
                 ),
                 type(caption),
             )
@@ -184,7 +185,7 @@ class Gallery(InlineUnit):
             else:
                 logger.error(
                     (
-                        "Invalid type for `next_handler`. Expected `callable` or `list`"
+                        "Invalid type for `next_handler`. Expected `Callable` or `list`"
                         " of `str`, got `%s`"
                     ),
                     type(next_handler),
@@ -224,7 +225,7 @@ class Gallery(InlineUnit):
             **({"ttl": round(time.time()) + ttl} if ttl else {}),
             **({"force_me": force_me} if force_me else {}),
             **({"disable_security": disable_security} if disable_security else {}),
-            **({"on_unload": on_unload} if callable(on_unload) else {}),
+            **({"on_unload": on_unload} if Callable(on_unload) else {}),
             **({"preload": preload} if preload else {}),
             **({"gif": gif} if gif else {}),
             **({"always_allow": always_allow} if always_allow else {}),
@@ -341,13 +342,13 @@ class Gallery(InlineUnit):
                 photo_url = callback[0]
             case _ if asyncio.iscoroutinefunction(callback):
                 photo_url = await callback()
-            case _ if callable(callback):
+            case _ if Callable(callback):
                 photo_url = callback()
             case _:
                 logger.error(
                     (
                         "Invalid type for `next_handler`. Expected `str`, `list` or"
-                        " `callable`, got %s"
+                        " `Callable`, got %s"
                     ),
                     type(callback),
                 )
@@ -599,7 +600,7 @@ class Gallery(InlineUnit):
         return (
             caption
             if isinstance(caption, str)
-            else caption() if callable(caption) else ""
+            else caption() if Callable(caption) else ""
         )
 
     def _gallery_markup(self: "InlineManager", unit_id: str):
