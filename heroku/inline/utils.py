@@ -160,7 +160,7 @@ class Utils(InlineUnit):
                             if setup_callbacks:
                                 self._custom_map[button["_callback_data"]] = {
                                     "handler": button["callback"],
-                                    "always_allow": button.get("always_allow", False),
+                                    "always_allow": button.get("always_allow", []) or [],
                                     "args": button.get("args", {}),
                                     "kwargs": button.get("kwargs", {}),
                                     "force_me": button.get("force_me", False),
