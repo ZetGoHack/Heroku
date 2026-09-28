@@ -1,7 +1,6 @@
 #!/bin/bash
 
-eval "git clone https://github.com/ZetGoHack/Heroku"
-cd Heroku
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")" || exit 1
 
 touch heroku-install.log
 
