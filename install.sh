@@ -5,7 +5,7 @@ APP_NAME="Heroku"
 MODULE_NAME="heroku"
 REPO_URL="${HEROKU_REPO_URL:-https://github.com/ZetGoHack/Heroku.git}"
 VENV_DIR="${HEROKU_VENV_DIR:-.venv}"
-LOG_FILE="heroku-install.log"
+LOG_FILE="$PWD/heroku-install.log"
 
 if [ "${SUDO_USER:-}" != "" ] && command -v sudo >/dev/null 2>&1; then
 	RUN_AS_USER=(sudo -u "$SUDO_USER")
@@ -14,7 +14,7 @@ else
 fi
 
 info() {
-	printf "\033[0;34m%s\033[0m\n" "$1"
+	printf "\033[38;5;177m%s\033[0m\n" "$1"
 }
 
 ok() {
@@ -28,7 +28,7 @@ fail() {
 }
 
 run() {
-	"$@" >>"$LOG_FILE" 2>&1
+	"$@" >>"$LOG_FILE" 2>&1 || fail "Command failed: $*" 5
 }
 
 sudo_run() {
@@ -136,7 +136,7 @@ prepare_repo() {
 
 	info "Cloning repo..."
 	rm -rf "$APP_NAME"
-	"${RUN_AS_USER[@]}" git clone "$REPO_URL" "$APP_NAME" >>"$LOG_FILE" 2>&1 || fail "Clone failed." 3
+	${RUN_AS_USER[@]+"${RUN_AS_USER[@]}"} git clone "$REPO_URL" "$APP_NAME" >>"$LOG_FILE" 2>&1 || fail "Clone failed." 3
 	cd "$APP_NAME"
 }
 
@@ -144,41 +144,49 @@ create_venv() {
 	local py="$1"
 
 	info "Creating virtual environment..."
-	"${RUN_AS_USER[@]}" "$py" -m venv "$VENV_DIR" >>"$LOG_FILE" 2>&1 || fail "Virtual environment creation failed." 4
+	${RUN_AS_USER[@]+"${RUN_AS_USER[@]}"} "$py" -m venv "$VENV_DIR" >>"$LOG_FILE" 2>&1 || fail "Virtual environment creation failed." 4
 }
 
 install_python_packages() {
 	local venv_python="$VENV_DIR/bin/python"
 
 	info "Installing Python dependencies..."
-	"${RUN_AS_USER[@]}" "$venv_python" -m pip install --upgrade pip setuptools wheel >>"$LOG_FILE" 2>&1 || fail "Pip upgrade failed." 4
-	"${RUN_AS_USER[@]}" "$venv_python" -m pip install --upgrade -r requirements.txt --disable-pip-version-check >>"$LOG_FILE" 2>&1 || fail "Requirements installation failed." 4
+	${RUN_AS_USER[@]+"${RUN_AS_USER[@]}"} "$venv_python" -m pip install --upgrade pip setuptools wheel >>"$LOG_FILE" 2>&1 || fail "Pip upgrade failed." 4
+	${RUN_AS_USER[@]+"${RUN_AS_USER[@]}"} "$venv_python" -m pip install --upgrade -r requirements.txt --disable-pip-version-check >>"$LOG_FILE" 2>&1 || fail "Requirements installation failed." 4
 }
 
 start_app() {
 	info "Starting..."
-	"${RUN_AS_USER[@]}" "$VENV_DIR/bin/python" -m "$MODULE_NAME" "$@"
+	if [ ! -t 0 ] && (: </dev/tty) 2>/dev/null; then
+		exec </dev/tty
+	fi
+
+	${RUN_AS_USER[@]+"${RUN_AS_USER[@]}"} "$VENV_DIR/bin/python" -m "$MODULE_NAME" "$@"
 }
 
-clear || true
-cat assets/download.txt
-printf "\033[3;34;40m Installing %s...\033[0m\n\n" "$APP_NAME"
+main() {
+	clear || true
+	printf "\033[3;38;5;177;40mInstalling %s...\033[0m\n\n" "$APP_NAME"
 
-: >"$LOG_FILE"
+	: >"$LOG_FILE"
 
-if [ "${SUDO_USER:-}" != "" ]; then
-	chown "$SUDO_USER:" "$LOG_FILE" >/dev/null 2>&1 || true
-fi
+	if [ "${SUDO_USER:-}" != "" ]; then
+		chown "$SUDO_USER:" "$LOG_FILE" >/dev/null 2>&1 || true
+	fi
 
-install_system_packages
-PYTHON="$(python_cmd)"
-prepare_repo
-check_python "$PYTHON"
-create_venv "$PYTHON"
-install_python_packages
+	install_system_packages
+	PYTHON="$(python_cmd)"
+	prepare_repo
+	[ -f assets/download.txt ] && cat assets/download.txt
+	check_python "$PYTHON"
+	create_venv "$PYTHON"
+	install_python_packages
 
-touch .setup_complete
-rm -f "$LOG_FILE"
+	touch .setup_complete
+	rm -f "$LOG_FILE"
 
-ok "Installation complete."
-start_app "$@"
+	ok "Installation complete."
+	start_app "$@"
+}
+
+main "$@"; exit $?
