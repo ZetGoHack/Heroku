@@ -102,7 +102,7 @@ install_system_packages() {
 			gcc \
 			gcc-c++ \
 			git \
-			imagemagick \
+			ImageMagick \
 			python3 \
 			python3-devel \
 			python3-pip
