@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="robots" content="noindex" />
+  <title>Heroku — вход</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="brand">
+      <span class="brand__mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" width="36" height="36">
+          <circle cx="20" cy="20" r="7.5" fill="currentColor" />
+          <ellipse cx="20" cy="20" rx="17" ry="6.5" transform="rotate(-22 20 20)"
+                   fill="none" stroke="currentColor" stroke-width="2" opacity=".55" />
+        </svg>
+      </span>
+      <div class="brand__text">
+        <strong>Heroku</strong>
+        <span>Userbot</span>
+      </div>
+    </header>
+
+    <section class="card" id="card">
+      <ol class="steps" id="steps">
+        <li class="step is-active" data-step="credentials">
+          <span class="step__num">1</span><span class="step__label">API</span>
+        </li>
+        <li class="step" data-step="phone">
+          <span class="step__num">2</span><span class="step__label">Номер</span>
+        </li>
+        <li class="step" data-step="code">
+          <span class="step__num">3</span><span class="step__label">Код</span>
+        </li>
+        <li class="step" data-step="password" hidden>
+          <span class="step__num">4</span><span class="step__label">Пароль</span>
+        </li>
+      </ol>
+
+      <!-- Шаг 1. API-ключи -->
+      <div class="panel" data-panel="credentials">
+        <header class="head">
+          <h1>Подключение к Telegram</h1>
+          <p>Выберите готовые ключи или вставьте свои из <b>my.telegram.org</b>.</p>
+        </header>
+
+        <div class="presets" id="presets" role="radiogroup" aria-label="API-ключи"></div>
+        <p class="note">
+          Официальные ключи удобны, но их использование в юзерботе может нарушать
+          правила Telegram.
+        </p>
+
+        <div class="custom" id="custom" hidden>
+          <label class="field">
+            <span class="field__label">API ID</span>
+            <input id="api-id" class="input" inputmode="numeric" autocomplete="off"
+                   placeholder="1234567" spellcheck="false" />
+          </label>
+          <label class="field">
+            <span class="field__label">API HASH</span>
+            <input id="api-hash" class="input" inputmode="text" autocomplete="off"
+                   placeholder="32 hex-символа" spellcheck="false" />
+          </label>
+        </div>
+
+        <button class="btn" id="btn-credentials" type="button">Продолжить</button>
+        <p class="error" id="err-credentials" role="alert" hidden></p>
+      </div>
+
+      <!-- Шаг 2. Телефон -->
+      <div class="panel" data-panel="phone" hidden>
+        <header class="head">
+          <h1>Номер телефона</h1>
+          <p>В международном формате, например <b>+7 999 123-45-67</b>.</p>
+        </header>
+
+        <label class="field">
+          <span class="field__label">Телефон</span>
+          <input id="phone" class="input input--lg" type="tel" inputmode="tel"
+                 autocomplete="tel" placeholder="+7 999 123-45-67" />
+        </label>
+
+        <button class="btn" id="btn-phone" type="button">Получить код</button>
+
+        <div class="divider"><span>или</span></div>
+        <button class="btn btn--ghost" id="btn-qr" type="button">Войти по QR-коду</button>
+
+        <button class="link" id="back-credentials" type="button">Изменить API-ключи</button>
+        <p class="error" id="err-phone" role="alert" hidden></p>
+      </div>
+
+      <!-- Вход по QR-коду -->
+      <div class="panel" data-panel="qr" hidden>
+        <header class="head">
+          <h1>Вход по QR-коду</h1>
+          <p>
+            Откройте Telegram на телефоне → <b>Настройки</b> → <b>Устройства</b> →
+            <b>Подключить устройство</b> и отсканируйте код.
+          </p>
+        </header>
+
+        <div class="qr">
+          <div class="qr__frame">
+            <img class="qr__image" id="qr-image" alt="QR-код для входа" />
+          </div>
+          <div class="qr__status" id="qr-status">Ожидаем сканирование…</div>
+        </div>
+
+        <button class="link" id="back-phone-qr" type="button">
+          Войти по номеру телефона
+        </button>
+        <p class="error" id="err-qr" role="alert" hidden></p>
+      </div>
+
+      <!-- Требуется проверка Telegram -->
+      <div class="panel" data-panel="recaptcha" hidden>
+        <header class="head">
+          <h1>Telegram просит проверку</h1>
+          <p>
+            Для этого IP включена анти-фрод защита, поэтому вход по коду
+            сейчас недоступен.
+          </p>
+        </header>
+
+        <div class="note">
+          Вход по QR-коду обычно проходит без капчи — он не запрашивает код
+          по SMS.
+        </div>
+
+        <button class="btn" id="btn-recaptcha-qr" type="button">
+          Войти по QR-коду
+        </button>
+        <button class="link" id="back-phone-recaptcha" type="button">
+          Попробовать номер ещё раз
+        </button>
+        <p class="error" id="err-recaptcha" role="alert" hidden></p>
+      </div>
+
+      <!-- Шаг 3. Код -->
+      <div class="panel" data-panel="code" hidden>
+        <header class="head">
+          <h1>Код подтверждения</h1>
+          <p>Отправили код в Telegram на <b id="phone-echo">ваш номер</b>.</p>
+        </header>
+
+        <div class="otp" id="otp">
+          <input class="otp__input" inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="Цифра 1" />
+          <input class="otp__input" inputmode="numeric" maxlength="1" aria-label="Цифра 2" />
+          <input class="otp__input" inputmode="numeric" maxlength="1" aria-label="Цифра 3" />
+          <input class="otp__input" inputmode="numeric" maxlength="1" aria-label="Цифра 4" />
+          <input class="otp__input" inputmode="numeric" maxlength="1" aria-label="Цифра 5" />
+        </div>
+
+        <button class="btn" id="btn-code" type="button">Войти</button>
+        <div class="row">
+          <button class="link" id="resend" type="button">Отправить код ещё раз</button>
+          <button class="link" id="back-phone" type="button">Изменить номер</button>
+        </div>
+        <p class="error" id="err-code" role="alert" hidden></p>
+      </div>
+
+      <!-- Шаг 4. Облачный пароль -->
+      <div class="panel" data-panel="password" hidden>
+        <header class="head">
+          <h1>Облачный пароль</h1>
+          <p id="password-hint">Включена двухфакторная защита. Введите пароль.</p>
+        </header>
+
+        <label class="field">
+          <span class="field__label">Пароль</span>
+          <input id="password" class="input input--lg" type="password"
+                 autocomplete="current-password" placeholder="••••••••" />
+        </label>
+
+        <button class="btn" id="btn-2fa" type="button">Войти</button>
+        <p class="error" id="err-2fa" role="alert" hidden></p>
+      </div>
+
+      <!-- Успех -->
+      <div class="panel panel--done" data-panel="done" hidden>
+        <div class="done">
+          <svg class="check" viewBox="0 0 52 52" aria-hidden="true">
+            <circle class="check__circle" cx="26" cy="26" r="24" />
+            <path class="check__mark" d="M15 27.5l7.5 7.5L37 19" />
+          </svg>
+          <h1>Готово</h1>
+          <p id="done-text">Сессия сохранена. Запускаем юзербота…</p>
+          <div class="account" id="account" hidden></div>
+          <div class="pulse" aria-hidden="true"><span></span></div>
+        </div>
+      </div>
+    </section>
+
+    <p class="footnote">Панель доступна только до входа. Данные хранятся локально.</p>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

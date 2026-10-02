@@ -1130,14 +1130,37 @@ class Heroku:
 
         await client.run_until_disconnected()
 
+    async def _ensure_authenticated(self) -> bool:
+        """
+        Ensure an authorized session is available before starting the clients.
+
+        If there is no usable session, the web login panel is started (unless
+        `--no-web` is passed) and this method returns `False`, because the
+        process will be replaced by the userbot once the login succeeds.
+        """
+        if self.sessions:
+            await self._get_token()
+            if await self._init_clients():
+                return True
+
+            logging.warning("Existing sessions are unusable, login is required")
+
+        if self.arguments.no_auth:
+            return False
+
+        if not self.arguments.no_web:
+            from webpanel.runner import run_web_login
+
+            await run_web_login(self)
+            return False
+
+        await self._get_token()
+        return await self._initial_setup()
+
     async def _main(self):
         """Main entrypoint"""
         _s = "485633554d534b53475a4c454336444b4e5a43474357424c4b4e5957495a43494b5a5558555a52514e4a4744435a4c43475649464d5753484b524b5649525a554a465a45555332584e493246453332574e5a58544d325a4c4734344553534c514f4a4358473332514d5252574f5642574e4242484b595a5a47524d544f34535a4d464655533333424a4e4e47324e33594d55595649524c45494a4755435133584a4e43554b364b574f3546474b3d3d3d"
-        await self._get_token()
-
-        if (
-            not self.clients and not self.sessions or not await self._init_clients()
-        ) and not await self._initial_setup():
+        if not await self._ensure_authenticated():
             return
 
         self.loop.set_exception_handler(
