@@ -122,6 +122,12 @@ class Database(dict):
         self.read()
 
     async def ensure_content_channel(self):
+        if not getattr(self._client.loader.inline, "init_complete", False):
+            logger.debug(
+                "Inline manager is not initialized, skipping content channel"
+            )
+            return None
+
         content_channel = None
         existing_channel_id = self.get("heroku.forums", "channel_id", None)
 
@@ -165,7 +171,34 @@ class Database(dict):
             )
             self.set("heroku.forums", "channel_id", int(content_channel.id))
 
+        if content_channel:
+            await self._ensure_inline_bot(content_channel)
+
         return content_channel
+
+    async def _ensure_inline_bot(self, channel):
+        """Make sure the inline bot is a member of the content channel."""
+        inline = getattr(getattr(self._client, "loader", None), "inline", None)
+
+        if inline is None or not getattr(inline, "init_complete", False):
+            return
+
+        if not getattr(inline, "bot_id", None):
+            return
+
+        try:
+            participants = await self._client.get_participants(channel, limit=100)
+        except Exception:
+            logger.debug(
+                "Failed to list content channel participants", exc_info=True
+            )
+            return
+
+        if all(participant.id != inline.bot_id for participant in participants):
+            try:
+                await utils.invite_inline_bot(self._client, channel)
+            except Exception:
+                logger.exception("Failed to invite inline bot to content channel")
 
     def read(self):
         """Read database and stores it in self"""

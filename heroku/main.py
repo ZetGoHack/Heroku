@@ -1121,7 +1121,15 @@ class Heroku:
 
         await modules.register_all(None)
         modules.send_config()
-        await modules.inline.register_manager()
+
+        try:
+            await modules.inline.register_manager()
+        except Exception:
+            logging.exception("Inline bot initialization failed")
+
+        if not modules.inline.init_complete:
+            asyncio.ensure_future(self._retry_inline(client, db, modules))
+
         await db.ensure_content_channel()
         await modules.send_ready()
 
@@ -1129,6 +1137,36 @@ class Heroku:
             await self._badge(client)
 
         await client.run_until_disconnected()
+
+    async def _retry_inline(
+        self,
+        client: CustomTelegramClient,
+        db: database.Database,
+        modules: loader.Modules,
+    ):
+        """Retry inline bot initialization, which may fail on a fresh account."""
+        for attempt in range(1, 6):
+            await asyncio.sleep(90 * attempt)
+
+            if modules.inline.init_complete:
+                return
+
+            logging.info(
+                "Retrying inline bot initialization (attempt %s/5)", attempt
+            )
+
+            try:
+                await modules.inline.register_manager()
+            except Exception:
+                logging.exception("Inline bot initialization retry failed")
+                continue
+
+            if modules.inline.init_complete:
+                try:
+                    await db.ensure_content_channel()
+                except Exception:
+                    logging.exception("Content channel initialization retry failed")
+                return
 
     async def _ensure_authenticated(self) -> bool:
         """

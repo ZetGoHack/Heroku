@@ -76,8 +76,15 @@ async def invite_inline_bot(
     :raise RuntimeError: If error occurred while inviting bot
     """
 
+    bot_username = getattr(getattr(client, "loader", None), "inline", None)
+    bot_username = getattr(bot_username, "bot_username", None)
+
+    if not bot_username:
+        logger.warning("Inline bot is not initialized yet, skipping invite")
+        return
+
     try:
-        await client(InviteToChannelRequest(peer, [client.loader.inline.bot_username]))
+        await client(InviteToChannelRequest(peer, [bot_username]))
     except Exception as e:
         raise RuntimeError(
             f"Can't invite inline bot to old asset chat, which is required by module: {e}"
@@ -87,7 +94,7 @@ async def invite_inline_bot(
         await client(
             EditAdminRequest(
                 channel=peer,
-                user_id=client.loader.inline.bot_username,
+                user_id=bot_username,
                 admin_rights=ChatAdminRights(ban_users=True),
                 rank="Heroku",
             )
