@@ -42,10 +42,9 @@ const els = {
   btnPhone: $("#btn-phone"),
   errPhone: $("#err-phone"),
   backCredentials: $("#back-credentials"),
-  btnQr: $("#btn-qr"),
+  methodHint: $("#method-hint"),
   errRecaptcha: $("#err-recaptcha"),
-  btnRecaptchaQr: $("#btn-recaptcha-qr"),
-  backPhoneRecaptcha: $("#back-phone-recaptcha"),
+  btnRecaptchaKeys: $("#btn-recaptcha-keys"),
   qrImage: $("#qr-image"),
   qrStatus: $("#qr-status"),
   errQr: $("#err-qr"),
@@ -209,6 +208,7 @@ function buildPresetRadio(preset, checked) {
     els.custom.hidden = input.value !== "custom";
     if (!els.custom.hidden) els.apiId.focus();
     clearError(els.errCredentials);
+    updateMethodHint();
   });
 
   const body = document.createElement("span");
@@ -250,8 +250,28 @@ async function loadPresets() {
   });
 }
 
+function isPresetApiId(apiId) {
+  return Boolean(apiId) && presets.some((preset) => preset.api_id === apiId);
+}
+
+function updateMethodHint() {
+  const selected = $('input[name="preset"]:checked', els.presets);
+  if (!selected) {
+    els.methodHint.textContent = "";
+    return;
+  }
+
+  els.methodHint.textContent =
+    selected.value === "custom"
+      ? "Со своими ключами вход по номеру телефона, коду и паролю."
+      : "С официальными ключами вход только по QR-коду.";
+}
+
 function prefillCredentials(state) {
-  if (!state) return;
+  if (!state) {
+    updateMethodHint();
+    return;
+  }
 
   if (state.api_id) {
     const match = presets.find((preset) => preset.api_id === state.api_id);
@@ -262,6 +282,7 @@ function prefillCredentials(state) {
       );
       if (radio) radio.checked = true;
       els.custom.hidden = true;
+      updateMethodHint();
       return;
     }
     els.apiId.value = state.api_id;
@@ -270,6 +291,7 @@ function prefillCredentials(state) {
   const custom = $('input[name="preset"][value="custom"]', els.presets);
   if (custom) custom.checked = true;
   els.custom.hidden = false;
+  updateMethodHint();
 }
 
 async function submitCredentials() {
@@ -282,8 +304,9 @@ async function submitCredentials() {
     return;
   }
 
+  const isCustom = selected.value === "custom";
   let body;
-  if (selected.value === "custom") {
+  if (isCustom) {
     const apiId = els.apiId.value.trim();
     const apiHash = els.apiHash.value.trim();
 
@@ -304,8 +327,12 @@ async function submitCredentials() {
   setLoading(els.btnCredentials, true);
   try {
     await api("/api/credentials", { method: "POST", body });
-    go("phone");
-    els.phone.focus();
+    if (isCustom) {
+      go("phone");
+      els.phone.focus();
+    } else {
+      await startQrFlow();
+    }
   } catch (error) {
     showError(els.errCredentials, errText(error));
   } finally {
@@ -401,10 +428,9 @@ function applyQrInfo(qr) {
       : "Ожидаем сканирование…";
 }
 
-async function startQr() {
+async function startQrFlow() {
   clearError(els.errQr);
   clearError(els.errRecaptcha);
-  setLoading(els.btnQr, true);
 
   try {
     const data = await api("/api/qr/start", { method: "POST" });
@@ -416,13 +442,9 @@ async function startQr() {
   } catch (error) {
     if (error.data && error.data.error === "recaptcha_required") {
       showRecaptchaNotice();
-    } else if (activeStep === "recaptcha") {
-      showError(els.errRecaptcha, errText(error));
     } else {
-      showError(els.errPhone, errText(error));
+      showError(els.errCredentials, errText(error));
     }
-  } finally {
-    setLoading(els.btnQr, false);
   }
 }
 
@@ -477,7 +499,8 @@ async function backFromQr() {
     /* ignore */
   }
   clearError(els.errQr);
-  go("phone");
+  go("credentials");
+  updateMethodHint();
 }
 
 /* ------------------------------------------------------------------ */
@@ -725,12 +748,11 @@ function bindEvents() {
     clearError(els.errCode);
     go("phone");
   });
-  els.backPhoneRecaptcha.addEventListener("click", () => {
+  els.btnRecaptchaKeys.addEventListener("click", () => {
     clearError(els.errRecaptcha);
-    go("phone");
+    go("credentials");
+    updateMethodHint();
   });
-  els.btnQr.addEventListener("click", startQr);
-  els.btnRecaptchaQr.addEventListener("click", startQr);
   els.backPhoneQr.addEventListener("click", backFromQr);
 
   els.phone.addEventListener("keydown", (event) => {
@@ -756,7 +778,9 @@ async function boot() {
 
   prefillCredentials(state);
 
-  if (state.step === "phone") {
+  if (state.step === "phone" && isPresetApiId(state.api_id)) {
+    await startQrFlow();
+  } else if (state.step === "phone") {
     go("phone");
     els.phone.focus();
   } else if (state.step === "qr") {
