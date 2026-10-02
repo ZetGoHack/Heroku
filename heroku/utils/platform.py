@@ -21,6 +21,7 @@ IS_MACOS = "com.apple" in os.environ.get("PATH", "")
 IS_USERLAND = "userland" in os.environ.get("USER", "")
 IS_WSL = False
 IS_WINDOWS = False
+CUSTOM_PLATFORM = os.environ.get("HEROKU_PLATFORM")
 with contextlib.suppress(Exception):
     from platform import uname
 
@@ -35,6 +36,9 @@ def get_named_platform() -> str:
     Returns formatted platform name
     :return: Platform name
     """
+
+    if CUSTOM_PLATFORM:
+        return CUSTOM_PLATFORM
 
     with contextlib.suppress(Exception):
         if os.path.isfile("/proc/device-tree/model"):
