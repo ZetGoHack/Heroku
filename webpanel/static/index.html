@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <meta name="robots" content="noindex" />
-  <title>Heroku — вход</title>
+  <title>Heroku · вход</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/css/style.css" />
 </head>
 <body>
   <main class="stage">
@@ -17,111 +17,118 @@
       <!-- API-ключи -->
       <div class="panel" data-panel="credentials">
         <header class="head">
-          <h1>Вход в Heroku</h1>
-          <p>API ID и API HASH вашего приложения с <b>my.telegram.org</b>.</p>
+          <h1 data-i18n="credentialsTitle"></h1>
+          <p>
+            <span data-i18n="credentialsHelpPre"></span>
+            <a href="https://my.telegram.org/apps" target="_blank" rel="noopener noreferrer">my.telegram.org</a>.
+          </p>
         </header>
 
         <label class="field">
-          <span class="field__label">API ID</span>
           <input id="api-id" class="input input--lg" inputmode="numeric" autocomplete="off"
-                 placeholder="1234567" spellcheck="false" />
+                 placeholder=" " spellcheck="false" />
+          <span class="field__label" data-i18n="apiIdLabel"></span>
         </label>
         <label class="field">
-          <span class="field__label">API HASH</span>
           <input id="api-hash" class="input input--lg" autocomplete="off"
-                 placeholder="32 hex-символа" spellcheck="false" />
+                 data-i18n-placeholder="apiHashPlaceholder" spellcheck="false" />
+          <span class="field__label" data-i18n="apiHashLabel"></span>
         </label>
 
-        <button class="btn" id="btn-credentials" type="button">Продолжить</button>
+        <button class="btn" id="btn-credentials" type="button" data-i18n="continueBtn"></button>
         <p class="error" id="err-credentials" role="alert" hidden></p>
       </div>
 
       <!-- Номер телефона -->
       <div class="panel" data-panel="phone" hidden>
         <header class="head">
-          <h1>Номер телефона</h1>
-          <p>В международном формате, например <b>+7 999 123-45-67</b>.</p>
+          <h1 data-i18n="phoneTitle"></h1>
+          <p><span data-i18n="phoneHelpPre"></span><br /><span data-i18n="phoneExamplePre"></span> <b data-i18n="phoneExample"></b>.</p>
         </header>
 
         <label class="field">
-          <span class="field__label">Телефон</span>
           <input id="phone" class="input input--lg" type="tel" inputmode="tel"
-                 autocomplete="tel" placeholder="+7 999 123-45-67" />
+                 autocomplete="tel" data-i18n-placeholder="phonePlaceholder" />
+          <span class="field__label" data-i18n="phoneLabel"></span>
         </label>
 
-        <button class="btn" id="btn-phone" type="button">Получить код</button>
-        <button class="link" id="btn-qr" type="button">Войти по QR-коду</button>
-        <button class="link" id="back-credentials" type="button">Изменить API-ключи</button>
+        <button class="btn" id="btn-phone" type="button" data-i18n="getCodeBtn"></button>
+
+        <div class="divider"><span data-i18n="orLabel"></span></div>
+
+        <button class="btn btn--ghost" id="btn-qr" type="button" data-i18n="qrLoginBtn"></button>
+        <button class="link" id="back-credentials" type="button" data-i18n="changeKeysBtn"></button>
         <p class="error" id="err-phone" role="alert" hidden></p>
       </div>
 
       <!-- QR -->
       <div class="panel" data-panel="qr" hidden>
         <header class="head">
-          <h1>Вход по QR-коду</h1>
+          <h1 data-i18n="qrTitle"></h1>
           <p>
-            Telegram → <b>Настройки</b> → <b>Устройства</b> → <b>Подключить устройство</b>.
+            <span data-i18n="qrHelpPre"></span>
+            <b data-i18n="qrNavSettings"></b> → <b data-i18n="qrNavDevices"></b> → <b data-i18n="qrNavConnect"></b>.
           </p>
         </header>
 
         <div class="qr">
           <div class="qr__frame">
-            <img class="qr__image" id="qr-image" alt="QR-код для входа" />
+            <img class="qr__image" id="qr-image" data-i18n-alt="qrAlt" alt="" />
           </div>
-          <span class="qr__status" id="qr-status">Ожидаем сканирование…</span>
+          <span class="qr__status" id="qr-status"></span>
         </div>
 
-        <button class="link" id="back-phone-qr" type="button">Изменить API-ключи</button>
+        <button class="link" id="back-phone-qr" type="button" data-i18n="changeKeysBtn"></button>
         <p class="error" id="err-qr" role="alert" hidden></p>
       </div>
 
       <!-- Анти-фрод -->
       <div class="panel" data-panel="recaptcha" hidden>
         <header class="head">
-          <h1>Нужна проверка Telegram</h1>
-          <p>Вход по номеру заблокирован анти-фродом. QR-код обычно проходит без проверки.</p>
+          <h1 data-i18n="recaptchaTitle"></h1>
+          <p data-i18n="recaptchaHelp"></p>
         </header>
 
-        <button class="btn" id="btn-recaptcha-qr" type="button">Войти по QR-коду</button>
-        <button class="link" id="back-phone-recaptcha" type="button">Изменить API-ключи</button>
+        <button class="btn" id="btn-recaptcha-qr" type="button" data-i18n="qrLoginBtn"></button>
+        <button class="link" id="back-phone-recaptcha" type="button" data-i18n="changeKeysBtn"></button>
         <p class="error" id="err-recaptcha" role="alert" hidden></p>
       </div>
 
       <!-- Код -->
       <div class="panel" data-panel="code" hidden>
         <header class="head">
-          <h1>Код подтверждения</h1>
-          <p>Отправили код на <b id="phone-echo">ваш номер</b>.</p>
+          <h1 data-i18n="codeTitle"></h1>
+          <p><span data-i18n="codeSentPre"></span> <b id="phone-echo"></b>.</p>
         </header>
 
         <div class="otp" id="otp">
-          <input class="otp__input" inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="Цифра 1" />
-          <input class="otp__input" inputmode="numeric" maxlength="1" aria-label="Цифра 2" />
-          <input class="otp__input" inputmode="numeric" maxlength="1" aria-label="Цифра 3" />
-          <input class="otp__input" inputmode="numeric" maxlength="1" aria-label="Цифра 4" />
-          <input class="otp__input" inputmode="numeric" maxlength="1" aria-label="Цифра 5" />
+          <input class="otp__input" inputmode="numeric" maxlength="1" autocomplete="one-time-code" data-i18n-aria-label="otpDigit" data-index="1" />
+          <input class="otp__input" inputmode="numeric" maxlength="1" data-i18n-aria-label="otpDigit" data-index="2" />
+          <input class="otp__input" inputmode="numeric" maxlength="1" data-i18n-aria-label="otpDigit" data-index="3" />
+          <input class="otp__input" inputmode="numeric" maxlength="1" data-i18n-aria-label="otpDigit" data-index="4" />
+          <input class="otp__input" inputmode="numeric" maxlength="1" data-i18n-aria-label="otpDigit" data-index="5" />
         </div>
 
-        <button class="btn" id="btn-code" type="button">Войти</button>
-        <button class="link" id="resend" type="button">Отправить код ещё раз</button>
-        <button class="link" id="back-phone" type="button">Изменить номер</button>
+        <button class="btn" id="btn-code" type="button" data-i18n="signInBtn"></button>
+        <button class="link" id="resend" type="button" data-i18n="resendBtn"></button>
+        <button class="link" id="back-phone" type="button" data-i18n="changeNumberBtn"></button>
         <p class="error" id="err-code" role="alert" hidden></p>
       </div>
 
       <!-- 2FA -->
       <div class="panel" data-panel="password" hidden>
         <header class="head">
-          <h1>Облачный пароль</h1>
-          <p id="password-hint">Введите пароль двухфакторной аутентификации.</p>
+          <h1 data-i18n="passwordTitle"></h1>
+          <p id="password-hint"></p>
         </header>
 
         <label class="field">
-          <span class="field__label">Пароль</span>
           <input id="password" class="input input--lg" type="password"
-                 autocomplete="current-password" placeholder="••••••••" />
+                 autocomplete="current-password" data-i18n-placeholder="passwordPlaceholder" />
+          <span class="field__label" data-i18n="passwordLabel"></span>
         </label>
 
-        <button class="btn" id="btn-2fa" type="button">Войти</button>
+        <button class="btn" id="btn-2fa" type="button" data-i18n="signInBtn"></button>
         <p class="error" id="err-2fa" role="alert" hidden></p>
       </div>
 
@@ -132,20 +139,23 @@
             <circle class="check__circle" cx="26" cy="26" r="24" />
             <path class="check__mark" d="M15 27.5l7.5 7.5L37 19" />
           </svg>
-          <h1>Готово</h1>
-          <p id="done-text">Сессия сохранена. Запускаем юзербота…</p>
+          <h1 data-i18n="doneTitle"></h1>
+          <p id="done-text"></p>
           <div class="account" id="account" hidden></div>
-          <p class="done__note" id="done-note">
-            Панель входа работает, только пока нет активной сессии.
-          </p>
+          <p class="done__note" data-i18n="doneNote"></p>
         </div>
       </div>
     </div>
   </main>
 
-  <footer class="footer"><span id="hosted">Hosted on Heroku</span></footer>
+  <nav class="lang" id="lang" data-i18n-aria-label="langAria">
+    <button class="lang__btn" data-lang="ru" type="button">RU</button>
+    <button class="lang__btn" data-lang="en" type="button">EN</button>
+  </nav>
+
+  <footer class="footer"><span id="hosted"></span></footer>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="/static/app.js"></script>
+  <script type="module" src="/static/js/app.js"></script>
 </body>
 </html>

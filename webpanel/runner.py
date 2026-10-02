@@ -12,6 +12,7 @@ import asyncio
 import contextlib
 import logging
 import os
+import secrets
 
 import uvicorn
 
@@ -23,8 +24,25 @@ logger = logging.getLogger(__name__)
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8000
 
+#: Environment variable holding the panel access token. When unset, a random
+#: token is generated on every start and printed to the logs.
+TOKEN_ENV = "WEBPANEL_TOKEN"
+
+#: Public domain sources, in priority order. When neither is set, only the
+#: access token is announced.
+DOMAIN_ENVS = ("CTRLFREE_DOMAIN", "WEBPANEL_DOMAIN")
+
 # Give uvicorn a moment to flush the final HTTP response before shutting down.
 SHUTDOWN_GRACE = 0.5
+
+#: Separator that makes the access link stand out in the console output.
+BANNER = "====="
+
+
+def _banner(label: str, value: str) -> str:
+    """Surround a labelled ``value`` with ``=====`` lines and blank lines."""
+
+    return f"\n\n{BANNER}\n\n{label}\n\n{value}\n\n{BANNER}\n\n"
 
 
 def resolve_address(host: str | None, port: int | None) -> tuple[str, int]:
@@ -35,14 +53,39 @@ def resolve_address(host: str | None, port: int | None) -> tuple[str, int]:
     return host, port
 
 
+def resolve_token() -> str:
+    """Return the access token from ``WEBPANEL_TOKEN`` or a fresh random one."""
+
+    return os.environ.get(TOKEN_ENV) or secrets.token_urlsafe(24)
+
+
+def resolve_base_url() -> str | None:
+    """Public base URL of the panel.
+
+    Tries ``CTRLFREE_DOMAIN`` first, then ``WEBPANEL_DOMAIN``. Returns ``None``
+    when neither is set, so only the access token is announced.
+    """
+
+    for name in DOMAIN_ENVS:
+        domain = (os.environ.get(name) or "").strip()
+        if not domain:
+            continue
+        if not domain.startswith(("http://", "https://")):
+            domain = f"https://{domain}"
+        return domain.rstrip("/")
+
+    return None
+
+
 def _build_server(
     manager: LoginManager,
     host: str,
     port: int,
+    token: str,
     log_level: str = "info",
 ) -> uvicorn.Server:
     config = uvicorn.Config(
-        create_app(manager),
+        create_app(manager, token=token),
         host=host,
         port=port,
         log_level=log_level,
@@ -68,10 +111,11 @@ async def run_web_login(
     """
 
     host, port = resolve_address(host, port)
+    token = resolve_token()
     manager = LoginManager(heroku)
-    server = _build_server(manager, host, port)
+    server = _build_server(manager, host, port, token)
 
-    _announce(host, port)
+    _announce(resolve_base_url(), token, host, port)
     task = asyncio.create_task(server.serve())
 
     try:
@@ -109,13 +153,26 @@ async def serve_standalone(
     """Run the panel without the userbot (useful to develop the frontend)."""
 
     host, port = resolve_address(host, port)
+    token = resolve_token()
     manager = LoginManager(None)
-    server = _build_server(manager, host, port)
+    server = _build_server(manager, host, port, token)
 
-    _announce(host, port)
+    _announce(resolve_base_url(), token, host, port)
     await server.serve()
 
 
-def _announce(host: str, port: int) -> None:
-    logger.info("Web login panel is available at http://%s:%s", host, port)
-    print(f"\033[0;96mWeb login panel: http://{host}:{port}\033[0m")
+def _display_host(host: str) -> str:
+    """Return a browser-friendly host for the announced link."""
+
+    return "127.0.0.1" if host in ("", "0.0.0.0", "::") else host
+
+
+def _announce(base_url: str | None, token: str, host: str, port: int) -> None:
+    # Always show a usable link, even when no public domain is configured, so
+    # the generated token can actually be used instead of the panel hanging.
+    origin = base_url or f"http://{_display_host(host)}:{port}"
+    url = f"{origin}/?token={token}"
+    logger.info("Web login panel is available at %s", url)
+    print(_banner("Web login panel:", url), end="")
+    logger.info("Web panel access token: %s", token)
+    print(_banner("Access token:", token), end="")

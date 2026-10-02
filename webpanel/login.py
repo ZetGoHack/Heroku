@@ -101,8 +101,6 @@ class LoginManager:
         return {
             "ok": True,
             "step": self.step,
-            "has_credentials": self.has_credentials,
-            "api_id": self.api_id,
             "phone": self.phone,
             "password_hint": self.password_hint,
             "qr": self.qr_info(),
@@ -305,6 +303,36 @@ class LoginManager:
             "error": self._qr_error,
         }
 
+    @staticmethod
+    def _qr_module_path(
+        x: int,
+        y: int,
+        radius: float,
+        up: bool,
+        down: bool,
+        left: bool,
+        right: bool,
+    ) -> str:
+        """SVG path for one QR module, rounding only its exposed outer corners."""
+
+        top_left = radius if not up and not left else 0.0
+        top_right = radius if not up and not right else 0.0
+        bottom_right = radius if not down and not right else 0.0
+        bottom_left = radius if not down and not left else 0.0
+
+        def corner(r: float, to_x: float, to_y: float) -> str:
+            return f"A{r} {r} 0 0 1 {to_x} {to_y}" if r else f"L{to_x} {to_y}"
+
+        x2 = x + 1
+        y2 = y + 1
+        return (
+            f"M{x + top_left} {y}"
+            f"L{x2 - top_right} {y}{corner(top_right, x2, y + top_right)}"
+            f"L{x2} {y2 - bottom_right}{corner(bottom_right, x2 - bottom_right, y2)}"
+            f"L{x + bottom_left} {y2}{corner(bottom_left, x, y2 - bottom_left)}"
+            f"L{x} {y + top_left}{corner(top_left, x + top_left, y)}Z"
+        )
+
     def qr_svg(self) -> str | None:
         if self._qr is None:
             return None
@@ -314,18 +342,27 @@ class LoginManager:
         code.make()
         matrix = code.get_matrix()
         size = len(matrix)
-        cells = "".join(
-            f'<rect x="{x}" y="{y}" width="1" height="1" rx="0.34"/>'
-            for y, row in enumerate(matrix)
-            for x, cell in enumerate(row)
-            if cell
-        )
+
+        radius = 0.3
+        modules = []
+        for y, row in enumerate(matrix):
+            for x, cell in enumerate(row):
+                if not cell:
+                    continue
+                up = y > 0 and bool(matrix[y - 1][x])
+                down = y < size - 1 and bool(matrix[y + 1][x])
+                left = x > 0 and bool(row[x - 1])
+                right = x < size - 1 and bool(row[x + 1])
+                modules.append(
+                    self._qr_module_path(x, y, radius, up, down, left, right)
+                )
 
         return (
             f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {size} {size}" '
             f'shape-rendering="geometricPrecision">'
             f'<rect width="{size}" height="{size}" fill="#ffffff"/>'
-            f'<g fill="#6c60cf">{cells}</g></svg>'
+            f'<path d="{"".join(modules)}" fill="#5f63d6" stroke="#5f63d6" '
+            f'stroke-width="0.05" stroke-linejoin="round"/></svg>'
         )
 
     async def _cancel_qr(self) -> None:

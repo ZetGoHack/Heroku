@@ -1,27 +1,23 @@
-"use strict";
+/* Heroku web panel - vanilla JS, no dependencies. */
 
-/* Heroku web panel — vanilla JS, no dependencies. */
+import { detectLang, getLocale, setLocale, t } from "./i18n/index.js";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const ERROR_TEXT = {
-  invalid_api_id: "API ID должен быть числом.",
-  invalid_api_hash: "API HASH должен состоять из 32 hex-символов.",
-  credentials_required: "Сначала укажите API-ключи.",
-  invalid_phone: "Неверный номер. Укажите в формате +7 999 123-45-67.",
-  phone_required: "Сначала укажите номер телефона.",
-  recaptcha_required: "Telegram требует проверку.",
-  invalid_code: "Неверный код. Проверьте и попробуйте снова.",
-  qr_failed: "Не удалось начать вход по QR-коду. Попробуйте ещё раз.",
-  qr_expired: "QR-код не удалось обновить. Начните вход заново.",
-  qr_not_started: "QR-код не сгенерирован.",
-  code_expired: "Код истёк. Запросите новый.",
-  invalid_password: "Неверный облачный пароль.",
-  send_code_failed: "Не удалось отправить код. Попробуйте позже.",
-  sign_in_failed: "Не удалось войти. Попробуйте позже.",
-};
+const ACCESS_TOKEN = new URLSearchParams(location.search).get("token") || "";
+
+/** Append the panel access token to an internal URL. */
+function withToken(path) {
+  if (!ACCESS_TOKEN) return path;
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}token=${encodeURIComponent(ACCESS_TOKEN)}`;
+}
+
+/* ------------------------------------------------------------------ */
+/* Element references & UI state                                       */
+/* ------------------------------------------------------------------ */
 
 const els = {
   panels: $$(".panel"),
@@ -56,6 +52,16 @@ const els = {
   account: $("#account"),
   hosted: $("#hosted"),
   toast: $("#toast"),
+  langButtons: $$(".lang__btn"),
+};
+
+const ui = {
+  phone: null,
+  passwordHint: null,
+  qrExpires: null,
+  donePhase: "saved",
+  account: null,
+  platform: null,
 };
 
 let toastTimer = null;
@@ -63,6 +69,153 @@ let qrPollTimer = null;
 let qrUrl = null;
 let qrFailures = 0;
 let qrImageTimer = 0;
+
+/* ------------------------------------------------------------------ */
+/* i18n rendering                                                      */
+/* ------------------------------------------------------------------ */
+
+function applyI18n() {
+  document.title = t("docTitle");
+  document.documentElement.lang = getLocale();
+
+  $$("[data-i18n]").forEach((el) => {
+    el.textContent = t(el.dataset.i18n);
+  });
+
+  $$("[data-i18n-placeholder]").forEach((el) => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+
+  $$("[data-i18n-aria-label]").forEach((el) => {
+    el.setAttribute("aria-label", t(el.dataset.i18nAriaLabel, { index: el.dataset.index }));
+  });
+
+  $$("[data-i18n-alt]").forEach((el) => {
+    el.setAttribute("alt", t(el.dataset.i18nAlt));
+  });
+}
+
+function renderAccount() {
+  const account = ui.account;
+  if (!account || !els.account) return;
+
+  const name =
+    [account.first_name, account.last_name].filter(Boolean).join(" ") ||
+    t("accountFallback");
+  const handle = account.username ? `@${account.username}` : `id ${account.id}`;
+
+  els.account.innerHTML = "";
+
+  if (account.avatar) {
+    const avatar = document.createElement("img");
+    avatar.className = "account__avatar";
+    avatar.src = account.avatar;
+    avatar.alt = "";
+    els.account.append(avatar);
+  } else {
+    const fallback = document.createElement("span");
+    fallback.className = "account__avatar account__avatar--fallback";
+    fallback.textContent = (name[0] || "?").toUpperCase();
+    els.account.append(fallback);
+  }
+
+  const meta = document.createElement("span");
+  meta.className = "account__meta";
+
+  const nameEl = document.createElement("span");
+  nameEl.className = "account__name";
+  nameEl.textContent = name;
+
+  const idEl = document.createElement("span");
+  idEl.className = "account__id";
+  idEl.textContent = handle;
+
+  meta.append(nameEl, idEl);
+  els.account.append(meta);
+  els.account.classList.toggle("account--avatar", Boolean(account.avatar));
+  els.account.hidden = false;
+}
+
+/**
+ * Display-only phone formatting, matching the hint examples
+ * (+7 999 123-45-67 / +1 555 123-4567). Other numbers are left untouched.
+ */
+function formatPhone(value) {
+  const raw = String(value || "").trim();
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length < 7) return raw;
+
+  if (digits.length === 11 && (digits[0] === "7" || digits[0] === "8")) {
+    const area = digits.slice(1, 4);
+    const mid = digits.slice(4, 7);
+    const tail = digits.slice(7, 9);
+    return `+7 ${area} ${mid}-${tail}-${digits.slice(9)}`;
+  }
+
+  if (digits.length === 11 && digits[0] === "1") {
+    const area = digits.slice(1, 4);
+    const mid = digits.slice(4, 7);
+    return `+1 ${area} ${mid}-${digits.slice(7)}`;
+  }
+
+  // Unknown length/country: leave the number untouched rather than guess.
+  return raw;
+}
+
+function renderDynamic() {
+  if (els.qrStatus) {
+    els.qrStatus.textContent =
+      typeof ui.qrExpires === "number"
+        ? t("qrValid", { seconds: ui.qrExpires })
+        : t("qrWaiting");
+  }
+
+  if (els.phoneEcho) {
+    els.phoneEcho.textContent = ui.phone ? formatPhone(ui.phone) : t("yourPhone");
+  }
+
+  if (els.passwordHint) {
+    els.passwordHint.textContent = ui.passwordHint
+      ? t("passwordHintWith", { hint: ui.passwordHint })
+      : t("passwordHintText");
+  }
+
+  if (els.doneText) {
+    els.doneText.textContent =
+      ui.donePhase === "running"
+        ? t("doneRunning")
+        : ui.donePhase === "starting"
+        ? t("doneStarting")
+        : t("doneSaved");
+  }
+
+  if (els.hosted) {
+    // ``data-platform`` is injected server-side so the footer is correct on the
+    // very first paint; ``ui.platform`` from /api/state keeps it authoritative.
+    const platform = ui.platform || els.hosted.dataset.platform;
+    if (platform) {
+      els.hosted.textContent = t("hosted", { platform });
+    }
+  }
+
+  renderAccount();
+}
+
+function updateLangButtons() {
+  const current = getLocale();
+  els.langButtons.forEach((btn) => {
+    const active = btn.dataset.lang === current;
+    btn.classList.toggle("is-active", active);
+    btn.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+}
+
+function setLang(next, { persist = true } = {}) {
+  setLocale(next, { persist });
+  applyI18n();
+  updateLangButtons();
+  renderDynamic();
+}
 
 /* ------------------------------------------------------------------ */
 /* Requests                                                            */
@@ -76,7 +229,7 @@ async function api(path, { method = "GET", body } = {}) {
     options.body = JSON.stringify(body);
   }
 
-  const response = await fetch(path, options);
+  const response = await fetch(withToken(path), options);
   let data = null;
 
   try {
@@ -123,23 +276,28 @@ function toast(message) {
 
 function errText(error) {
   const code = error.data && error.data.error;
-  if (code && ERROR_TEXT[code]) return ERROR_TEXT[code];
-  if (error.status === 429) return "Слишком много попыток. Подождите немного.";
-  if (!navigator.onLine) return "Нет соединения с сервером.";
-  return "Что-то пошло не так. Попробуйте ещё раз.";
+  if (code) {
+    const text = t(`errors.${code}`);
+    if (text !== `errors.${code}`) return text;
+  }
+  if (error.status === 429) return t("tooMany");
+  if (!navigator.onLine) return t("offline");
+  return t("genericError");
 }
 
 async function countdown(button, seconds) {
   setLoading(button, false);
-  const original = button.textContent;
+  const original = button.dataset.i18n
+    ? t(button.dataset.i18n)
+    : button.textContent;
   button.disabled = true;
 
   for (let left = seconds; left > 0; left--) {
-    button.textContent = `Повторите через ${left} с`;
+    button.textContent = t("countdown", { seconds: left });
     await sleep(1000);
   }
 
-  button.textContent = original;
+  button.textContent = button.dataset.i18n ? t(button.dataset.i18n) : original;
   button.disabled = false;
 }
 
@@ -172,11 +330,11 @@ async function submitCredentials() {
   const apiHash = els.apiHash.value.trim();
 
   if (!/^\d+$/.test(apiId)) {
-    showError(els.errCredentials, ERROR_TEXT.invalid_api_id);
+    showError(els.errCredentials, t("errors.invalid_api_id"));
     return;
   }
   if (!/^[0-9a-fA-F]{32}$/.test(apiHash)) {
-    showError(els.errCredentials, ERROR_TEXT.invalid_api_hash);
+    showError(els.errCredentials, t("errors.invalid_api_hash"));
     return;
   }
 
@@ -196,7 +354,7 @@ async function submitCredentials() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Step 2 — phone                                                      */
+/* Step 2 - phone                                                      */
 /* ------------------------------------------------------------------ */
 
 async function submitPhone() {
@@ -205,7 +363,7 @@ async function submitPhone() {
 
   const phone = els.phone.value.trim();
   if (phone.replace(/\D/g, "").length < 5) {
-    showError(els.errPhone, "Введите номер телефона.");
+    showError(els.errPhone, t("enterPhone"));
     return;
   }
 
@@ -215,22 +373,16 @@ async function submitPhone() {
       method: "POST",
       body: { phone },
     });
-    els.phoneEcho.textContent = data.phone || phone;
+    ui.phone = data.phone || phone;
+    renderDynamic();
     resetOtp();
     go("code");
     els.otpInputs[0].focus();
   } catch (error) {
     if (error.data && error.data.error === "recaptcha_required") {
       showRecaptchaNotice();
-    } else if (
-      error.data &&
-      error.data.error === "flood_wait" &&
-      error.data.seconds
-    ) {
-      showError(
-        els.errPhone,
-        `Слишком много попыток. Повторите через ${error.data.seconds} с.`
-      );
+    } else if (error.data && error.data.error === "flood_wait" && error.data.seconds) {
+      showError(els.errPhone, t("floodWait", { seconds: error.data.seconds }));
     } else {
       showError(els.errPhone, errText(error));
     }
@@ -263,10 +415,8 @@ function applyQrInfo(qr) {
   if (!qr) return;
 
   if (qr.error) {
-    showError(
-      els.errQr,
-      ERROR_TEXT[qr.error] || "Не удалось выполнить вход по QR-коду."
-    );
+    const text = t(`errors.${qr.error}`);
+    showError(els.errQr, text !== `errors.${qr.error}` ? text : t("errors.qr_failed"));
     return;
   }
 
@@ -274,13 +424,11 @@ function applyQrInfo(qr) {
     qrUrl = qr.url;
     qrFailures = 0;
     qrImageTimer = Date.now();
-    els.qrImage.src = `/api/qr/image?ts=${qrImageTimer}`;
+    els.qrImage.src = withToken(`/api/qr/image?ts=${qrImageTimer}`);
   }
 
-  els.qrStatus.textContent =
-    typeof qr.expires_in === "number"
-      ? `Код действителен ещё ${qr.expires_in} с`
-      : "Ожидаем сканирование…";
+  ui.qrExpires = typeof qr.expires_in === "number" ? qr.expires_in : null;
+  renderDynamic();
 }
 
 async function startQrFlow(errorEl = els.errCredentials) {
@@ -315,9 +463,8 @@ async function pollQr() {
 
     if (data.step === "password") {
       stopQrPolling();
-      els.passwordHint.textContent = data.password_hint
-        ? `Подсказка: ${data.password_hint}`
-        : "Введите пароль двухфакторной аутентификации.";
+      ui.passwordHint = data.password_hint || null;
+      renderDynamic();
       go("password");
       els.password.focus();
       return;
@@ -358,7 +505,7 @@ async function backFromQr() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Step 3 — code                                                       */
+/* Step 3 - code                                                       */
 /* ------------------------------------------------------------------ */
 
 function otpValue() {
@@ -399,6 +546,7 @@ function setupOtp() {
         event.preventDefault();
         els.otpInputs[index + 1].focus();
       } else if (event.key === "Enter") {
+        event.preventDefault();
         submitCode();
       }
     });
@@ -426,7 +574,7 @@ async function submitCode() {
 
   const code = otpValue();
   if (code.length !== 5) {
-    showError(els.errCode, "Введите 5-значный код.");
+    showError(els.errCode, t("enterCode"));
     return;
   }
 
@@ -441,9 +589,8 @@ async function submitCode() {
     const code = error.data && error.data.error;
 
     if (code === "2fa_required") {
-      els.passwordHint.textContent = error.data.hint
-        ? `Подсказка: ${error.data.hint}`
-        : "Введите пароль двухфакторной аутентификации.";
+      ui.passwordHint = error.data.hint || null;
+      renderDynamic();
       els.password.value = "";
       go("password");
       els.password.focus();
@@ -451,10 +598,7 @@ async function submitCode() {
     }
 
     if (code === "flood_wait" && error.data.seconds) {
-      showError(
-        els.errCode,
-        `Слишком много попыток. Повторите через ${error.data.seconds} с.`
-      );
+      showError(els.errCode, t("floodWait", { seconds: error.data.seconds }));
       await countdown(els.btnCode, Number(error.data.seconds));
       return;
     }
@@ -477,38 +621,35 @@ async function resendCode() {
   if (els.resend.disabled) return;
   clearError(els.errCode);
 
-  const original = els.resend.textContent;
+  const original = els.resend.dataset.i18n
+    ? t(els.resend.dataset.i18n)
+    : els.resend.textContent;
   els.resend.disabled = true;
-  els.resend.textContent = "Отправляем…";
+  els.resend.textContent = t("sending");
 
   try {
     await api("/api/resend", { method: "POST" });
     resetOtp();
-    toast("Код отправлен повторно");
+    toast(t("codeResent"));
     els.otpInputs[0].focus();
   } catch (error) {
     if (error.data && error.data.error === "recaptcha_required") {
       showRecaptchaNotice();
-    } else if (
-      error.data &&
-      error.data.error === "flood_wait" &&
-      error.data.seconds
-    ) {
-      showError(
-        els.errCode,
-        `Подождите ${error.data.seconds} с перед повторной отправкой.`
-      );
+    } else if (error.data && error.data.error === "flood_wait" && error.data.seconds) {
+      showError(els.errCode, t("floodResend", { seconds: error.data.seconds }));
     } else {
       showError(els.errCode, errText(error));
     }
   } finally {
-    els.resend.textContent = original;
+    els.resend.textContent = els.resend.dataset.i18n
+      ? t(els.resend.dataset.i18n)
+      : original;
     els.resend.disabled = false;
   }
 }
 
 /* ------------------------------------------------------------------ */
-/* Step 4 — 2FA password                                               */
+/* Step 4 - 2FA password                                               */
 /* ------------------------------------------------------------------ */
 
 async function submitPassword() {
@@ -517,7 +658,7 @@ async function submitPassword() {
 
   const password = els.password.value;
   if (!password) {
-    showError(els.err2fa, "Введите пароль.");
+    showError(els.err2fa, t("enterPassword"));
     return;
   }
 
@@ -527,10 +668,7 @@ async function submitPassword() {
     onSuccess(data.account);
   } catch (error) {
     if (error.data && error.data.error === "flood_wait" && error.data.seconds) {
-      showError(
-        els.err2fa,
-        `Слишком много попыток. Повторите через ${error.data.seconds} с.`
-      );
+      showError(els.err2fa, t("floodWait", { seconds: error.data.seconds }));
       await countdown(els.btn2fa, Number(error.data.seconds));
       return;
     }
@@ -546,46 +684,10 @@ async function submitPassword() {
 /* ------------------------------------------------------------------ */
 
 function onSuccess(account) {
+  if (account) ui.account = account;
+  ui.donePhase = "saved";
   go("done");
-
-  if (account) {
-    const name =
-      [account.first_name, account.last_name].filter(Boolean).join(" ") ||
-      "Аккаунт";
-    const handle = account.username ? `@${account.username}` : `id ${account.id}`;
-
-    els.account.innerHTML = "";
-
-    if (account.avatar) {
-      const avatar = document.createElement("img");
-      avatar.className = "account__avatar";
-      avatar.src = account.avatar;
-      avatar.alt = "";
-      els.account.append(avatar);
-    } else {
-      const fallback = document.createElement("span");
-      fallback.className = "account__avatar account__avatar--fallback";
-      fallback.textContent = (name[0] || "?").toUpperCase();
-      els.account.append(fallback);
-    }
-
-    const meta = document.createElement("span");
-    meta.className = "account__meta";
-
-    const nameEl = document.createElement("span");
-    nameEl.className = "account__name";
-    nameEl.textContent = name;
-
-    const idEl = document.createElement("span");
-    idEl.className = "account__id";
-    idEl.textContent = handle;
-
-    meta.append(nameEl, idEl);
-    els.account.append(meta);
-    els.account.classList.toggle("account--avatar", Boolean(account.avatar));
-    els.account.hidden = false;
-  }
-
+  renderDynamic();
   watchForRestart();
 }
 
@@ -594,20 +696,31 @@ async function watchForRestart() {
 
   for (let attempt = 0; attempt < 90; attempt++) {
     try {
-      await fetch("/api/health", { cache: "no-store" });
+      await fetch(withToken("/api/health"), { cache: "no-store" });
     } catch (_) {
-      els.doneText.textContent = "Юзербот запущен. Страницу можно закрыть.";
+      ui.donePhase = "running";
+      renderDynamic();
       return;
     }
     await sleep(1000);
   }
 
-  els.doneText.textContent = "Юзербот запускается. Страницу можно закрыть.";
+  ui.donePhase = "starting";
+  renderDynamic();
 }
 
 /* ------------------------------------------------------------------ */
 /* Boot                                                                */
 /* ------------------------------------------------------------------ */
+
+function onEnter(input, handler) {
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handler();
+    }
+  });
+}
 
 function bindEvents() {
   els.btnCredentials.addEventListener("click", submitCredentials);
@@ -650,58 +763,78 @@ function bindEvents() {
   });
   els.backPhoneQr.addEventListener("click", backFromQr);
 
-  els.phone.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") submitPhone();
-  });
-  els.password.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") submitPassword();
+  // Enter confirms input on every text field (PC keyboards).
+  onEnter(els.apiId, submitCredentials);
+  onEnter(els.apiHash, submitCredentials);
+  onEnter(els.phone, submitPhone);
+  onEnter(els.password, submitPassword);
+
+  els.langButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (btn.dataset.lang !== getLocale()) setLang(btn.dataset.lang);
+    });
   });
 
   setupOtp();
 }
 
-async function boot() {
-  bindEvents();
-
+async function syncState({ focus = true } = {}) {
   let state = {};
   try {
     state = await api("/api/state");
   } catch (_) {
-    /* fall back to the credentials step */
+    return false;
   }
 
-  if (state.platform && els.hosted) {
-    els.hosted.textContent = `Hosted on ${state.platform}`;
-  }
-
-  if (state.api_id) {
-    els.apiId.value = state.api_id;
-  }
+  if (state.platform) ui.platform = state.platform;
+  ui.account = state.account || null;
+  // Render shared/static bits (e.g. the "Hosted on …" footer) before the
+  // step-specific branches, some of which never call renderDynamic().
+  renderDynamic();
 
   if (state.step === "phone") {
     go("phone");
-    els.phone.focus();
+    if (focus) els.phone.focus();
   } else if (state.step === "qr") {
+    ui.qrExpires =
+      state.qr && typeof state.qr.expires_in === "number" ? state.qr.expires_in : null;
+    renderDynamic();
     go("qr");
     applyQrInfo(state.qr);
     startQrPolling();
   } else if (state.step === "recaptcha") {
     showRecaptchaNotice();
   } else if (state.step === "code") {
-    els.phoneEcho.textContent = state.phone || "ваш номер";
+    ui.phone = state.phone || null;
+    renderDynamic();
     go("code");
-    els.otpInputs[0].focus();
+    if (focus) els.otpInputs[0].focus();
   } else if (state.step === "password") {
-    els.passwordHint.textContent = state.password_hint
-      ? `Подсказка: ${state.password_hint}`
-      : "Введите пароль двухфакторной аутентификации.";
+    ui.passwordHint = state.password_hint || null;
+    renderDynamic();
     go("password");
-    els.password.focus();
+    if (focus) els.password.focus();
   } else if (state.step === "done") {
-    onSuccess(state.account);
+    ui.donePhase = "saved";
+    go("done");
+    renderDynamic();
+    watchForRestart();
   } else {
     go("credentials");
-    els.apiId.focus();
+    if (focus) els.apiId.focus();
+  }
+
+  return true;
+}
+
+async function boot() {
+  bindEvents();
+
+  setLang(detectLang(), { persist: false });
+
+  const ok = await syncState({ focus: true });
+  if (!ok) {
+    go("credentials");
   }
 }
 

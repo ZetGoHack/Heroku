@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="robots" content="noindex" />
+  <title>Доступ запрещён</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <main class="stage">
+    <div class="stage__inner">
+      <div class="denied">
+        <span class="denied__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+               stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="10" width="16" height="11" rx="2.5" />
+            <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+            <circle cx="12" cy="15.5" r="1.2" />
+          </svg>
+        </span>
+        <h1 data-i18n="deniedTitle">Доступ запрещён</h1>
+        <p data-i18n="deniedText">Ссылка недействительна или устарела.</p>
+        <p class="denied__hint" data-i18n="deniedHint">
+          Посмотрите логи бота - при запуске панели он печатает ссылку с токеном доступа.
+        </p>
+
+        <form class="denied__form" id="token-form" autocomplete="off">
+          <label class="field">
+            <input id="token-input" class="input input--lg" type="text"
+                   spellcheck="false" autocapitalize="off"
+                   data-i18n-placeholder="deniedTokenPlaceholder" />
+            <span class="field__label" data-i18n="deniedTokenLabel">Токен доступа</span>
+          </label>
+          <button class="btn" type="submit" data-i18n="deniedOpenBtn">Открыть панель</button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <nav class="lang" id="lang" data-i18n-aria-label="langAria">
+    <button class="lang__btn" data-lang="ru" type="button">RU</button>
+    <button class="lang__btn" data-lang="en" type="button">EN</button>
+  </nav>
+
+  <script type="module" src="/static/js/denied.js"></script>
+</body>
+</html>
