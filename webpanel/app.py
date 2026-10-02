@@ -6,6 +6,7 @@ from :data:`STATIC_DIR` at ``/`` and ``/static/*``.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -66,7 +67,9 @@ def create_app(manager: LoginManager) -> FastAPI:
 
     @app.get("/api/state")
     async def state() -> dict:
-        return manager.state()
+        data = manager.state()
+        data["platform"] = os.environ.get("HEROKU_PLATFORM") or "Heroku"
+        return data
 
     @app.post("/api/credentials")
     async def credentials(payload: CredentialsPayload) -> dict:

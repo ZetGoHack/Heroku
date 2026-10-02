@@ -63,6 +63,7 @@ const els = {
   err2fa: $("#err-2fa"),
   doneText: $("#done-text"),
   account: $("#account"),
+  hosted: $("#hosted"),
   toast: $("#toast"),
 };
 
@@ -807,6 +808,10 @@ async function boot() {
     state = await api("/api/state");
   } catch (_) {
     /* fall back to the credentials step */
+  }
+
+  if (state.platform && els.hosted) {
+    els.hosted.textContent = `Hosted on ${state.platform}`;
   }
 
   prefillCredentials(state);

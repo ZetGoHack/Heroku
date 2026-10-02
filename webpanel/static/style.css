@@ -1,20 +1,21 @@
 /* Heroku web panel — muted canvas, capsule forms */
 
 :root {
-  --canvas: #101014;
-  --surface: #191821;
-  --surface-2: #21202b;
-  --line: rgba(255, 255, 255, 0.07);
+  --canvas: #0d0c12;
+  --surface: #17161f;
+  --surface-2: #201e2a;
+  --line: rgba(255, 255, 255, 0.08);
 
-  --text: #e8e6ee;
-  --text-dim: #a29eae;
-  --text-faint: #6f6b7a;
+  --text: #e9e7f1;
+  --text-dim: #a5a0b2;
+  --text-faint: #716c7e;
 
-  --accent: #7c73c0;
-  --accent-strong: #8d85cc;
-  --accent-soft: rgba(124, 115, 192, 0.16);
-  --accent-ring: rgba(124, 115, 192, 0.35);
-  --danger: #e0808a;
+  --accent: #857ad4;
+  --accent-strong: #9a90e0;
+  --accent-2: #b3a6ff;
+  --accent-soft: rgba(133, 122, 212, 0.14);
+  --accent-ring: rgba(133, 122, 212, 0.4);
+  --danger: #e28a93;
 
   --radius: 999px;
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
@@ -45,28 +46,8 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-}
-
-/* ---------- Top bar ---------- */
-
-.topbar {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 17px 24px;
-  border-bottom: 1px solid var(--line);
-}
-
-.brand__mark {
-  color: var(--accent);
-  display: grid;
-  place-items: center;
-}
-
-.brand__name {
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  min-height: 100svh;
+  overflow-x: hidden;
 }
 
 /* ---------- Stage ---------- */
@@ -75,7 +56,8 @@ body {
   flex: 1;
   display: flex;
   justify-content: center;
-  padding: 9vh 20px 40px;
+  align-items: flex-start;
+  padding: clamp(48px, 12vh, 150px) 20px 24px;
 }
 
 .stage__inner {
@@ -107,7 +89,7 @@ body {
 }
 
 .step.is-done {
-  background: rgba(124, 115, 192, 0.42);
+  background: rgba(133, 122, 212, 0.42);
 }
 
 /* ---------- Panels ---------- */
@@ -138,11 +120,11 @@ body {
   font-weight: 600;
 }
 
-/* ---------- Presets (capsules) ---------- */
+/* ---------- Presets (tiles) ---------- */
 
 .presets {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin-top: 2px;
 }
@@ -159,42 +141,52 @@ body {
 }
 
 .preset__body {
+  position: relative;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  justify-content: space-between;
   gap: 10px;
-  padding: 12px 14px;
-  border-radius: 15px;
+  min-height: 82px;
+  padding: 13px 14px;
+  border-radius: 16px;
   background: var(--surface);
-  border: 1px solid transparent;
-  transition: background 0.15s var(--ease), border-color 0.15s var(--ease);
+  border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease),
+    transform 0.1s var(--ease);
 }
 
 .preset:hover .preset__body {
   background: var(--surface-2);
 }
 
-.preset input:checked + .preset__body {
-  background: var(--accent-soft);
-  border-color: var(--accent-ring);
+.preset:active .preset__body {
+  transform: scale(0.99);
 }
 
-.preset input:focus-visible + .preset__body {
+.preset input:checked + .preset__body {
+  background: var(--accent-soft);
   border-color: var(--accent);
 }
 
+.preset input:focus-visible + .preset__body {
+  box-shadow: 0 0 0 2px var(--accent-ring);
+}
+
 .preset__name {
-  font-size: 14px;
-  font-weight: 500;
+  padding-right: 22px;
+  font-size: 13.5px;
+  font-weight: 600;
   color: var(--text);
   transition: color 0.15s var(--ease);
 }
 
 .preset input:checked + .preset__body .preset__name {
-  color: var(--accent-strong);
+  color: var(--accent-2);
 }
 
 .preset__meta {
-  margin-left: auto;
+  align-self: flex-start;
   padding: 3px 10px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
@@ -202,11 +194,52 @@ body {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
 }
 
 .preset input:checked + .preset__body .preset__meta {
-  background: rgba(124, 115, 192, 0.22);
+  background: rgba(133, 122, 212, 0.24);
   color: var(--text);
+}
+
+.preset__body::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.16);
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease),
+    box-shadow 0.15s var(--ease);
+}
+
+.preset input:checked + .preset__body::after {
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: inset 0 0 0 3px var(--canvas);
+}
+
+.preset:last-child {
+  grid-column: 1 / -1;
+}
+
+.preset:last-child .preset__body {
+  flex-direction: row;
+  align-items: center;
+  min-height: 0;
+  gap: 0;
+}
+
+.preset:last-child .preset__name {
+  padding-right: 0;
+}
+
+.preset:last-child .preset__meta {
+  align-self: center;
+  margin-left: auto;
+  margin-right: 24px;
 }
 
 /* ---------- Fields ---------- */
@@ -304,8 +337,9 @@ body {
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 12px 28px -16px rgba(133, 122, 212, 0.9);
   transition: background 0.15s var(--ease), transform 0.1s var(--ease),
-    opacity 0.2s var(--ease);
+    box-shadow 0.15s var(--ease), opacity 0.2s var(--ease);
 }
 
 .btn:hover {
@@ -319,12 +353,14 @@ body {
 .btn:disabled {
   cursor: default;
   opacity: 0.5;
+  box-shadow: none;
 }
 
 .btn--ghost {
   margin-top: 10px;
   background: var(--surface);
   color: var(--text);
+  box-shadow: none;
 }
 
 .btn--ghost:hover {
@@ -368,7 +404,7 @@ body {
 }
 
 .link:hover {
-  color: var(--accent-strong);
+  color: var(--accent-2);
 }
 
 .row {
@@ -534,7 +570,7 @@ body {
   place-items: center;
   font-size: 16px;
   font-weight: 600;
-  color: var(--accent-strong);
+  color: var(--accent-2);
   background: var(--accent-soft);
 }
 
@@ -556,9 +592,10 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-.done__note {
-  margin: 20px auto 0;
+.done .done__note {
   max-width: 300px;
+  margin: 20px auto 0;
+  text-align: center;
   color: var(--text-faint);
   font-size: 12.5px;
   line-height: 1.5;
@@ -582,7 +619,7 @@ body {
 /* ---------- Footer / toast ---------- */
 
 .footer {
-  padding: 20px;
+  padding: 16px 20px 20px;
   text-align: center;
   font-size: 12px;
   color: var(--text-faint);
@@ -685,12 +722,8 @@ body {
 }
 
 @media (max-width: 440px) {
-  .topbar {
-    padding: 15px 18px;
-  }
-
   .stage {
-    padding: 6vh 18px 32px;
+    padding: clamp(32px, 8vh, 80px) 18px 20px;
   }
 
   .otp__input {
