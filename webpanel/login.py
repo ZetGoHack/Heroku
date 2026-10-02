@@ -40,7 +40,7 @@ from herokutl.tl.tlobject import TLRequest
 from herokutl.tl.types import CodeSettings
 from herokutl.utils import parse_phone
 
-from heroku.qr import QRCode
+from heroku.qr import ERROR_CORRECT_Q, QRCode
 from heroku.tl_cache import CustomTelegramClient
 from heroku.version import __version__
 
@@ -411,13 +411,13 @@ class LoginManager:
         if self._qr is None:
             return None
 
-        code = QRCode(border=2)
+        code = QRCode(border=2, error_correction=ERROR_CORRECT_Q)
         code.add_data(self._qr.url)
         code.make()
         matrix = code.get_matrix()
         size = len(matrix)
         cells = "".join(
-            f'<rect x="{x}" y="{y}" width="1" height="1"/>'
+            f'<rect x="{x}" y="{y}" width="1" height="1" rx="0.34"/>'
             for y, row in enumerate(matrix)
             for x, cell in enumerate(row)
             if cell
@@ -425,9 +425,9 @@ class LoginManager:
 
         return (
             f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {size} {size}" '
-            f'shape-rendering="crispEdges">'
+            f'shape-rendering="geometricPrecision">'
             f'<rect width="{size}" height="{size}" fill="#ffffff"/>'
-            f'<g fill="#000000">{cells}</g></svg>'
+            f'<g fill="#6c60cf">{cells}</g></svg>'
         )
 
     async def _cancel_qr(self) -> None:
