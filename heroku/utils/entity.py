@@ -6,12 +6,14 @@
 
 import asyncio
 import inspect
+import io
 import logging
 import random
 import re
 import string
 import time
 import typing
+from pathlib import Path
 from urllib.parse import urlparse
 
 import emoji
@@ -227,7 +229,7 @@ async def asset_channel(
     silent: bool = False,
     archive: bool = False,
     invite_bot: bool = False,
-    avatar: str | None = None,
+    avatar: str | bytes | Path | None = None,
     ttl: int | None = None,
     forum: bool = False,
     hide_general: bool = False,
@@ -300,7 +302,10 @@ async def asset_channel(
 
     if avatar:
         await fw_protect()
-        await set_avatar(client, peer, avatar)
+        try:
+            await set_avatar(client, peer, avatar)
+        except Exception:
+            logger.exception("Failed to set asset channel avatar")
 
     if hide_general and forum:
         await fw_protect()
@@ -469,37 +474,99 @@ async def get_topic_id(db: "Database", topic_name: str) -> int | None:
         return None
 
 
+MIN_AVATAR_SIDE = 160
+
+
+def _is_valid_avatar(image: bytes) -> bool:
+    """Return ``True`` when *image* is a picture large enough for Telegram."""
+
+    try:
+        from PIL import Image
+
+        with Image.open(io.BytesIO(image)) as im:
+            width, height = im.size
+    except Exception:
+        logger.debug("Avatar is not a readable image", exc_info=True)
+        return False
+
+    if width < MIN_AVATAR_SIDE or height < MIN_AVATAR_SIDE:
+        logger.warning(
+            "Avatar is too small (%sx%s), Telegram requires at least %sx%s",
+            width,
+            height,
+            MIN_AVATAR_SIDE,
+            MIN_AVATAR_SIDE,
+        )
+        return False
+
+    return True
+
+
 async def set_avatar(
     client: CustomTelegramClient,
     peer: hints.Entity,
-    avatar: str,
+    avatar: str | bytes | Path,
 ) -> bool:
     """
     Sets an entity avatar
     :param client: Client to use
     :param peer: Peer to set avatar to
-    :param avatar: Avatar to set
+    :param avatar: URL, local file path or raw bytes of the avatar
     :return: True if avatar was set, False otherwise
     """
+    if isinstance(avatar, Path):
+        avatar = str(avatar)
+
     if isinstance(avatar, str) and check_url(avatar):
-        f = (
-            await run_sync(
-                requests.get,
+        try:
+            response = await run_sync(requests.get, avatar, timeout=20)
+        except Exception:
+            logger.exception("Failed to download avatar %s", avatar)
+            return False
+
+        if response.status_code != 200 or not response.content:
+            logger.warning(
+                "Avatar %s is unavailable (HTTP %s)",
                 avatar,
+                response.status_code,
             )
-        ).content
+            return False
+
+        content_type = response.headers.get("Content-Type", "")
+        if "image" not in content_type.lower():
+            logger.warning(
+                "Avatar %s is not an image (Content-Type: %s)",
+                avatar,
+                content_type,
+            )
+            return False
+
+        f = response.content
+    elif isinstance(avatar, str):
+        try:
+            f = Path(avatar).read_bytes()
+        except OSError:
+            logger.warning("Avatar file %s not found", avatar)
+            return False
     elif isinstance(avatar, bytes):
         f = avatar
     else:
         return False
 
-    await fw_protect()
-    res = await client(
-        EditPhotoRequest(
-            channel=peer,
-            photo=await client.upload_file(f, file_name="photo.png"),
+    if not _is_valid_avatar(f):
+        return False
+
+    try:
+        await fw_protect()
+        res = await client(
+            EditPhotoRequest(
+                channel=peer,
+                photo=await client.upload_file(f, file_name="photo.png"),
+            )
         )
-    )
+    except Exception:
+        logger.exception("Failed to set avatar")
+        return False
 
     await fw_protect()
 
