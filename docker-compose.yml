@@ -1,8 +1,9 @@
 services:
   worker:
     container_name: heroku_ub
-    build:
-      context: .
+    build: .
+    ports:
+      - "8000:8000"
     volumes:
       - worker:/data
     stop_signal: SIGINT

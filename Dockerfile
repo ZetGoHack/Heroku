@@ -1,10 +1,17 @@
+FROM ghcr.io/astral-sh/uv:latest AS uv
+
 FROM python:3.14
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_DEFAULT_TIMEOUT=100 \
     DOCKER=true \
-    GIT_PYTHON_REFRESH=quiet
+    GIT_PYTHON_REFRESH=quiet \
+    UV_SYSTEM_PYTHON=1 \
+    UV_LINK_MODE=copy \
+    UV_COMPILE_BYTECODE=1
+
+COPY --from=uv /uv /uvx /bin/
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
     build-essential \
@@ -27,16 +34,16 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-WORKDIR /data
-RUN mkdir /data/private
+# /data is the runtime data root (kept in a volume), /app holds the code.
+RUN mkdir -p /data/private /app
 
-RUN git clone https://github.com/ZetGoHack/Heroku /data/Heroku
+WORKDIR /app
 
-WORKDIR /data/Heroku
+# Install dependencies first so Docker can cache this layer
+COPY requirements.txt .
+RUN uv pip install --no-cache -r requirements.txt
 
-ARG HEROKU_REF=master
-RUN git fetch origin "${HEROKU_REF}" && git checkout "${HEROKU_REF}" && git pull origin "${HEROKU_REF}"
-
-RUN pip install --no-cache-dir --no-warn-script-location --disable-pip-version-check --upgrade -r requirements.txt
+# Copy the local project instead of cloning it from GitHub
+COPY . .
 
 CMD ["python", "-m", "heroku", "--root"]
