@@ -425,7 +425,7 @@ test:
   hint: "Подсказка"
   ping_emoji: "Эмодзи когда пинг норм."
   back: "↩️ Назад"
-  banner_url: "Картинка для пинга, типа: https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/ping_cmd.png"
+  banner_url: "Картинка для пинга, типа: https://raw.githubusercontent.com/staxxy403/Heroku/master/assets/heroku.png"
   logs_caption: "<tg-emoji emoji-id=5350594756126721186>🪐</tg-emoji> <b>Логи Heroku (lvl</b> <code>{}</code><b>)</b>\n\n<tg-emoji emoji-id=5228879218363872764>⚪️</tg-emoji> <b>Версия: {}.{}.{}</b>{}"
   debugging_enabled: "<tg-emoji emoji-id=5332533929020761310>✅</tg-emoji> <b>Режим дебага ON для</b> <code>{0}</code>\n<i>Иди в `debug_modules`, правь `{0}.py`, и смотри че будет</i>"
   debugging_disabled: "<tg-emoji emoji-id=5332533929020761310>✅</tg-emoji> <b>Режим дебага OFF</b>"

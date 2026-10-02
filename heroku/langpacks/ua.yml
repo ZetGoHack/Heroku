@@ -425,7 +425,7 @@ test:
   hint: "Встановіть підказку"
   ping_emoji: "Емоджі, який з'являється, коли пінг не збільшується суттєво"
   back: "↩️ Назад"
-  banner_url: "Картинка для вашого пінгу, наприклад: https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/ping_cmd.png"
+  banner_url: "Картинка для вашого пінгу, наприклад: https://raw.githubusercontent.com/staxxy403/Heroku/master/assets/heroku.png"
   logs_caption: "<tg-emoji emoji-id=5350594756126721186>🪐</tg-emoji> <b>Логи Heroku рівня</b> <code>{}</code>\n\n<tg-emoji emoji-id=5228879218363872764>⚪️</tg-emoji> <b>Версія: {}.{}.{}</b>{}"
   debugging_enabled: "<tg-emoji emoji-id=5332533929020761310>✅</tg-emoji> <b>Режим розробника увімкнено для модуля</b> <code>{0}</code>\n<i>Прямуй до директорії `debug_modules`, змінюй файл `{0}.py`, и смотри изменения в режиме реального времени</i>"
   debugging_disabled: "<tg-emoji emoji-id=5332533929020761310>✅</tg-emoji> <b>Режим розробника вімкнено</b>"

@@ -268,20 +268,28 @@ class UpdaterMod(loader.Module):
                     manual_update = True
 
             if manual_update:
-                m = await self.inline.bot.send_photo(
-                    self.tg_id,
-                    "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/updated.png",
-                    caption=self.strings["update_required"].format(
-                        current[:6],
-                        '<a href="https://github.com/staxxy403/Heroku/compare/{}...{}">{}</a>'.format(
-                            current[:12],
-                            self._pending[:12],
-                            self._pending[:6],
-                        ),
-                        changelog,
+                text = self.strings["update_required"].format(
+                    current[:6],
+                    '<a href="https://github.com/staxxy403/Heroku/compare/{}...{}">{}</a>'.format(
+                        current[:12],
+                        self._pending[:12],
+                        self._pending[:6],
                     ),
+                    changelog,
+                )
+                m = await utils.assets.send_photo(
+                    self.inline.bot,
+                    self.tg_id,
+                    "updated.png",
+                    caption=text,
                     reply_markup=self._markup(),
                 )
+                if m is None:
+                    m = await self.inline.bot.send_message(
+                        self.tg_id,
+                        text,
+                        reply_markup=self._markup(),
+                    )
 
                 self._notified = self._pending
                 self.set("ignore_permanent", False)
@@ -291,19 +299,23 @@ class UpdaterMod(loader.Module):
                 self.set("upd_msg", m.message_id)
 
             else:
-                m = await self.inline.bot.send_photo(
-                    self.tg_id,
-                    "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/updated.png",
-                    caption=self.strings["autoupdate_notifier"].format(
-                        self._pending[:6],
-                        changelog,
-                        '<a href="https://github.com/staxxy403/Heroku/compare/{}...{}">{}</a>'.format(
-                            current[:12],
-                            self._pending[:12],
-                            "🔎 diff",
-                        ),
+                text = self.strings["autoupdate_notifier"].format(
+                    self._pending[:6],
+                    changelog,
+                    '<a href="https://github.com/staxxy403/Heroku/compare/{}...{}">{}</a>'.format(
+                        current[:12],
+                        self._pending[:12],
+                        "🔎 diff",
                     ),
                 )
+                m = await utils.assets.send_photo(
+                    self.inline.bot,
+                    self.tg_id,
+                    "updated.png",
+                    caption=text,
+                )
+                if m is None:
+                    await self.inline.bot.send_message(self.tg_id, text)
                 await self.invoke("update", "-f", peer=self.inline.bot_username)
 
     async def _delete_all_upd_messages(self):
@@ -699,31 +711,39 @@ class UpdaterMod(loader.Module):
             self.set("do_not_create", True)
 
         if not self.config["autoupdate"] and not self.get("autoupdate_answered", False):
-            await self.inline.bot.send_photo(
-                self.tg_id,
-                photo="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/unit_alpha.png",
-                caption=self.strings["autoupdate"],
-                reply_markup=self.inline.generate_markup(
+            autoupdate_markup = self.inline.generate_markup(
+                [
                     [
-                        [
-                            {
-                                "text": "✅ Turn on",
-                                "callback": self._set_autoupdate_state,
-                                "args": (True,),
-                                "style": "success",
-                            }
-                        ],
-                        [
-                            {
-                                "text": "🚫 Turn off",
-                                "callback": self._set_autoupdate_state,
-                                "args": (False,),
-                                "style": "danger",
-                            }
-                        ],
-                    ]
-                ),
+                        {
+                            "text": "✅ Turn on",
+                            "callback": self._set_autoupdate_state,
+                            "args": (True,),
+                            "style": "success",
+                        }
+                    ],
+                    [
+                        {
+                            "text": "🚫 Turn off",
+                            "callback": self._set_autoupdate_state,
+                            "args": (False,),
+                            "style": "danger",
+                        }
+                    ],
+                ]
             )
+            sent = await utils.assets.send_photo(
+                self.inline.bot,
+                self.tg_id,
+                "unit_alpha.png",
+                caption=self.strings["autoupdate"],
+                reply_markup=autoupdate_markup,
+            )
+            if sent is None:
+                await self.inline.bot.send_message(
+                    self.tg_id,
+                    self.strings["autoupdate"],
+                    reply_markup=autoupdate_markup,
+                )
 
     async def _add_folder(self):
         folders = await self._client(GetDialogFiltersRequest())

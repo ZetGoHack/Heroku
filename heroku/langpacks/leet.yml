@@ -439,7 +439,7 @@ test:
   hint: "S37 4 h1n7"
   ping_emoji: "3m0j1 7h47 4pp34r5 wh3n p1ng d035 n07 1ncr3453 51gn1f1c4n7ly"
   back: "↩️ B4ck"
-  banner_url: "1m4g3 4 ur p1ng, e.g.: https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/ping_cmd.png"
+  banner_url: "1m4g3 4 ur p1ng, e.g.: https://raw.githubusercontent.com/staxxy403/Heroku/master/assets/heroku.png"
   logs_caption: "<tg-emoji emoji-id=5350594756126721186>🪐</tg-emoji> <b>H3r0ku l0g5 w17h v3rb0517y</b> <code>{}</code>\n\n<tg-emoji emoji-id=5228879218363872764>⚪️</tg-emoji> <b>V3r510n: {}.{}.{}</b>{}"
   suspend_invalid_time: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>1nv4l1d 71m3 2 su5p3nd</b>"
   suspended: "<tg-emoji emoji-id=5452023368054216810>🥶</tg-emoji> <b>B07 su5p3nd3d 4 {}</b>"

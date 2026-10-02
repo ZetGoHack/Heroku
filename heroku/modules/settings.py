@@ -115,7 +115,7 @@ class CoreMod(loader.Module):
                 f"{herokutl.__version__} #{herokutl.tl.alltlobjects.LAYER}",
             )
             + (branch_text),
-            file="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_cmd.png",
+            **utils.assets.file_kwargs("heroku_cmd.png"),
             reply_to=getattr(message, "reply_to_msg_id", None),
         )
 
@@ -649,16 +649,19 @@ class CoreMod(loader.Module):
                 self.strings["choose_installation"],
                 message,
                 reply_markup=self._markup(),
-                photo="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_installation.png",
+                **utils.assets.photo_kwargs("heroku_installation.png"),
             )
         ):
 
-            await self.client.send_file(
+            sent = await utils.assets.send_file(
+                self.client,
                 message.peer_id,
-                "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_installation.png",
+                "heroku_installation.png",
                 caption=self.strings["vds_install"],
                 reply_to=getattr(message, "reply_to_msg_id", None),
             )
+            if sent is None:
+                await utils.answer(message, self.strings["vds_install"])
         match True:
             case _ if "-vds" in args:
                 await utils.answer(message, self.strings["vds_install"])

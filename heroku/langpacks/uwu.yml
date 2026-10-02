@@ -439,7 +439,7 @@ test:
   hint: "Set a hint"
   ping_emoji: "Emoji dat appeaws when ping does nyot incwease signyificantwy"
   back: "↩️ Back"
-  banner_url: "Image fow youw ping, fow exampwe: https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/ping_cmd.png"
+  banner_url: "Image fow youw ping, fow exampwe: https://raw.githubusercontent.com/staxxy403/Heroku/master/assets/heroku.png"
   logs_caption: "<tg-emoji emoji-id=5350594756126721186>🪐</tg-emoji> <b>Heroku wogs with vewbosity</b> <code>{}</code>\n\n<tg-emoji emoji-id=5228879218363872764>⚪️</tg-emoji> <b>Vewsion: {}.{}.{}</b>{}"
   suspend_invalid_time: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Invawid time to suspend</b>"
   suspended: "<tg-emoji emoji-id=5452023368054216810>🥶</tg-emoji> <b>Bot suspended fow {}</b>"

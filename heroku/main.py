@@ -1078,9 +1078,10 @@ class Heroku:
                     .get_logs_topic_id_by_client(client.tg_id)
                 )
 
-                await client.heroku_inline.bot.send_photo(
+                await utils.assets.send_photo(
+                    client.heroku_inline.bot,
                     log_chat_id,
-                    "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_started.png",
+                    "heroku_started.png",
                     caption=(
                         "{} <b>{} started!</b>\n\n<tg-emoji emoji-id=5231065262228250587>⚙</tg-emoji> <b>GitHub commit SHA: <a"
                         ' href="https://github.com/staxxy403/Heroku/commit/{}">{}</a></b>\n<tg-emoji emoji-id=5873225338984599714>🔎</tg-emoji>'

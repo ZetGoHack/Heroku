@@ -74,6 +74,16 @@ def photo_kwargs(name: str) -> dict:
     return {"photo": found} if found is not None else {}
 
 
+def file_kwargs(name: str) -> dict:
+    """Build ``{"file": <path>}`` or ``{}`` when the asset is missing.
+
+    Meant to be splatted into ``utils.answer(..., **kwargs)`` calls.
+    """
+
+    found = photo(name)
+    return {"file": found} if found is not None else {}
+
+
 async def send_photo(
     target,
     chat_id,

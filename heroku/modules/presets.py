@@ -126,12 +126,20 @@ class Presets(loader.Module):
         await self._menu()
 
     async def _menu(self):
-        await self.inline.bot.send_photo(
+        menu_markup = self.inline.generate_markup(self._markup_gen())
+        sent = await utils.assets.send_photo(
+            self.inline.bot,
             self._client.tg_id,
-            "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/presets_cmd.png",
+            "presets_cmd.png",
             caption=self.strings["welcome"],
-            reply_markup=self.inline.generate_markup(self._markup_gen()),
+            reply_markup=menu_markup,
         )
+        if sent is None:
+            await self.inline.bot.send_message(
+                self._client.tg_id,
+                self.strings["welcome"],
+                reply_markup=menu_markup,
+            )
 
     async def _back(self, call: InlineCall):
         await call.edit(self.strings["welcome"], reply_markup=self._markup_gen())
@@ -349,7 +357,7 @@ class Presets(loader.Module):
         """| Packs of modules to load"""
         await self.inline.form(
             message=message,
-            photo="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/presets_cmd.png",
+            **utils.assets.photo_kwargs("presets_cmd.png"),
             text=self.strings["welcome"].replace(
                 "/presets", self.get_prefix() + "presets"
             ),

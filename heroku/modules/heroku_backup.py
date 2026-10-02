@@ -39,33 +39,41 @@ class HerokuBackupMod(loader.Module):
 
     async def client_ready(self):
         if not self.get("period"):
-            await self.inline.bot.send_photo(
-                self.tg_id,
-                photo="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/unit_alpha.png",
-                caption=self.strings["period"],
-                reply_markup=self.inline.generate_markup(
-                    utils.chunks(
-                        [
-                            {
-                                "text": f"🕰 {i} h",
-                                "callback": self._set_backup_period,
-                                "args": (i,),
-                            }
-                            for i in [1, 2, 4, 6, 8, 12, 24, 48, 168]
-                        ],
-                        3,
-                    )
-                    + [
-                        [
-                            {
-                                "text": "🚫 Never",
-                                "callback": self._set_backup_period,
-                                "args": (0,),
-                            }
-                        ]
+            period_markup = self.inline.generate_markup(
+                utils.chunks(
+                    [
+                        {
+                            "text": f"🕰 {i} h",
+                            "callback": self._set_backup_period,
+                            "args": (i,),
+                        }
+                        for i in [1, 2, 4, 6, 8, 12, 24, 48, 168]
+                    ],
+                    3,
+                )
+                + [
+                    [
+                        {
+                            "text": "🚫 Never",
+                            "callback": self._set_backup_period,
+                            "args": (0,),
+                        }
                     ]
-                ),
+                ]
             )
+            sent = await utils.assets.send_photo(
+                self.inline.bot,
+                self.tg_id,
+                "unit_alpha.png",
+                caption=self.strings["period"],
+                reply_markup=period_markup,
+            )
+            if sent is None:
+                await self.inline.bot.send_message(
+                    self.tg_id,
+                    self.strings["period"],
+                    reply_markup=period_markup,
+                )
 
         self._content_channel_id = await utils.wait_for_content_channel(self._db)
 
