@@ -13,6 +13,7 @@ stays thin.
 from __future__ import annotations
 
 import asyncio
+import base64
 import contextlib
 import logging
 import re
@@ -119,6 +120,7 @@ class LoginManager:
         self.phone: str | None = None
         self.password_hint: str | None = None
         self.me: typing.Any = None
+        self.avatar: str | None = None
         self.step = "credentials"
         self.logged_in = asyncio.Event()
         self._lock = asyncio.Lock()
@@ -165,6 +167,7 @@ class LoginManager:
             "username": getattr(self.me, "username", None),
             "first_name": getattr(self.me, "first_name", None),
             "last_name": getattr(self.me, "last_name", None),
+            "avatar": self.avatar,
         }
 
     # ------------------------------------------------------------------
@@ -227,6 +230,7 @@ class LoginManager:
         self.client = None
         self.phone = None
         self.password_hint = None
+        self.avatar = None
         self._reset_recaptcha()
 
     async def close(self) -> None:
@@ -578,6 +582,21 @@ class LoginManager:
             logger.debug("Failed to fetch 2FA hint", exc_info=True)
             return None
 
+    async def _fetch_avatar(self, user: typing.Any) -> str | None:
+        if self.client is None or user is None or not getattr(user, "photo", None):
+            return None
+
+        try:
+            data = await self.client.download_profile_photo(user, file=bytes)
+        except Exception:
+            logger.debug("Failed to download profile photo", exc_info=True)
+            return None
+
+        if isinstance(data, (bytes, bytearray)) and data:
+            return "data:image/jpeg;base64," + base64.b64encode(data).decode()
+
+        return None
+
     async def _complete(self, user: typing.Any) -> None:
         if user is None and self.client is not None:
             user = await self.client.get_me()
@@ -589,6 +608,7 @@ class LoginManager:
             self.client.tg_id = user.id
             self.client.hikka_me = user
             self.client.heroku_me = user
+            self.avatar = await self._fetch_avatar(user)
 
         self.step = "done"
         self.logged_in.set()

@@ -702,12 +702,34 @@ function onSuccess(account) {
     const handle = account.username ? `@${account.username}` : `id ${account.id}`;
 
     els.account.innerHTML = "";
+
+    if (account.avatar) {
+      const avatar = document.createElement("img");
+      avatar.className = "account__avatar";
+      avatar.src = account.avatar;
+      avatar.alt = "";
+      els.account.append(avatar);
+    } else {
+      const fallback = document.createElement("span");
+      fallback.className = "account__avatar account__avatar--fallback";
+      fallback.textContent = (name[0] || "?").toUpperCase();
+      els.account.append(fallback);
+    }
+
+    const meta = document.createElement("span");
+    meta.className = "account__meta";
+
     const nameEl = document.createElement("span");
+    nameEl.className = "account__name";
     nameEl.textContent = name;
+
     const idEl = document.createElement("span");
     idEl.className = "account__id";
     idEl.textContent = handle;
-    els.account.append(nameEl, idEl);
+
+    meta.append(nameEl, idEl);
+    els.account.append(meta);
+    els.account.classList.toggle("account--avatar", Boolean(account.avatar));
     els.account.hidden = false;
   }
 
