@@ -41,6 +41,8 @@ from herokutl.errors import (
     PasswordHashInvalidError,
     PhoneNumberInvalidError,
     SessionPasswordNeededError,
+    UserDeactivatedBanError,
+    UserDeactivatedError,
 )
 from herokutl.errors.rpcerrorlist import (
     AuthKeyUnregisteredError,
@@ -914,6 +916,16 @@ class Heroku:
 
         return True
 
+    def _drop_session(self, session, *, unlink: bool = False) -> None:
+        """Remove a session from the active list and optionally its files."""
+        if session in self.sessions:
+            self.sessions.remove(session)
+
+        filename = getattr(session, "filename", None)
+        if unlink and filename:
+            Path(filename).unlink(missing_ok=True)
+            Path(f"{filename}-journal").unlink(missing_ok=True)
+
     async def _init_clients(self) -> bool:
         """
         Reads session from disk and inits them
@@ -938,8 +950,14 @@ class Heroku:
                     patcher.patch(client, session)
 
                 await client.connect()
-                client.phone = "None"
 
+                # Validate the session right away: a revoked one must be caught
+                # here, before we decide to run the userbot instead of the panel.
+                me = await client.get_me()
+                if me is None:
+                    raise AuthKeyUnregisteredError(request=None)
+
+                client.phone = "None"
                 self.clients += [client]
             except sqlite3.OperationalError:
                 logging.error(
@@ -948,42 +966,69 @@ class Heroku:
                     session.filename,
                 )
                 continue
-            except (TypeError, AuthKeyDuplicatedError):
-                Path(session.filename).unlink(missing_ok=True)
-                self.sessions.remove(session)
             except (ValueError, ApiIdInvalidError):
-                # Bad API hash/ID
-                run_config()
+                # Bad API hash/ID; let the caller ask for credentials again
+                logging.error("Invalid API credentials, login is required")
                 return False
+            except (TypeError, AuthKeyDuplicatedError):
+                self._drop_session(session, unlink=True)
             except PhoneNumberInvalidError:
                 logging.error(
                     "Phone number is incorrect. Use international format (+XX...) "
                     "and don't put spaces in it."
                 )
-                self.sessions.remove(session)
-            except (AuthKeyUnregisteredError, InteractiveAuthRequired):
+                self._drop_session(session)
+            except (
+                AuthKeyUnregisteredError,
+                UserDeactivatedError,
+                UserDeactivatedBanError,
+                InteractiveAuthRequired,
+            ):
                 logging.error(
                     "Session %s was terminated and re-auth is required",
                     session.filename,
                 )
-                self.sessions.remove(session)
+                self._drop_session(session, unlink=True)
 
         return bool(self.sessions)
 
     async def amain_wrapper(self, client: CustomTelegramClient, a_i: list):
         """Wrapper around amain"""
-        async with client:
-            first = True
-            me = await client.get_me()
-            client._tg_id = me.id
-            client.tg_id = me.id
-            client.hikka_me = me
-            client.heroku_me = me
+        try:
+            async with client:
+                first = True
+                me = await client.get_me()
+                if me is None:
+                    raise AuthKeyUnregisteredError(request=None)
 
-            #await version.check_branch(me.id, a_i, self)
+                client._tg_id = me.id
+                client.tg_id = me.id
+                client.hikka_me = me
+                client.heroku_me = me
 
-            while await self.amain(first, client):
-                first = False
+                #await version.check_branch(me.id, a_i, self)
+
+                while await self.amain(first, client):
+                    first = False
+        except (
+            AuthKeyUnregisteredError,
+            AuthKeyDuplicatedError,
+            UserDeactivatedError,
+            UserDeactivatedBanError,
+            InteractiveAuthRequired,
+        ):
+            session = getattr(client, "session", None)
+            logging.error(
+                "Session %s is no longer valid, re-auth is required",
+                getattr(session, "filename", "?"),
+            )
+
+            if session is not None:
+                self._drop_session(session, unlink=True)
+
+            # Restart into a clean state: with the dead session gone the login
+            # panel will be shown instead of crash-looping.
+            restart()
 
     async def _badge(self, client: CustomTelegramClient):
         """Call the badge in shell"""
