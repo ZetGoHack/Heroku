@@ -42,6 +42,7 @@ const els = {
   btnPhone: $("#btn-phone"),
   errPhone: $("#err-phone"),
   backCredentials: $("#back-credentials"),
+  btnQr: $("#btn-qr"),
   methodHint: $("#method-hint"),
   errRecaptcha: $("#err-recaptcha"),
   btnRecaptchaKeys: $("#btn-recaptcha-keys"),
@@ -263,7 +264,7 @@ function updateMethodHint() {
 
   els.methodHint.textContent =
     selected.value === "custom"
-      ? "Со своими ключами вход по номеру телефона, коду и паролю."
+      ? "Со своими ключами вход по номеру телефона или по QR-коду."
       : "С официальными ключами вход только по QR-коду.";
 }
 
@@ -331,7 +332,7 @@ async function submitCredentials() {
       go("phone");
       els.phone.focus();
     } else {
-      await startQrFlow();
+      await startQrFlow(els.errCredentials);
     }
   } catch (error) {
     showError(els.errCredentials, errText(error));
@@ -428,7 +429,7 @@ function applyQrInfo(qr) {
       : "Ожидаем сканирование…";
 }
 
-async function startQrFlow() {
+async function startQrFlow(errorEl = els.errCredentials) {
   clearError(els.errQr);
   clearError(els.errRecaptcha);
 
@@ -443,7 +444,7 @@ async function startQrFlow() {
     if (error.data && error.data.error === "recaptcha_required") {
       showRecaptchaNotice();
     } else {
-      showError(els.errCredentials, errText(error));
+      showError(errorEl, errText(error));
     }
   }
 }
@@ -753,6 +754,16 @@ function bindEvents() {
     go("credentials");
     updateMethodHint();
   });
+  els.btnQr.addEventListener("click", async () => {
+    if (els.btnQr.disabled) return;
+    clearError(els.errPhone);
+    setLoading(els.btnQr, true);
+    try {
+      await startQrFlow(els.errPhone);
+    } finally {
+      setLoading(els.btnQr, false);
+    }
+  });
   els.backPhoneQr.addEventListener("click", backFromQr);
 
   els.phone.addEventListener("keydown", (event) => {
@@ -779,7 +790,7 @@ async function boot() {
   prefillCredentials(state);
 
   if (state.step === "phone" && isPresetApiId(state.api_id)) {
-    await startQrFlow();
+    await startQrFlow(els.errCredentials);
   } else if (state.step === "phone") {
     go("phone");
     els.phone.focus();
