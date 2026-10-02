@@ -329,10 +329,11 @@ class UpdaterMod(loader.Module):
     @loader.callback_handler()
     async def update_call(self, call: InlineCall):
         """Process update buttons clicks"""
-        if NO_GIT:
-            await call.answer("Git disabled via --no-git.", show_alert=True)
-            return
         if call.data not in {"heroku/update", "heroku/ignore_upd"}:
+            return
+        if NO_GIT:
+            # Git updates are unavailable: dismiss the button silently.
+            await call.answer()
             return
 
         if call.data == "heroku/ignore_upd":
@@ -615,6 +616,8 @@ class UpdaterMod(loader.Module):
     @loader.command()
     async def autoupdate(self, message: Message):
         """| switch autoupdate state"""
+        if NO_GIT:
+            return
         self.config["autoupdate"] = not self.config["autoupdate"]
         if self.config["autoupdate"]:
             await utils.answer(message, self.strings["autoupdate_on"])
@@ -629,8 +632,6 @@ class UpdaterMod(loader.Module):
         hard: bool = False,
     ):
         if NO_GIT:
-            with contextlib.suppress(Exception):
-                await utils.answer(msg_obj, "<b>Git disabled via --no-git.</b>")
             return
 
         # We don't really care about asyncio at this point, as we are shutting down
@@ -710,7 +711,11 @@ class UpdaterMod(loader.Module):
 
             self.set("do_not_create", True)
 
-        if not self.config["autoupdate"] and not self.get("autoupdate_answered", False):
+        if (
+            not NO_GIT
+            and not self.config["autoupdate"]
+            and not self.get("autoupdate_answered", False)
+        ):
             autoupdate_markup = self.inline.generate_markup(
                 [
                     [
