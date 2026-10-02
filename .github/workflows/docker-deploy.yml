@@ -32,4 +32,4 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker buildx build --push --tag codrago/heroku:latest .
+          docker buildx build --push --tag staxxy403/heroku:latest .

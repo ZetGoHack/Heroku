@@ -3,7 +3,7 @@ set -euo pipefail
 
 APP_NAME="Heroku"
 MODULE_NAME="heroku"
-REPO_URL="${HEROKU_REPO_URL:-https://github.com/ZetGoHack/Heroku.git}"
+REPO_URL="${HEROKU_REPO_URL:-https://github.com/staxxy403/Heroku.git}"
 VENV_DIR="${HEROKU_VENV_DIR:-.venv}"
 LOG_FILE="heroku-install.log"
 

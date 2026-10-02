@@ -6,7 +6,7 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/staxxy403/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -65,7 +65,7 @@ class UpdaterMod(loader.Module):
         self.config = loader.ModuleConfig(
             loader.ConfigValue(
                 "GIT_ORIGIN_URL",
-                "https://github.com/ZetGoHack/Heroku",
+                "https://github.com/staxxy403/Heroku",
                 lambda: self.strings["origin_cfg_doc"],
                 validator=loader.validators.Link(),
             ),
@@ -249,7 +249,7 @@ class UpdaterMod(loader.Module):
                 try:
                     async with aiohttp.ClientSession() as session:
                         r = await session.get(
-                            url=f"https://api.github.com/repos/ZetGoHack/Heroku/contents/heroku/version.py?ref={version.branch}",
+                            url=f"https://api.github.com/repos/staxxy403/Heroku/contents/heroku/version.py?ref={version.branch}",
                             headers={"Accept": "application/vnd.github.v3.raw"},
                         )
                         text = await r.text()
@@ -273,7 +273,7 @@ class UpdaterMod(loader.Module):
                     "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/updated.png",
                     caption=self.strings["update_required"].format(
                         current[:6],
-                        '<a href="https://github.com/ZetGoHack/Heroku/compare/{}...{}">{}</a>'.format(
+                        '<a href="https://github.com/staxxy403/Heroku/compare/{}...{}">{}</a>'.format(
                             current[:12],
                             self._pending[:12],
                             self._pending[:6],
@@ -297,7 +297,7 @@ class UpdaterMod(loader.Module):
                     caption=self.strings["autoupdate_notifier"].format(
                         self._pending[:6],
                         changelog,
-                        '<a href="https://github.com/ZetGoHack/Heroku/compare/{}...{}">{}</a>'.format(
+                        '<a href="https://github.com/staxxy403/Heroku/compare/{}...{}">{}</a>'.format(
                             current[:12],
                             self._pending[:12],
                             "🔎 diff",
