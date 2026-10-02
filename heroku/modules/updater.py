@@ -498,6 +498,9 @@ class UpdaterMod(loader.Module):
         restart()
 
     async def download_common(self):
+        if NO_GIT:
+            return False
+
         def _sync():
             try:
                 with Repo(os.path.dirname(utils.get_base_dir())) as repo:
@@ -613,6 +616,11 @@ class UpdaterMod(loader.Module):
         msg_obj: InlineCall | Message,
         hard: bool = False,
     ):
+        if NO_GIT:
+            with contextlib.suppress(Exception):
+                await utils.answer(msg_obj, "<b>Git disabled via --no-git.</b>")
+            return
+
         # We don't really care about asyncio at this point, as we are shutting down
         if hard:
             os.system(f"cd {utils.get_base_dir()} && cd .. && git reset --hard HEAD")
@@ -649,11 +657,12 @@ class UpdaterMod(loader.Module):
         )
 
     async def client_ready(self):
-        try:
-            with git.Repo():
-                pass
-        except Exception as e:
-            raise loader.LoadError("Can't load due to repo init error") from e
+        if not NO_GIT:
+            try:
+                with git.Repo():
+                    pass
+            except Exception as e:
+                raise loader.LoadError("Can't load due to repo init error") from e
 
         if not self.get("autoupdate_answered"):
             self.set("autoupdate_answered", self.get("autoupdate", False))
