@@ -1,11 +1,21 @@
-"""Ready-to-use API credentials presets.
+"""API credential presets for the web login panel.
 
-.. warning::
+The list is intentionally empty.
 
-    Official Telegram client credentials are published by Telegram and are
-    intended to be used by Telegram's own clients. Using them for a
-    third-party userbot violates Telegram's Terms of Service and may lead to
-    account restrictions. Use them at your own risk.
+Telegram's own sample API ids (the ones bundled with the open-source
+clients, e.g. ``2040`` for Desktop, ``6`` for Android, ``8`` for iOS and
+``2496`` for Web) are limited server-side and are **not** meant for
+third-party apps released to users:
+
+    "This API id is limited on the server side and is not suitable for
+     apps released to end-users — using it for anything but testing
+     purposes will result in the API_ID_PUBLISHED_FLOOD error for your
+     users."
+    — https://core.telegram.org/api/obtaining_api_id
+
+Using them also puts the account under observation and can lead to bans.
+Every user must supply their own api_id / api_hash from
+https://my.telegram.org instead.
 """
 
 from __future__ import annotations
@@ -21,41 +31,12 @@ class ApiPreset(typing.TypedDict):
     note: str
 
 
-API_PRESETS: list[ApiPreset] = [
-    {
-        "id": "telegram-desktop",
-        "name": "Telegram Desktop",
-        "api_id": 2040,
-        "api_hash": "b18441a1ff607e10a989891a5462e627",
-        "note": "Official Telegram Desktop credentials",
-    },
-    {
-        "id": "telegram-android",
-        "name": "Telegram Android",
-        "api_id": 6,
-        "api_hash": "eb06d4abfb49dc3eeb1aeb98ae0f581e",
-        "note": "Official Telegram Android credentials",
-    },
-    {
-        "id": "telegram-ios",
-        "name": "Telegram iOS",
-        "api_id": 8,
-        "api_hash": "7245de8e747a0d6fbe11f7cc14fcc0bb",
-        "note": "Official Telegram iOS credentials",
-    },
-    {
-        "id": "telegram-web",
-        "name": "Telegram Web",
-        "api_id": 2496,
-        "api_hash": "8da85b0d5bfe62527ea62dad0f0c89ec",
-        "note": "Official Telegram Web credentials",
-    },
-]
+API_PRESETS: list[ApiPreset] = []
 
 PRESETS_WARNING = (
-    "Official Telegram credentials are meant for Telegram's own clients. "
-    "Using them for a userbot violates the Terms of Service and may get the "
-    "account restricted. Prefer your own credentials from https://my.telegram.org"
+    "Use your own api_id and api_hash from https://my.telegram.org. "
+    "Telegram's bundled sample keys are rate-limited and trigger "
+    "API_ID_PUBLISHED_FLOOD."
 )
 
 
