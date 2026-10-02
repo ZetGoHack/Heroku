@@ -43,7 +43,8 @@ WORKDIR /app
 
 # Install dependencies first so Docker can cache this layer
 COPY requirements.txt .
-RUN uv pip install --no-cache -r requirements.txt
+RUN uv pip install --no-cache -r requirements.txt \
+    && sha256sum requirements.txt | cut -d' ' -f1 > .requirements_hash
 
 # Copy the local project instead of cloning it from GitHub
 COPY . .
