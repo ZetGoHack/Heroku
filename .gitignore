@@ -175,3 +175,9 @@ Pipfile.lock
 
 heroku.log.*
 unknown_errors.txt
+
+# Bundled user-facing artwork must be tracked despite the media ignore rules
+!assets/*.png
+!assets/*.webp
+!assets/heroku/*.png
+!assets/heroku/*.webp
