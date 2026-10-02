@@ -6,19 +6,13 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const STEP_ORDER = ["credentials", "phone", "code", "password"];
-
 const ERROR_TEXT = {
   invalid_api_id: "API ID должен быть числом.",
   invalid_api_hash: "API HASH должен состоять из 32 hex-символов.",
-  unknown_preset: "Неизвестный вариант ключей.",
   credentials_required: "Сначала укажите API-ключи.",
   invalid_phone: "Неверный номер. Укажите в формате +7 999 123-45-67.",
   phone_required: "Сначала укажите номер телефона.",
-  recaptcha_required: "Telegram требует проверку reCAPTCHA.",
-  recaptcha_token_required: "Пройдите проверку.",
-  recaptcha_not_pending: "Проверка устарела. Запросите код заново.",
-  recaptcha_failed: "Telegram отклонил проверку. Попробуйте войти по QR-коду.",
+  recaptcha_required: "Telegram требует проверку.",
   invalid_code: "Неверный код. Проверьте и попробуйте снова.",
   qr_failed: "Не удалось начать вход по QR-коду. Попробуйте ещё раз.",
   qr_expired: "QR-код не удалось обновить. Начните вход заново.",
@@ -30,10 +24,7 @@ const ERROR_TEXT = {
 };
 
 const els = {
-  steps: $("#steps"),
   panels: $$(".panel"),
-  presets: $("#presets"),
-  custom: $("#custom"),
   apiId: $("#api-id"),
   apiHash: $("#api-hash"),
   btnCredentials: $("#btn-credentials"),
@@ -43,9 +34,9 @@ const els = {
   errPhone: $("#err-phone"),
   backCredentials: $("#back-credentials"),
   btnQr: $("#btn-qr"),
-  methodHint: $("#method-hint"),
   errRecaptcha: $("#err-recaptcha"),
-  btnRecaptchaKeys: $("#btn-recaptcha-keys"),
+  btnRecaptchaQr: $("#btn-recaptcha-qr"),
+  backPhoneRecaptcha: $("#back-phone-recaptcha"),
   qrImage: $("#qr-image"),
   qrStatus: $("#qr-status"),
   errQr: $("#err-qr"),
@@ -67,9 +58,7 @@ const els = {
   toast: $("#toast"),
 };
 
-let presets = [];
 let toastTimer = null;
-let activeStep = "credentials";
 let qrPollTimer = null;
 let qrUrl = null;
 let qrFailures = 0;
@@ -159,8 +148,6 @@ async function countdown(button, seconds) {
 /* ------------------------------------------------------------------ */
 
 function go(step) {
-  activeStep = step;
-
   els.panels.forEach((panel) => {
     panel.hidden = panel.dataset.panel !== step;
   });
@@ -171,170 +158,36 @@ function go(step) {
     void active.offsetWidth;
     active.style.animation = "";
   }
-
-  updateSteps(step);
-}
-
-function updateSteps(step) {
-  if (step === "done" || step === "qr" || step === "recaptcha") {
-    els.steps.hidden = true;
-    return;
-  }
-
-  els.steps.hidden = false;
-
-  const current = STEP_ORDER.indexOf(step);
-  $$(".step", els.steps).forEach((element) => {
-    const index = STEP_ORDER.indexOf(element.dataset.step);
-    if (index <= current) element.hidden = false;
-    element.classList.toggle("is-active", index === current);
-    element.classList.toggle("is-done", index < current);
-  });
 }
 
 /* ------------------------------------------------------------------ */
-/* Step 1 — API credentials                                            */
+/* API credentials                                                     */
 /* ------------------------------------------------------------------ */
-
-function buildPresetRadio(preset, checked) {
-  const label = document.createElement("label");
-  label.className = "preset";
-
-  const input = document.createElement("input");
-  input.type = "radio";
-  input.name = "preset";
-  input.value = preset.id;
-  input.checked = checked;
-
-  input.addEventListener("change", () => {
-    els.custom.hidden = input.value !== "custom";
-    if (!els.custom.hidden) els.apiId.focus();
-    clearError(els.errCredentials);
-    updateMethodHint();
-  });
-
-  const body = document.createElement("span");
-  body.className = "preset__body";
-
-  const name = document.createElement("span");
-  name.className = "preset__name";
-  name.textContent = preset.name;
-
-  const meta = document.createElement("span");
-  meta.className = "preset__meta";
-  meta.textContent = preset.api_id ? `api_id ${preset.api_id}` : preset.note || "";
-
-  body.append(name, meta);
-  label.append(input, body);
-  return label;
-}
-
-async function loadPresets() {
-  let data = { presets: [] };
-  try {
-    data = await api("/api/presets");
-  } catch (_) {
-    /* keep the custom option only */
-  }
-
-  presets = data.presets || [];
-  els.presets.innerHTML = "";
-
-  const custom = {
-    id: "custom",
-    name: "Свои ключи",
-    api_id: null,
-    note: "my.telegram.org",
-  };
-
-  [...presets, custom].forEach((preset, index) => {
-    els.presets.append(buildPresetRadio(preset, index === 0));
-  });
-}
-
-function isPresetApiId(apiId) {
-  return Boolean(apiId) && presets.some((preset) => preset.api_id === apiId);
-}
-
-function updateMethodHint() {
-  const selected = $('input[name="preset"]:checked', els.presets);
-  if (!selected) {
-    els.methodHint.textContent = "";
-    return;
-  }
-
-  els.methodHint.textContent =
-    selected.value === "custom"
-      ? "Со своими ключами вход по номеру телефона или по QR-коду."
-      : "С официальными ключами вход только по QR-коду.";
-}
-
-function prefillCredentials(state) {
-  if (!state) {
-    updateMethodHint();
-    return;
-  }
-
-  if (state.api_id) {
-    const match = presets.find((preset) => preset.api_id === state.api_id);
-    if (match) {
-      const radio = $(
-        `input[name="preset"][value="${match.id}"]`,
-        els.presets
-      );
-      if (radio) radio.checked = true;
-      els.custom.hidden = true;
-      updateMethodHint();
-      return;
-    }
-    els.apiId.value = state.api_id;
-  }
-
-  const custom = $('input[name="preset"][value="custom"]', els.presets);
-  if (custom) custom.checked = true;
-  els.custom.hidden = false;
-  updateMethodHint();
-}
 
 async function submitCredentials() {
   if (els.btnCredentials.disabled) return;
   clearError(els.errCredentials);
 
-  const selected = $('input[name="preset"]:checked', els.presets);
-  if (!selected) {
-    showError(els.errCredentials, "Выберите способ подключения.");
+  const apiId = els.apiId.value.trim();
+  const apiHash = els.apiHash.value.trim();
+
+  if (!/^\d+$/.test(apiId)) {
+    showError(els.errCredentials, ERROR_TEXT.invalid_api_id);
     return;
   }
-
-  const isCustom = selected.value === "custom";
-  let body;
-  if (isCustom) {
-    const apiId = els.apiId.value.trim();
-    const apiHash = els.apiHash.value.trim();
-
-    if (!/^\d+$/.test(apiId)) {
-      showError(els.errCredentials, ERROR_TEXT.invalid_api_id);
-      return;
-    }
-    if (!/^[0-9a-fA-F]{32}$/.test(apiHash)) {
-      showError(els.errCredentials, ERROR_TEXT.invalid_api_hash);
-      return;
-    }
-
-    body = { api_id: Number(apiId), api_hash: apiHash };
-  } else {
-    body = { preset: selected.value };
+  if (!/^[0-9a-fA-F]{32}$/.test(apiHash)) {
+    showError(els.errCredentials, ERROR_TEXT.invalid_api_hash);
+    return;
   }
 
   setLoading(els.btnCredentials, true);
   try {
-    await api("/api/credentials", { method: "POST", body });
-    if (isCustom) {
-      go("phone");
-      els.phone.focus();
-    } else {
-      await startQrFlow(els.errCredentials);
-    }
+    await api("/api/credentials", {
+      method: "POST",
+      body: { api_id: Number(apiId), api_hash: apiHash },
+    });
+    go("phone");
+    els.phone.focus();
   } catch (error) {
     showError(els.errCredentials, errText(error));
   } finally {
@@ -502,7 +355,6 @@ async function backFromQr() {
   }
   clearError(els.errQr);
   go("credentials");
-  updateMethodHint();
 }
 
 /* ------------------------------------------------------------------ */
@@ -772,10 +624,19 @@ function bindEvents() {
     clearError(els.errCode);
     go("phone");
   });
-  els.btnRecaptchaKeys.addEventListener("click", () => {
+  els.btnRecaptchaQr.addEventListener("click", async () => {
+    if (els.btnRecaptchaQr.disabled) return;
+    clearError(els.errRecaptcha);
+    setLoading(els.btnRecaptchaQr, true);
+    try {
+      await startQrFlow(els.errRecaptcha);
+    } finally {
+      setLoading(els.btnRecaptchaQr, false);
+    }
+  });
+  els.backPhoneRecaptcha.addEventListener("click", () => {
     clearError(els.errRecaptcha);
     go("credentials");
-    updateMethodHint();
   });
   els.btnQr.addEventListener("click", async () => {
     if (els.btnQr.disabled) return;
@@ -801,7 +662,6 @@ function bindEvents() {
 
 async function boot() {
   bindEvents();
-  await loadPresets();
 
   let state = {};
   try {
@@ -814,11 +674,11 @@ async function boot() {
     els.hosted.textContent = `Hosted on ${state.platform}`;
   }
 
-  prefillCredentials(state);
+  if (state.api_id) {
+    els.apiId.value = state.api_id;
+  }
 
-  if (state.step === "phone" && isPresetApiId(state.api_id)) {
-    await startQrFlow(els.errCredentials);
-  } else if (state.step === "phone") {
+  if (state.step === "phone") {
     go("phone");
     els.phone.focus();
   } else if (state.step === "qr") {

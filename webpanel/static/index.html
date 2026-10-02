@@ -8,48 +8,35 @@
   <title>Heroku — вход</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
   <main class="stage">
     <div class="stage__inner">
-      <ol class="steps" id="steps">
-        <li class="step is-active" data-step="credentials"></li>
-        <li class="step" data-step="phone"></li>
-        <li class="step" data-step="code"></li>
-        <li class="step" data-step="password" hidden></li>
-      </ol>
-
-      <!-- Шаг 1. API-ключи -->
+      <!-- API-ключи -->
       <div class="panel" data-panel="credentials">
         <header class="head">
           <h1>Вход в Heroku</h1>
-          <p>Укажите API ID и API HASH вашего приложения из <b>my.telegram.org</b>.</p>
+          <p>API ID и API HASH вашего приложения с <b>my.telegram.org</b>.</p>
         </header>
 
-        <div class="presets" id="presets" role="radiogroup" aria-label="API-ключи"></div>
-
-        <div class="custom" id="custom" hidden>
-          <label class="field">
-            <span class="field__label">API ID</span>
-            <input id="api-id" class="input" inputmode="numeric" autocomplete="off"
-                   placeholder="1234567" spellcheck="false" />
-          </label>
-          <label class="field">
-            <span class="field__label">API HASH</span>
-            <input id="api-hash" class="input" inputmode="text" autocomplete="off"
-                   placeholder="32 hex-символа" spellcheck="false" />
-          </label>
-        </div>
-
-        <p class="hint" id="method-hint"></p>
+        <label class="field">
+          <span class="field__label">API ID</span>
+          <input id="api-id" class="input input--lg" inputmode="numeric" autocomplete="off"
+                 placeholder="1234567" spellcheck="false" />
+        </label>
+        <label class="field">
+          <span class="field__label">API HASH</span>
+          <input id="api-hash" class="input input--lg" autocomplete="off"
+                 placeholder="32 hex-символа" spellcheck="false" />
+        </label>
 
         <button class="btn" id="btn-credentials" type="button">Продолжить</button>
         <p class="error" id="err-credentials" role="alert" hidden></p>
       </div>
 
-      <!-- Шаг 2. Телефон -->
+      <!-- Номер телефона -->
       <div class="panel" data-panel="phone" hidden>
         <header class="head">
           <h1>Номер телефона</h1>
@@ -63,18 +50,17 @@
         </label>
 
         <button class="btn" id="btn-phone" type="button">Получить код</button>
-        <button class="btn btn--ghost" id="btn-qr" type="button">Войти по QR-коду</button>
+        <button class="link" id="btn-qr" type="button">Войти по QR-коду</button>
         <button class="link" id="back-credentials" type="button">Изменить API-ключи</button>
         <p class="error" id="err-phone" role="alert" hidden></p>
       </div>
 
-      <!-- Вход по QR-коду -->
+      <!-- QR -->
       <div class="panel" data-panel="qr" hidden>
         <header class="head">
           <h1>Вход по QR-коду</h1>
           <p>
-            Откройте Telegram на телефоне → <b>Настройки</b> → <b>Устройства</b> →
-            <b>Подключить устройство</b> и отсканируйте код.
+            Telegram → <b>Настройки</b> → <b>Устройства</b> → <b>Подключить устройство</b>.
           </p>
         </header>
 
@@ -89,26 +75,23 @@
         <p class="error" id="err-qr" role="alert" hidden></p>
       </div>
 
-      <!-- Требуется проверка Telegram -->
+      <!-- Анти-фрод -->
       <div class="panel" data-panel="recaptcha" hidden>
         <header class="head">
           <h1>Нужна проверка Telegram</h1>
-          <p>
-            Для этого IP включена анти-фрод защита, поэтому вход по номеру
-            недоступен. Возьмите официальные ключи — вход по QR-коду обычно
-            проходит без проверки.
-          </p>
+          <p>Вход по номеру заблокирован анти-фродом. QR-код обычно проходит без проверки.</p>
         </header>
 
-        <button class="btn" id="btn-recaptcha-keys" type="button">К выбору ключей</button>
+        <button class="btn" id="btn-recaptcha-qr" type="button">Войти по QR-коду</button>
+        <button class="link" id="back-phone-recaptcha" type="button">Изменить API-ключи</button>
         <p class="error" id="err-recaptcha" role="alert" hidden></p>
       </div>
 
-      <!-- Шаг 3. Код -->
+      <!-- Код -->
       <div class="panel" data-panel="code" hidden>
         <header class="head">
           <h1>Код подтверждения</h1>
-          <p>Отправили код в Telegram на <b id="phone-echo">ваш номер</b>.</p>
+          <p>Отправили код на <b id="phone-echo">ваш номер</b>.</p>
         </header>
 
         <div class="otp" id="otp">
@@ -120,18 +103,16 @@
         </div>
 
         <button class="btn" id="btn-code" type="button">Войти</button>
-        <div class="row">
-          <button class="link" id="resend" type="button">Отправить код ещё раз</button>
-          <button class="link" id="back-phone" type="button">Изменить номер</button>
-        </div>
+        <button class="link" id="resend" type="button">Отправить код ещё раз</button>
+        <button class="link" id="back-phone" type="button">Изменить номер</button>
         <p class="error" id="err-code" role="alert" hidden></p>
       </div>
 
-      <!-- Шаг 4. Облачный пароль -->
+      <!-- 2FA -->
       <div class="panel" data-panel="password" hidden>
         <header class="head">
           <h1>Облачный пароль</h1>
-          <p id="password-hint">Включена двухфакторная защита. Введите пароль.</p>
+          <p id="password-hint">Введите пароль двухфакторной аутентификации.</p>
         </header>
 
         <label class="field">
@@ -154,7 +135,6 @@
           <h1>Готово</h1>
           <p id="done-text">Сессия сохранена. Запускаем юзербота…</p>
           <div class="account" id="account" hidden></div>
-          <div class="pulse" aria-hidden="true"><span></span></div>
           <p class="done__note" id="done-note">
             Панель входа работает, только пока нет активной сессии.
           </p>

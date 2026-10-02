@@ -15,7 +15,6 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .login import LoginError, LoginManager
-from .presets import API_PRESETS, PRESETS_WARNING, find_preset
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -23,7 +22,6 @@ STATIC_DIR = Path(__file__).parent / "static"
 class CredentialsPayload(BaseModel):
     api_id: int | None = None
     api_hash: str | None = None
-    preset: str | None = None
 
 
 class PhonePayload(BaseModel):
@@ -36,10 +34,6 @@ class CodePayload(BaseModel):
 
 class PasswordPayload(BaseModel):
     password: str
-
-
-class RecaptchaPayload(BaseModel):
-    token: str
 
 
 def create_app(manager: LoginManager) -> FastAPI:
@@ -61,10 +55,6 @@ def create_app(manager: LoginManager) -> FastAPI:
     async def health() -> dict:
         return {"ok": True, "step": manager.step}
 
-    @app.get("/api/presets")
-    async def presets() -> dict:
-        return {"ok": True, "warning": PRESETS_WARNING, "presets": API_PRESETS}
-
     @app.get("/api/state")
     async def state() -> dict:
         data = manager.state()
@@ -73,14 +63,7 @@ def create_app(manager: LoginManager) -> FastAPI:
 
     @app.post("/api/credentials")
     async def credentials(payload: CredentialsPayload) -> dict:
-        if payload.preset:
-            preset = find_preset(payload.preset)
-            if preset is None:
-                raise LoginError("unknown_preset", 400)
-            await manager.configure(int(preset["api_id"]), preset["api_hash"])
-        else:
-            await manager.configure(payload.api_id, payload.api_hash)
-
+        await manager.configure(payload.api_id, payload.api_hash)
         return manager.state()
 
     @app.post("/api/send_code")
@@ -91,11 +74,6 @@ def create_app(manager: LoginManager) -> FastAPI:
     @app.post("/api/resend")
     async def resend() -> dict:
         phone = await manager.resend()
-        return {"ok": True, "step": manager.step, "phone": phone}
-
-    @app.post("/api/recaptcha")
-    async def recaptcha(payload: RecaptchaPayload) -> dict:
-        phone = await manager.send_code_with_recaptcha(payload.token)
         return {"ok": True, "step": manager.step, "phone": phone}
 
     @app.post("/api/qr/start")

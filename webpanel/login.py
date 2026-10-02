@@ -18,7 +18,6 @@ import contextlib
 import logging
 import re
 import string
-import struct
 import typing
 from datetime import datetime, timezone
 
@@ -33,10 +32,8 @@ from herokutl.errors import (
     SessionPasswordNeededError,
 )
 from herokutl.sessions import MemorySession
-from herokutl.tl import functions as tl_functions
 from herokutl.tl.functions.account import GetPasswordRequest
 from herokutl.tl.functions.auth import SendCodeRequest
-from herokutl.tl.tlobject import TLRequest
 from herokutl.tl.types import CodeSettings
 from herokutl.utils import parse_phone
 
@@ -51,49 +48,6 @@ logger = logging.getLogger(__name__)
 
 # RECAPTCHA_CHECK_<action>__<sitekey>
 RECAPTCHA_RE = re.compile(r"RECAPTCHA_CHECK_([A-Za-z0-9_]+?)__([A-Za-z0-9_-]+)")
-
-
-class _InvokeWithReCaptchaRequest(TLRequest):
-    """Fallback for ``functions.InvokeWithReCaptchaRequest``.
-
-    ``invokeWithReCaptcha`` is a generic wrapper: its ``{X:Type}`` marker is
-    not serialized, so the payload is just the token plus the wrapped query.
-    Used only if the bundled TL layer lacks the generated class.
-    """
-
-    CONSTRUCTOR_ID = 0xADBB0F94
-    SUBCLASS_OF_ID = 0x00000000
-
-    def __init__(self, token: str, query):
-        self.token = token
-        self.query = query
-
-    def to_dict(self) -> dict:
-        return {
-            "_": "InvokeWithReCaptchaRequest",
-            "token": self.token,
-            "query": self.query.to_dict() if self.query is not None else None,
-        }
-
-    def __bytes__(self) -> bytes:
-        return b"".join(
-            (
-                struct.pack("<I", self.CONSTRUCTOR_ID),
-                self.serialize_bytes(self.token),
-                bytes(self.query),
-            )
-        )
-
-    @classmethod
-    def from_reader(cls, reader):
-        return cls(reader.tgread_string(), reader.tgread_object())
-
-
-InvokeWithReCaptchaRequest = getattr(
-    tl_functions,
-    "InvokeWithReCaptchaRequest",
-    _InvokeWithReCaptchaRequest,
-)
 
 
 class LoginError(Exception):
@@ -124,8 +78,6 @@ class LoginManager:
         self.step = "credentials"
         self.logged_in = asyncio.Event()
         self._lock = asyncio.Lock()
-        self._recaptcha: dict | None = None
-        self._pending_send_code: typing.Any = None
         self._qr: typing.Any = None
         self._qr_task: asyncio.Task | None = None
         self._qr_error: str | None = None
@@ -153,7 +105,6 @@ class LoginManager:
             "api_id": self.api_id,
             "phone": self.phone,
             "password_hint": self.password_hint,
-            "recaptcha": dict(self._recaptcha) if self._recaptcha else None,
             "qr": self.qr_info(),
             "account": self._account(),
         }
@@ -231,8 +182,6 @@ class LoginManager:
         self.phone = None
         self.password_hint = None
         self.avatar = None
-        self._reset_recaptcha()
-
     async def close(self) -> None:
         """Disconnect the temporary client and reset transient state."""
 
@@ -280,10 +229,6 @@ class LoginManager:
             return None
         return {"action": match.group(1), "sitekey": match.group(2)}
 
-    def _reset_recaptcha(self) -> None:
-        self._recaptcha = None
-        self._pending_send_code = None
-
     def _build_send_code_request(self, phone: str):
         # Mirrors Telethon's send_code_request, which uses empty CodeSettings.
         return SendCodeRequest(phone, self.api_id, self.api_hash, CodeSettings())
@@ -318,18 +263,10 @@ class LoginManager:
             except PhoneNumberInvalidError:
                 raise LoginError("invalid_phone", 400)
             except (ForbiddenError, RPCError) as e:
-                recaptcha = self._parse_recaptcha(e)
-                if recaptcha:
-                    self._recaptcha = recaptcha
-                    self._pending_send_code = request
+                if self._parse_recaptcha(e):
                     self.phone = parsed
                     self.step = "recaptcha"
-                    raise LoginError(
-                        "recaptcha_required",
-                        403,
-                        action=recaptcha["action"],
-                        sitekey=recaptcha["sitekey"],
-                    )
+                    raise LoginError("recaptcha_required", 403)
                 raise LoginError("send_code_failed", 502)
             except LoginError:
                 raise
@@ -337,49 +274,10 @@ class LoginManager:
                 logger.exception("Failed to send login code")
                 raise LoginError("send_code_failed", 502)
 
-            self._reset_recaptcha()
             self._apply_sent_code(parsed, result)
             self.phone = parsed
             self.step = "code"
             return parsed
-
-    async def send_code_with_recaptcha(self, token: str) -> str:
-        """Retry ``auth.sendCode`` wrapped in ``invokeWithReCaptcha``."""
-
-        async with self._lock:
-            if (
-                self.client is None
-                or self.phone is None
-                or self._pending_send_code is None
-            ):
-                raise LoginError("recaptcha_not_pending", 400)
-
-            token = (token or "").strip()
-            if not token:
-                raise LoginError("recaptcha_token_required", 400)
-
-            wrapped = InvokeWithReCaptchaRequest(
-                token=token,
-                query=self._pending_send_code,
-            )
-
-            try:
-                result = await self.client(wrapped)
-            except FloodWaitError as e:
-                raise LoginError("flood_wait", 429, seconds=e.seconds)
-            except (ForbiddenError, RPCError) as e:
-                if self._parse_recaptcha(e):
-                    raise LoginError("recaptcha_failed", 403)
-                raise LoginError("sign_in_failed", 502)
-            except Exception:
-                logger.exception("Failed to complete reCAPTCHA")
-                raise LoginError("sign_in_failed", 502)
-
-            phone = self.phone
-            self._reset_recaptcha()
-            self._apply_sent_code(phone, result)
-            self.step = "code"
-            return phone
 
     # ------------------------------------------------------------------
     # QR login (avoids auth.sendCode and its reCAPTCHA)
@@ -460,16 +358,9 @@ class LoginManager:
             except FloodWaitError as e:
                 raise LoginError("flood_wait", 429, seconds=e.seconds)
             except (ForbiddenError, RPCError) as e:
-                recaptcha = self._parse_recaptcha(e)
-                if recaptcha:
-                    self._recaptcha = recaptcha
+                if self._parse_recaptcha(e):
                     self.step = "recaptcha"
-                    raise LoginError(
-                        "recaptcha_required",
-                        403,
-                        action=recaptcha["action"],
-                        sitekey=recaptcha["sitekey"],
-                    )
+                    raise LoginError("recaptcha_required", 403)
                 raise LoginError("qr_failed", 502)
             except LoginError:
                 raise
@@ -479,7 +370,6 @@ class LoginManager:
 
             self._qr_error = None
             self.phone = None
-            self._reset_recaptcha()
             self.step = "qr"
             self._qr_task = asyncio.create_task(self._qr_loop())
             return self.qr_info()
