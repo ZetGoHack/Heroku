@@ -12,7 +12,6 @@
 
 import asyncio
 import logging
-import os
 import random
 import re
 import typing
@@ -68,10 +67,11 @@ class TokenObtainment(InlineUnit):
                 genran = "".join(random.choice(main.LATIN_MOCK))
                 username = f"@{genran}_{uid}_bot"
 
+            # Only create the bot here: BotFather is asked for its name and
+            # username. The rest of the configuration (inline mode, feedback,
+            # profile photo) is performed exactly once in ``_assert_token``.
             for msg in [
                 "🪐 Heroku userbot"[:64],
-                username,
-                "/setuserpic",
                 username,
             ]:
                 await fw_protect()
@@ -84,35 +84,6 @@ class TokenObtainment(InlineUnit):
                 await fw_protect()
                 await m.delete()
                 await r.delete()
-
-            try:
-                await fw_protect()
-                from .. import main
-
-                if "DOCKER" in os.environ:
-                    m = await conv.send_file(
-                        "https://raw.githubusercontent.com/staxxy403/Heroku/refs/heads/master/assets/heroku-ava.png"
-                    )
-                else:
-                    m = await conv.send_file(
-                        main.BASE_PATH / "assets" / "heroku-ava.png"
-                    )
-                r = await conv.get_response()
-
-                logger.debug(">> <Photo>")
-                logger.debug("<< %s", r.raw_text)
-            except Exception:
-                await fw_protect()
-                m = await conv.send_message("/cancel")
-                r = await conv.get_response()
-
-                logger.debug(">> %s", m.raw_text)
-                logger.debug("<< %s", r.raw_text)
-
-            await fw_protect()
-
-            await m.delete()
-            await r.delete()
 
         return await self._assert_token(create_new_if_needed=False)
 
@@ -241,29 +212,28 @@ class TokenObtainment(InlineUnit):
                         await m.delete()
                         await r.delete()
 
-                    try:
-                        await fw_protect()
-                        from .. import main
-
-                        m = await conv.send_file(
-                            main.BASE_PATH / "assets" / "heroku-ava.png"
+                    avatar = utils.assets.path("heroku-ava.png")
+                    if avatar is None:
+                        logger.debug(
+                            "Bot avatar asset is missing, skipping profile photo"
                         )
-                        r = await conv.get_response()
+                    else:
+                        try:
+                            await fw_protect()
+                            m = await conv.send_file(avatar)
+                            r = await conv.get_response()
 
-                        logger.debug(">> <Photo>")
-                        logger.debug("<< %s", r.raw_text)
-                    except Exception:
-                        await fw_protect()
-                        m = await conv.send_message("/cancel")
-                        r = await conv.get_response()
+                            logger.debug(">> <Photo>")
+                            logger.debug("<< %s", r.raw_text)
 
-                        logger.debug(">> %s", m.raw_text)
-                        logger.debug("<< %s", r.raw_text)
+                            await fw_protect()
 
-                    await fw_protect()
-
-                    await m.delete()
-                    await r.delete()
+                            await m.delete()
+                            await r.delete()
+                        except Exception:
+                            logger.exception(
+                                "Failed to set bot profile photo, skipping"
+                            )
 
                     # TODO: add bot commands setup
                     return True
