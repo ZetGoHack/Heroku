@@ -69,7 +69,10 @@ class LoaderRestrictor(loader.Module):
     async def client_ready(self):
         self.poll: PollStatus | None = None
 
-        if not self.get("passed", False):
+        if self.get("passed", False) or not self.inline.init_complete:
+            return
+
+        try:
             await self.inline.bot.send_message(
                 self.client.tg_id,
                 self.strings["unlock_prompt"],
@@ -84,6 +87,8 @@ class LoaderRestrictor(loader.Module):
                     ]
                 ),
             )
+        except Exception:
+            logger.debug("Can't send unlock prompt", exc_info=True)
 
     async def _unlock_prompt_callback(self, call: BotInlineCall):
         await call.delete()
