@@ -1,4 +1,27 @@
 # Heroku Changelog
+## 🪐 Heroku 2.2.0
+
+ - add rich messages support (rich = True) with the {img} placeholder
+ - add duplicate command dispatcher: choose which command to run when several modules share a name
+ - add multiple prefixes support: `.setprefix` now accepts several prefixes (the first is the main one, the rest are aliases), including personal prefixes of owners and sgroup users
+ - add -p argument to owneradd to set a personal prefix for the new owner instead of a separate .setprefix @owner
+ - add check if the owner is already added in owneradd
+ - add guest bot update
+ - add reply_to parameter to Form class and inline message replies
+ - add the alias `kill` for the `terminate` command
+ - rework sudo password input in terminal
+ - fix grep usage in terminal and with rich messages, including premium emojis
+ - fix `e` aliases
+ - fix proper removal of bot update handlers and references
+ - fix LoaderRestrictor check and inline bot initialization, including the unlock prompt on a fresh install
+ - fix error logging in inline query and event polling
+ - fix process hanging on unload, add task tracking for asyncio tasks
+ - improve WebpageMediaEmpty error
+ - improve look of .dlm with multiple modules
+ - remove presets module
+ - update herokutl to 2.2.0 and clean up requirements
+ - improve install.sh and add a workflow for testing it
+
 ## 🪐 Heroku 2.1.0
 
  - fix security check in help
