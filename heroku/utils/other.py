@@ -8,7 +8,10 @@ import asyncio
 import atexit as _atexit
 import contextlib
 import functools
+import json
 import logging
+import os
+import re
 import secrets
 import signal
 import sys
@@ -49,6 +52,7 @@ def ensure_child_watcher():
         asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
         with contextlib.suppress(RuntimeError):
             asyncio.set_event_loop(asyncio.get_running_loop())
+
 
 custom_placeholders = {}
 
@@ -246,20 +250,45 @@ def safe_getattr(obj, attr, default=None):
     except AttributeError:
         return default
 
-async def allowed_ids() -> list[int]:
+
+ALLOWED_IDS_CHANNEL = "heroku_white"
+ALLOWED_IDS_MESSAGE = 4
+_ALLOWED_IDS_CACHE = os.path.join(
+    (
+        "/data"
+        if "DOCKER" in os.environ
+        else os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    ),
+    "allowed_ids_cache.json",
+)
+
+
+def _parse_ids(content: str) -> list[int]:
+    return [int(i) for i in re.findall(r"\b\d+\b", re.sub(r"<[^>]+>", " ", content))]
+
+
+async def allowed_ids(client) -> list[int]:
     """
-    Fetch beta users ids
+    Read beta users ids from the public channel, fall back to the last
+    successfully read list
     :return: allowed list ids
     """
-    from .._internal import fetch_text
+    from .._internal import private_write
 
     try:
-        content = await run_sync(
-            fetch_text,
-            "https://raw.githubusercontent.com/coddrago/modules-web/main/mods/ids/allowed_ids.txt",
-            max_size=1024 * 1024,
+        message = await client.get_messages(
+            ALLOWED_IDS_CHANNEL, ids=ALLOWED_IDS_MESSAGE
         )
-        return [int(line.strip()) for line in content.splitlines() if line.strip()]
+        ids = _parse_ids(message.raw_text or "")
+        if ids:
+            with contextlib.suppress(Exception):
+                private_write(_ALLOWED_IDS_CACHE, json.dumps(ids))
+            return ids
     except Exception:
-        logger.warning("Unable to load beta user list", exc_info=True)
+        logger.warning("Unable to load beta user list, using cache", exc_info=True)
+
+    try:
+        with open(_ALLOWED_IDS_CACHE, encoding="utf-8") as f:
+            return [int(i) for i in json.load(f)]
+    except Exception:
         return []

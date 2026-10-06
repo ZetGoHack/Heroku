@@ -406,7 +406,7 @@ def get_branch_name(repo_path):
             pass
 
     if isinstance(branch_name, str):
-        branch_name = branch_name.strip().lstrip("refs/heads/")
+        branch_name = branch_name.strip().removeprefix("refs/heads/")
 
     return branch_name
 

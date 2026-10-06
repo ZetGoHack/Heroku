@@ -985,7 +985,7 @@ class Heroku:
 
         return bool(self.sessions)
 
-    async def amain_wrapper(self, client: CustomTelegramClient, a_i: list):
+    async def amain_wrapper(self, client: CustomTelegramClient):
         """Wrapper around amain"""
         async with client:
             first = True
@@ -998,7 +998,11 @@ class Heroku:
             register_secret(StringSession.save(client.session))
             register_secret(getattr(me, "phone", None))
 
-            await version.check_branch(me.id, a_i, self)
+            async with self._allowed_ids_lock:
+                if not self._allowed_ids:
+                    self._allowed_ids = await get_allowed_ids(client)
+
+            await version.check_branch(me.id, self._allowed_ids, self)
 
             while await self.amain(first, client):
                 first = False
@@ -1186,10 +1190,9 @@ class Heroku:
             return
 
         self.loop.set_exception_handler(self._loop_exception_handler)
-        allowed_ids = await get_allowed_ids()
-        await asyncio.gather(
-            *[self.amain_wrapper(client, allowed_ids) for client in self.clients]
-        )
+        self._allowed_ids = []
+        self._allowed_ids_lock = asyncio.Lock()
+        await asyncio.gather(*[self.amain_wrapper(client) for client in self.clients])
 
     async def _shutdown_handler(self):
         for client in self.clients:

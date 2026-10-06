@@ -43,7 +43,7 @@ else:
 
 
 async def check_branch(me_id: int, allowed_ids: list, self):
-    if NO_GIT:
+    if NO_GIT or branch == "master":
         return
     if git is None:
         return
