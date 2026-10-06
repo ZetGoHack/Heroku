@@ -384,6 +384,11 @@ class InlineManager(
         try:
             m = await self._client.send_message(self.bot_username, "/start heroku init")
         except (InputUserDeactivatedError, ValueError):
+            logger.warning(
+                "Inline bot @%s is deactivated (frozen) or not found, "
+                "creating a new one",
+                self.bot_username,
+            )
             self._db.set("heroku.inline", "bot_token", None)
             self._token = False
 

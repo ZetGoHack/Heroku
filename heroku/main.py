@@ -953,6 +953,16 @@ class Heroku:
                     patcher.patch(client, session)
 
                 await client.connect()
+
+                if not await client.is_user_authorized():
+                    logging.warning(
+                        "Session %s is not authorized, skipping it",
+                        session.filename,
+                    )
+                    await client.disconnect()
+                    self.sessions.remove(session)
+                    continue
+
                 client.phone = "None"
 
                 self.clients += [client]

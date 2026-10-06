@@ -15,6 +15,8 @@
  - fix proper removal of bot update handlers and references
  - fix LoaderRestrictor check and inline bot initialization, including the unlock prompt on a fresh install
  - fix error logging in inline query and event polling
+ - fix several unauthorized sessions asking for the phone number at the same time on start
+ - fix inline bot recreation when the bot is deactivated (frozen): warn and create a new one
  - fix process hanging on unload, add task tracking for asyncio tasks
  - improve WebpageMediaEmpty error
  - improve look of .dlm with multiple modules
