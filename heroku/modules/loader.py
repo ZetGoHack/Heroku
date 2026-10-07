@@ -428,8 +428,7 @@ class LoaderMod(loader.Module):
         """Send installation results using the selected message format."""
         if not rich:
             return await utils.answer_with_media_fallback(
-                message, text, parse_mode="HTML",
-                reply_markup=reply_markup, **kwargs,
+                message, text, reply_markup=reply_markup, **kwargs,
             )
         return await utils.answer_with_media_fallback(
             message, rich_message=text, reply_markup=reply_markup, **kwargs,

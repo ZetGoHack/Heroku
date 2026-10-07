@@ -479,6 +479,7 @@ async def answer(
 
         if reply_markup:
             kwargs.pop("message", None)
+            kwargs.pop("parse_mode", None)
             if isinstance(message, (InlineMessage, InlineCall, BotInlineCall)):
                 await message.edit(response, reply_markup, **kwargs)
                 return
