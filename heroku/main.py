@@ -8,7 +8,7 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -1067,10 +1067,10 @@ class Heroku:
 
                 await client.heroku_inline.bot.send_photo(
                     log_chat_id,
-                    "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_started.png",
+                    "https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/heroku_started.jpg",
                     caption=(
                         "{} <b>{} started!</b>\n\n<tg-emoji emoji-id=5231065262228250587>⚙</tg-emoji> <b>GitHub commit SHA: <a"
-                        ' href="https://github.com/ZetGoHack/Heroku/commit/{}">{}</a></b>\n<tg-emoji emoji-id=5873225338984599714>🔎</tg-emoji>'
+                        ' href="https://github.com/Heroku-userbot/Heroku/commit/{}">{}</a></b>\n<tg-emoji emoji-id=5873225338984599714>🔎</tg-emoji>'
                         " <b>Update status: {}</b>\n<tg-emoji emoji-id=5870903672937911120>🕶</tg-emoji> <b>Prefix:</b> <code>{}</code>"
                     ).format(
                         (

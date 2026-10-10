@@ -6,7 +6,7 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -65,7 +65,7 @@ class UpdaterMod(loader.Module):
         self.config = loader.ModuleConfig(
             loader.ConfigValue(
                 "GIT_ORIGIN_URL",
-                "https://github.com/ZetGoHack/Heroku",
+                "https://github.com/Heroku-userbot/Heroku",
                 lambda: self.strings["origin_cfg_doc"],
                 validator=loader.validators.Link(),
             ),
@@ -198,7 +198,7 @@ class UpdaterMod(loader.Module):
     async def poller_announcement(self):
         async with aiohttp.ClientSession() as session:
             try:
-                url = "https://api.github.com/repos/coddrago/assets/contents/heroku/announcment.txt"
+                url = "https://api.github.com/repos/Heroku-userbot/assets/contents/announcment.txt"
                 r = await session.get(
                     url,
                     timeout=aiohttp.ClientTimeout(total=10),
@@ -249,7 +249,7 @@ class UpdaterMod(loader.Module):
                 try:
                     async with aiohttp.ClientSession() as session:
                         r = await session.get(
-                            url=f"https://api.github.com/repos/ZetGoHack/Heroku/contents/heroku/version.py?ref={version.branch}",
+                            url=f"https://api.github.com/repos/Heroku-userbot/Heroku/contents/heroku/version.py?ref={version.branch}",
                             headers={"Accept": "application/vnd.github.v3.raw"},
                         )
                         text = await r.text()
@@ -270,10 +270,10 @@ class UpdaterMod(loader.Module):
             if manual_update:
                 m = await self.inline.bot.send_photo(
                     self.tg_id,
-                    "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/updated.png",
+                    "https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/updated.jpg",
                     caption=self.strings["update_required"].format(
                         current[:6],
-                        '<a href="https://github.com/ZetGoHack/Heroku/compare/{}...{}">{}</a>'.format(
+                        '<a href="https://github.com/Heroku-userbot/Heroku/compare/{}...{}">{}</a>'.format(
                             current[:12],
                             self._pending[:12],
                             self._pending[:6],
@@ -293,11 +293,11 @@ class UpdaterMod(loader.Module):
             else:
                 m = await self.inline.bot.send_photo(
                     self.tg_id,
-                    "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/updated.png",
+                    "https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/updated.jpg",
                     caption=self.strings["autoupdate_notifier"].format(
                         self._pending[:6],
                         changelog,
-                        '<a href="https://github.com/ZetGoHack/Heroku/compare/{}...{}">{}</a>'.format(
+                        '<a href="https://github.com/Heroku-userbot/Heroku/compare/{}...{}">{}</a>'.format(
                             current[:12],
                             self._pending[:12],
                             "🔎 diff",
@@ -675,7 +675,7 @@ class UpdaterMod(loader.Module):
         if not self.config["autoupdate"] and not self.get("autoupdate_answered", False):
             await self.inline.bot.send_photo(
                 self.tg_id,
-                photo="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/unit_alpha.png",
+                photo="https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/unit_alpha.jpg",
                 caption=self.strings["autoupdate"],
                 reply_markup=self.inline.generate_markup(
                     [

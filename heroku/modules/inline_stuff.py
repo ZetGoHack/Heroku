@@ -6,7 +6,7 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -116,7 +116,7 @@ class InlineStuff(loader.Module):
         match message.text:
             case "/start":
                 await message.answer_photo(
-                    "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/start_cmd.png",
+                    "https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/start_cmd.jpg",
                     caption=self.strings["this_is_heroku"].format(
                         (
                             "<tg-emoji emoji-id=5463379725441341739>🪐</tg-emoji>"
@@ -130,7 +130,7 @@ class InlineStuff(loader.Module):
                             [
                                 {
                                     "text": "GitHub",
-                                    "url": "https://github.com/ZetGoHack/Heroku",
+                                    "url": "https://github.com/Heroku-userbot/Heroku",
                                     "emoji_id": "5231065262228250587",
                                 }
                             ],
@@ -149,7 +149,7 @@ class InlineStuff(loader.Module):
                     pass
                 else:
                     await message.answer_photo(
-                        "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/start_cmd.png",
+                        "https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/start_cmd.jpg",
                         caption=self.strings["profile_cmd"].format(
                             prefix=self.get_prefix(),
                             ram_usage=utils.get_ram_usage(),

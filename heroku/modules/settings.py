@@ -6,7 +6,7 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -117,7 +117,7 @@ class CoreMod(loader.Module):
                 htl_version=herokutl.__version__,
                 layer=herokutl.tl.alltlobjects.LAYER,
                 current_user=getpass.getuser(),
-                banner_url="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_cmd.png",
+                banner_url="https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/heroku_cmd.jpg",
             )
             if branch_text:
                 rich_message += f"<footer>{branch_text.strip()}</footer>"
@@ -141,7 +141,7 @@ class CoreMod(loader.Module):
                 f"{herokutl.__version__} #{herokutl.tl.alltlobjects.LAYER}",
             )
             + (branch_text),
-            file="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_cmd.png",
+            file="https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/heroku_cmd.jpg",
             reply_to=getattr(message, "reply_to_msg_id", None),
         )
 
@@ -699,13 +699,13 @@ class CoreMod(loader.Module):
                 self.strings["choose_installation"],
                 message,
                 reply_markup=self._markup(),
-                photo="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_installation.png",
+                photo="https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/heroku_installation.jpg",
             )
         ):
 
             await self.client.send_file(
                 message.peer_id,
-                "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_installation.png",
+                "https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/heroku_installation.jpg",
                 caption=self.strings["vds_install"],
                 reply_to=getattr(message, "reply_to_msg_id", None),
             )
