@@ -285,10 +285,10 @@ class TokenObtainment(InlineUnit):
 
                     try:
                         await fw_protect()
-                        from .. import main
-
                         m = await conv.send_file(
-                            main.BASE_PATH / "assets" / "heroku-ava.png"
+                            Path(__file__).resolve().parents[2]
+                            / "assets"
+                            / "heroku.jpeg"
                         )
                         r = await conv.get_response()
 
