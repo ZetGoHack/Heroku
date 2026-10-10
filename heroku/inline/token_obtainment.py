@@ -12,10 +12,10 @@
 
 import asyncio
 import logging
-import os
 import random
 import re
 import typing
+from pathlib import Path
 
 from herokutl.errors.rpcerrorlist import YouBlockedUserError
 from herokutl.tl.functions.contacts import UnblockRequest
@@ -128,16 +128,9 @@ class TokenObtainment(InlineUnit):
 
             try:
                 await fw_protect()
-                from .. import main
-
-                if "DOCKER" in os.environ:
-                    m = await conv.send_file(
-                        "https://raw.githubusercontent.com/ZetGoHack/Heroku/refs/heads/master/assets/heroku-ava.png"
-                    )
-                else:
-                    m = await conv.send_file(
-                        main.BASE_PATH / "assets" / "heroku-ava.png"
-                    )
+                m = await conv.send_file(
+                    Path(__file__).resolve().parents[2] / "assets" / "heroku.jpeg"
+                )
                 r = await conv.get_response()
 
                 logger.debug(">> <Photo>")
